@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
 # release-migration-manifest.sh
-# Lists everything a release will apply to the databases: schema and data migrations, across both the
-# core MySQL database and the agent-service Postgres one.
+# Lists everything a release will apply to the database: schema and data migrations.
 #
-# The MySQL schema half gets a reviewable PlanetScale deploy request. The other three do not — Postgres
-# applies DDL directly and backfills are DML — so this manifest is the review surface for them, printed
-# onto the release PR before anyone merges it.
+# The schema gets a reviewable PlanetScale deploy request. Backfills do not — they are DML — so this
+# manifest is the review surface for them, printed onto the release PR before anyone merges it.
 #
 # Usage: ./scripts/release-migration-manifest.sh [--format markdown|plain]
 #
@@ -34,10 +32,8 @@ PREVIOUS_TAG="$(release_previous_tag "$BASE_REF")"
 
 CORE_SCHEMA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" shared/db/migrations)"
 CORE_DATA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" shared/db/data-migrations)"
-AGENT_SCHEMA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" services/agent-service/db/migrations)"
-AGENT_DATA="$(release_new_migrations "$PREVIOUS_TAG" "$BASE_REF" services/agent-service/db/data-migrations)"
 
-if [ -z "$CORE_SCHEMA$CORE_DATA$AGENT_SCHEMA$AGENT_DATA" ]; then
+if [ -z "$CORE_SCHEMA$CORE_DATA" ]; then
     if [ "$FORMAT" = "markdown" ]; then
         echo "No database migrations in this release."
     else
@@ -62,6 +58,4 @@ section() {
 }
 
 section "Core schema (MySQL)"  "deploy request, reviewable below"        "$CORE_SCHEMA"
-section "Agent schema (Postgres)" "applied directly on merge"            "$AGENT_SCHEMA"
 section "Core backfills (MySQL)"  "applied on merge, after the schema"   "$CORE_DATA"
-section "Agent backfills (Postgres)" "applied on merge, after the schema" "$AGENT_DATA"

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
@@ -169,9 +169,9 @@ func (s *schedulerSvc) checkSchedules(ctx context.Context) {
 		var lastRunTime time.Time
 		if lastRunAPIErr != nil {
 			// No previous run — use config creation time as baseline
-			lastRunTime = cfg.CreatedAt.Time
+			lastRunTime = cfg.CreatedAt
 		} else {
-			lastRunTime = lastRun.CreatedAt.Time
+			lastRunTime = lastRun.CreatedAt
 		}
 
 		// Check if it's time for the next run
@@ -221,7 +221,7 @@ func (s *schedulerSvc) scheduleRun(ctx context.Context, cfg sqlc.ListEnabledConf
 		ID:                runID,
 		AccountID:         cfg.AccountID,
 		AgentDefinitionID: cfg.AgentDefinitionID,
-		AgentConfigID:     agentdb.PgText(cfg.ID),
+		AgentConfigID:     db.NullString(cfg.ID),
 		StatusCode:        domain.RunStatusPending,
 		TriggerType:       string(constants.AgentTriggerTypeScheduled),
 		Input:             json.RawMessage(`{}`),

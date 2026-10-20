@@ -3,10 +3,11 @@ package service
 import (
 	"testing"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"database/sql"
+
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/shared/db"
 )
 
 // isChatRun gates resource-link linking + native reasoning streaming: true only when the run carries
@@ -18,9 +19,9 @@ func TestIsChatRun(t *testing.T) {
 		run  *sqlc.AgentRun
 		want bool
 	}{
-		{"has conversation", &sqlc.AgentRun{ConversationID: agentdb.PgText("cv_1")}, true},
+		{"has conversation", &sqlc.AgentRun{ConversationID: db.NullString("cv_1")}, true},
 		{"no conversation (null)", &sqlc.AgentRun{}, false},
-		{"empty conversation id (valid but blank)", &sqlc.AgentRun{ConversationID: pgtype.Text{String: "", Valid: true}}, false},
+		{"empty conversation id (valid but blank)", &sqlc.AgentRun{ConversationID: sql.NullString{String: "", Valid: true}}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"go.uber.org/mock/gomock"
@@ -124,16 +124,16 @@ func TestForkDeadChatRun(t *testing.T) {
 				ID:                deadID,
 				AccountID:         acct,
 				AgentDefinitionID: defID,
-				AgentConfigID:     agentdb.PgText(configID),
-				ConversationID:    agentdb.PgText(convID),
+				AgentConfigID:     db.NullString(configID),
+				ConversationID:    db.NullString(convID),
 				StatusCode:        deadStatus,
 			}
 			// Transcript ending in the failure marker; the marker (and a cancelled one) must be dropped,
 			// while the real turns — including a tool call linked to an action — are inherited.
 			events := []sqlc.AgentRunEvent{
 				{StepType: "trigger_received", Title: "Run triggered", Sequence: 0},
-				{StepType: "user_message", Title: "User message", Content: agentdb.PgText("do the thing"), Sequence: 1},
-				{StepType: "tool_call", Title: "search", Sequence: 2, AgentActionID: agentdb.PgText("aac_1"), Metadata: json.RawMessage(`{"tool_use_id":"tu_1"}`)},
+				{StepType: "user_message", Title: "User message", Content: db.NullString("do the thing"), Sequence: 1},
+				{StepType: "tool_call", Title: "search", Sequence: 2, AgentActionID: db.NullString("aac_1"), Metadata: json.RawMessage(`{"tool_use_id":"tu_1"}`)},
 				{StepType: "tool_result", Title: "search result", Sequence: 3, Metadata: json.RawMessage(`{"tool_use_id":"tu_1"}`)},
 				{StepType: stepTypeCancelled, Title: "Run cancelled", Sequence: 4},
 				{StepType: stepTypeError, Title: "Run failed", Sequence: 5},

@@ -12,12 +12,12 @@ import (
 	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
 	mediatormock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/mediator"
 	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/messaging"
 	"go.uber.org/mock/gomock"
@@ -88,7 +88,7 @@ func expectAgentRole(core *clientmock.MockCoreClient, tc driveCase) {
 }
 
 func driveDef() *sqlc.AgentDefinition {
-	return &sqlc.AgentDefinition{ID: driveDefID, Name: "Wide agent", Slug: "wide-agent", RoleID: agentdb.PgText(driveRoleID)}
+	return &sqlc.AgentDefinition{ID: driveDefID, Name: "Wide agent", Slug: "wide-agent", RoleID: db.NullString(driveRoleID)}
 }
 
 func newDriveSvc(ctrl *gomock.Controller, factory *factorymock.MockRepoFactory, core *clientmock.MockCoreClient) *agentDefSvcImpl {
@@ -186,7 +186,7 @@ func TestRetryRunRequiresTheAgentsRole(t *testing.T) {
 
 func TestDriveAgentWithoutRoleNeedsNoCheck(t *testing.T) {
 	s := &agentDefSvcImpl{}
-	if apiErr := s.checkCanDriveAgent(context.Background(), grantOf(roleTestIdentity(constants.RoleTypeCustom)), agentdb.PgText("")); apiErr != nil {
+	if apiErr := s.checkCanDriveAgent(context.Background(), grantOf(roleTestIdentity(constants.RoleTypeCustom)), db.NullString("")); apiErr != nil {
 		t.Fatalf("an agent without a role grants nothing to borrow: %v", apiErr.PublicMessage)
 	}
 }
@@ -316,7 +316,7 @@ func TestContinueChatRunIgnoresAnotherAgentsRun(t *testing.T) {
 func TestCreateChatRunIgnoresAnotherAccountsAgent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	def := driveDef()
-	def.AccountID = agentdb.PgText("ac_other")
+	def.AccountID = db.NullString("ac_other")
 	defRepo := repositorymock.NewMockAgentDefinitionRepo(ctrl)
 	defRepo.EXPECT().GetByID(gomock.Any(), driveDefID).Return(def, nil)
 	factory := factorymock.NewMockRepoFactory(ctrl)

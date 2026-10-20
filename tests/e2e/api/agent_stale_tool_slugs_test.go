@@ -29,7 +29,7 @@ func createAgentWithStaleEndpointTool(t *testing.T, suffix string) string {
 		"endpoint_tool_review": map[string]bool{"create_account_group": true, staleEndpointToolSlug: true},
 	})
 	require.NoError(t, err)
-	_, err = agentDB(t).Exec(`UPDATE agent_definition SET config = $1 WHERE id = $2`, stored, id)
+	_, err = authDB(t).Exec(`UPDATE agent_definition SET config = ? WHERE id = ?`, json.RawMessage(stored), id)
 	require.NoError(t, err)
 	return id
 }
@@ -68,7 +68,7 @@ func TestAgentStaleSlugs_PatchResendingStoredStaleEndpointToolPrunesIt(t *testin
 	assert.Equal(t, map[string]any{"create_account_group": true}, jsonObject(config, "endpoint_tool_review"))
 
 	var stored []byte
-	require.NoError(t, agentDB(t).QueryRow(`SELECT config FROM agent_definition WHERE id = $1`, id).Scan(&stored))
+	require.NoError(t, authDB(t).QueryRow(`SELECT config FROM agent_definition WHERE id = ?`, id).Scan(&stored))
 	assert.NotContains(t, string(stored), staleEndpointToolSlug, "the stale slug is pruned from the stored config")
 }
 
@@ -112,8 +112,8 @@ func TestAgentStaleSlugs_PatchResendingStoredStaleBuiltinToolDropsIt(t *testing.
 	id := jsonField(created, "id")
 	require.NotEmpty(t, id)
 
-	_, err := agentDB(t).Exec(`INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
-		VALUES ($1, $2, $3, '{}', 2, false)`, "adt_stale_"+id, id, staleBuiltinToolSlug)
+	_, err := authDB(t).Exec(`INSERT INTO agent_definition_tool (id, agent_definition_id, tool_slug, config, sort_order, require_review)
+		VALUES (?, ?, ?, '{}', 2, false)`, "adt_stale_"+id, id, staleBuiltinToolSlug)
 	require.NoError(t, err)
 
 	status, respBody, err := apiClient.Patch(covAiAgentsPath+"/"+id+"?include=tools", map[string]any{
@@ -130,7 +130,7 @@ func TestAgentStaleSlugs_PatchResendingStoredStaleBuiltinToolDropsIt(t *testing.
 	assert.Equal(t, "read_doc", jsonField(jsonObject(tools[0].(map[string]any), "tool"), "slug"))
 
 	var n int
-	require.NoError(t, agentDB(t).QueryRow(`SELECT count(*) FROM agent_definition_tool WHERE agent_definition_id = $1 AND tool_slug = $2`, id, staleBuiltinToolSlug).Scan(&n))
+	require.NoError(t, authDB(t).QueryRow(`SELECT count(*) FROM agent_definition_tool WHERE agent_definition_id = ? AND tool_slug = ?`, id, staleBuiltinToolSlug).Scan(&n))
 	assert.Zero(t, n, "the stale built-in link is not re-created")
 
 	status, respBody, err = apiClient.Patch(covAiAgentsPath+"/"+id, map[string]any{

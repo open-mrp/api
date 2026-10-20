@@ -11,7 +11,6 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/agents"
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/event"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	agentgrpc "github.com/open-mrp/api/services/agent-service/internal/infrastructure/grpc"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/httpgateway"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/repository"
@@ -21,6 +20,7 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/mediator"
 	"github.com/open-mrp/api/services/agent-service/internal/service"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/lease"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/pagination"
@@ -51,11 +51,11 @@ func Run(
 	}
 	defer tracing.DeferShutdown(tracerShutdown)()
 
-	pgpool, err := agentdb.NewPgPool(ctx, cfg.DBURL)
+	dbPool, err := db.NewDbPool(&db.Config{DBURI: cfg.DBURL, Application: domain.ServiceName})
 	if err != nil {
 		return err
 	}
-	defer pgpool.Close()
+	defer dbPool.Close()
 
 	rabbitmq, err := messaging.NewRabbitMQ(ctx, &messaging.RabbitMQConfig{URI: cfg.RabbitMQURI})
 	if err != nil {
@@ -63,11 +63,11 @@ func Run(
 	}
 	defer rabbitmq.Close()
 
-	queries := sqlc.New(pgpool)
+	queries := sqlc.New(dbPool)
 
 	leaseSvc := lease.New(repository.NewLeaseRepo(queries))
 
-	outboxRepo := repository.NewOutboxEnqueuerRepo(pgpool, queries)
+	outboxRepo := repository.NewOutboxEnqueuerRepo(dbPool, queries)
 	enqueuer, err := messaging.NewEnqueuer(&messaging.EnqueuerConfig{ServiceName: domain.ServiceName, PlatformMode: cfg.PlatformMode}, outboxRepo, rabbitmq, leaseSvc)
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func Run(
 
 	// Agent definition service
 	mediatorFactory := mediator.NewMediatorFactory()
-	txManager := service.NewTransactionManager(pgpool, queries)
+	txManager := service.NewTransactionManager(dbPool, queries)
 	agentDefSvc := service.NewAgentDefinitionSvc(&service.AgentDefinitionSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,

@@ -118,7 +118,7 @@ func chatMentionAgent(t *testing.T, c *Client, convID, agentID string) string {
 func chatAgentRunCount(t *testing.T, convID string) int {
 	t.Helper()
 	var n int
-	require.NoError(t, agentDB(t).QueryRow(`SELECT count(*) FROM agent_run WHERE conversation_id = $1`, convID).Scan(&n))
+	require.NoError(t, authDB(t).QueryRow(`SELECT count(*) FROM agent_run WHERE conversation_id = ?`, convID).Scan(&n))
 	return n
 }
 

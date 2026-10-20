@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	agentpagination "github.com/open-mrp/api/services/agent-service/internal/pagination"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
@@ -535,14 +535,18 @@ func (h *agentHandler) UpdateAgentAccountStatus(ctx context.Context, req *pb.Upd
 	}, nil
 }
 
-func formatPgTimestamp(ts pgtype.Timestamptz) string {
+func formatNullTime(ts sql.NullTime) string {
 	if !ts.Valid {
 		return ""
 	}
-	return ts.Time.Format("2006-01-02T15:04:05.000Z")
+	return formatTime(ts.Time)
 }
 
-func formatPgText(t pgtype.Text) string {
+func formatTime(t time.Time) string {
+	return t.Format("2006-01-02T15:04:05.000Z")
+}
+
+func formatNullString(t sql.NullString) string {
 	if !t.Valid {
 		return ""
 	}
@@ -562,22 +566,22 @@ func sqlcRunToProto(run *sqlc.AgentRun) *pb.AgentRunInfo {
 		Id:                      run.ID,
 		AccountId:               run.AccountID,
 		AgentDefinitionId:       run.AgentDefinitionID,
-		AgentConfigId:           formatPgText(run.AgentConfigID),
+		AgentConfigId:           formatNullString(run.AgentConfigID),
 		StatusCode:              run.StatusCode,
 		TriggerType:             run.TriggerType,
 		Input:                   inputStr,
 		Output:                  outputStr,
-		ErrorMessage:            formatPgText(run.ErrorMessage),
-		StartedAt:               formatPgTimestamp(run.StartedAt),
-		CompletedAt:             formatPgTimestamp(run.CompletedAt),
+		ErrorMessage:            formatNullString(run.ErrorMessage),
+		StartedAt:               formatNullTime(run.StartedAt),
+		CompletedAt:             formatNullTime(run.CompletedAt),
 		DurationMs:              run.DurationMs.Int32,
 		TotalInputTokens:        run.TotalInputTokens,
 		TotalOutputTokens:       run.TotalOutputTokens,
-		CreatedAt:               formatPgTimestamp(run.CreatedAt),
-		UpdatedAt:               formatPgTimestamp(run.UpdatedAt),
-		TriggeredByActorId:      formatPgText(run.TriggeredByActorID),
-		TriggeredByIdentityType: formatPgText(run.TriggeredByIdentityType),
-		TriggeredByActorName:    formatPgText(run.TriggeredByActorName),
+		CreatedAt:               formatTime(run.CreatedAt),
+		UpdatedAt:               formatTime(run.UpdatedAt),
+		TriggeredByActorId:      formatNullString(run.TriggeredByActorID),
+		TriggeredByIdentityType: formatNullString(run.TriggeredByIdentityType),
+		TriggeredByActorName:    formatNullString(run.TriggeredByActorName),
 	}
 }
 
@@ -614,15 +618,15 @@ func sqlcEventToProto(event *sqlc.AgentRunEvent) *pb.AgentRunStepInfo {
 		AgentRunId:    event.AgentRunID,
 		StepType:      event.StepType,
 		Title:         event.Title,
-		Content:       formatPgText(event.Content),
+		Content:       formatNullString(event.Content),
 		Sequence:      event.Sequence,
 		DurationMs:    event.DurationMs.Int32,
-		AgentActionId: formatPgText(event.AgentActionID),
+		AgentActionId: formatNullString(event.AgentActionID),
 		MetadataJson:  string(withoutTokenCounts(event.Metadata)),
-		CreatedAt:     formatPgTimestamp(event.CreatedAt),
-		ActorId:       formatPgText(event.ActorID),
-		ActorType:     formatPgText(event.ActorType),
-		ActorName:     formatPgText(event.ActorName),
+		CreatedAt:     formatTime(event.CreatedAt),
+		ActorId:       formatNullString(event.ActorID),
+		ActorType:     formatNullString(event.ActorType),
+		ActorName:     formatNullString(event.ActorName),
 	}
 }
 
@@ -641,21 +645,21 @@ func sqlcActionToProto(action *sqlc.AgentAction, runStatusCode, runTriggerType *
 		AgentRunId:          action.AgentRunID,
 		ToolSlug:            action.ToolSlug,
 		StatusCode:          action.StatusCode,
-		Label:               formatPgText(action.Label),
-		Description:         formatPgText(action.Description),
+		Label:               formatNullString(action.Label),
+		Description:         formatNullString(action.Description),
 		Input:               inputStr,
 		Output:              outputStr,
-		ErrorMessage:        formatPgText(action.ErrorMessage),
-		EntityType:          formatPgText(action.EntityType),
-		EntityId:            formatPgText(action.EntityID),
+		ErrorMessage:        formatNullString(action.ErrorMessage),
+		EntityType:          formatNullString(action.EntityType),
+		EntityId:            formatNullString(action.EntityID),
 		RequiresReview:      action.RequiresReview,
-		ReviewedAt:          formatPgTimestamp(action.ReviewedAt),
-		ReviewedBy:          formatPgText(action.ReviewedBy),
-		ReviewedByActorType: formatPgText(action.ReviewedByActorType),
-		ReviewedByActorName: formatPgText(action.ReviewedByActorName),
-		ExecutedAt:          formatPgTimestamp(action.ExecutedAt),
-		CreatedAt:           formatPgTimestamp(action.CreatedAt),
-		UpdatedAt:           formatPgTimestamp(action.UpdatedAt),
+		ReviewedAt:          formatNullTime(action.ReviewedAt),
+		ReviewedBy:          formatNullString(action.ReviewedBy),
+		ReviewedByActorType: formatNullString(action.ReviewedByActorType),
+		ReviewedByActorName: formatNullString(action.ReviewedByActorName),
+		ExecutedAt:          formatNullTime(action.ExecutedAt),
+		CreatedAt:           formatTime(action.CreatedAt),
+		UpdatedAt:           formatTime(action.UpdatedAt),
 		RunStatusCode:       runStatusCode,
 		RunTriggerType:      runTriggerType,
 	}
@@ -779,29 +783,18 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		limit = 1000
 	}
 
-	filterQuery := false
-	search := pgtype.Text{}
-	if req.GetQuery() != "" {
-		filterQuery = true
-		search = pgtype.Text{String: req.GetQuery(), Valid: true}
-	}
-
 	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	params := sqlc.ListAgentRunsByAccountFilteredParams{
+	params := domain.AgentRunPageQuery{
 		AccountID:         accountID,
-		FilterStatus:      req.StatusCode != "",
 		StatusCode:        req.StatusCode,
-		FilterDefinition:  req.AgentDefinitionId != "",
 		AgentDefinitionID: req.AgentDefinitionId,
-		FilterQuery:       filterQuery,
-		Search:            search,
-		HasCursor:         cursorID != "",
+		Query:             req.GetQuery(),
 		CursorID:          cursorID,
-		Lim:               limit + 1,
+		Limit:             limit + 1,
 	}
 
 	runRepo := h.repos.NewAgentRunRepo()
@@ -814,7 +807,7 @@ func (h *agentHandler) ListRuns(ctx context.Context, req *pb.ListRunsRequest) (*
 		runs,
 		limit,
 		cursorDir,
-		func(r sqlc.AgentRun) time.Time { return r.CreatedAt.Time },
+		func(r sqlc.AgentRun) time.Time { return r.CreatedAt },
 		func(r sqlc.AgentRun) string { return r.ID },
 	)
 
@@ -924,12 +917,11 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	params := sqlc.ListAgentTokenUsageByAccountParams{
+	params := domain.AgentTokenUsagePageQuery{
 		AccountID: accountID,
-		SinceDate: agentdb.PgDate(sinceDate),
-		HasCursor: cursorID != "",
+		SinceDate: sinceDate,
 		CursorID:  cursorID,
-		Lim:       limit + 1,
+		Limit:     limit + 1,
 	}
 
 	tokenUsageRepo := h.repos.NewAgentTokenUsageRepo()
@@ -942,7 +934,7 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 		rows,
 		limit,
 		cursorDir,
-		func(r sqlc.AgentTokenUsage) time.Time { return r.Date.Time },
+		func(r sqlc.AgentTokenUsage) time.Time { return r.Date },
 		func(r sqlc.AgentTokenUsage) string { return r.ID },
 	)
 
@@ -950,13 +942,13 @@ func (h *agentHandler) ListTokenUsage(ctx context.Context, req *pb.ListTokenUsag
 	for i := range rows {
 		pbUsage[i] = &pb.AgentTokenUsageInfo{
 			Id:           rows[i].ID,
-			Date:         rows[i].Date.Time.Format("2006-01-02"),
+			Date:         rows[i].Date.Format("2006-01-02"),
 			InputTokens:  rows[i].InputTokens,
 			OutputTokens: rows[i].OutputTokens,
 			TotalCost:    rows[i].TotalCost,
 			RunCount:     rows[i].RunCount,
-			CreatedAt:    rows[i].CreatedAt.Time.Format("2006-01-02T15:04:05Z"),
-			UpdatedAt:    rows[i].UpdatedAt.Time.Format("2006-01-02T15:04:05Z"),
+			CreatedAt:    rows[i].CreatedAt.Format("2006-01-02T15:04:05Z"),
+			UpdatedAt:    rows[i].UpdatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}
 
@@ -977,12 +969,12 @@ func sqlcMemoryToProto(m *sqlc.AgentMemory) *pb.AgentMemoryInfo {
 		Category:     m.Category,
 		Content:      m.Content,
 		MetadataJson: metadataStr,
-		EntityType:   formatPgText(m.EntityType),
-		EntityId:     formatPgText(m.EntityID),
+		EntityType:   formatNullString(m.EntityType),
+		EntityId:     formatNullString(m.EntityID),
 		Importance:   m.Importance,
-		ExpiresAt:    formatPgTimestamp(m.ExpiresAt),
-		CreatedAt:    formatPgTimestamp(m.CreatedAt),
-		UpdatedAt:    formatPgTimestamp(m.UpdatedAt),
+		ExpiresAt:    formatNullTime(m.ExpiresAt),
+		CreatedAt:    formatTime(m.CreatedAt),
+		UpdatedAt:    formatTime(m.UpdatedAt),
 	}
 }
 
@@ -1024,29 +1016,18 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 
 	memoryRepo := h.repos.NewAgentMemoryRepo()
 
-	filterQuery := false
-	search := pgtype.Text{}
-	if req.GetQuery() != "" {
-		filterQuery = true
-		search = pgtype.Text{String: req.GetQuery(), Valid: true}
-	}
-
 	cursorID, cursorDir, apiErr := agentpagination.ParseOptionalStringCursor(req.Cursor)
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
 	}
 
-	params := sqlc.ListAgentMemoriesByAccountCursorParams{
-		AccountID:        accountID,
-		FilterCategory:   req.Category != "",
-		Category:         req.Category,
-		FilterEntityType: req.EntityType != "",
-		EntityType:       pgtype.Text{String: req.EntityType, Valid: req.EntityType != ""},
-		FilterQuery:      filterQuery,
-		Search:           search,
-		HasCursor:        cursorID != "",
-		CursorID:         cursorID,
-		Lim:              limit + 1,
+	params := domain.AgentMemoryPageQuery{
+		AccountID:  accountID,
+		Category:   req.Category,
+		EntityType: req.EntityType,
+		Query:      req.GetQuery(),
+		CursorID:   cursorID,
+		Limit:      limit + 1,
 	}
 
 	rows, repoErr := memoryRepo.ListByAccountCursor(ctx, params)
@@ -1058,7 +1039,7 @@ func (h *agentHandler) ListAgentMemories(ctx context.Context, req *pb.ListAgentM
 		rows,
 		limit,
 		cursorDir,
-		func(m sqlc.AgentMemory) time.Time { return m.CreatedAt.Time },
+		func(m sqlc.AgentMemory) time.Time { return m.CreatedAt },
 		func(m sqlc.AgentMemory) string { return m.ID },
 	)
 

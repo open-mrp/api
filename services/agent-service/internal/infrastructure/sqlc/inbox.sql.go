@@ -7,76 +7,79 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"time"
 )
 
 const claimInboxRecord = `-- name: ClaimInboxRecord :execrows
 UPDATE message_inbox
-SET lock_owner = $2, lock_expires_at = now() + ($3 || ' seconds')::interval
-WHERE id = $1
+SET lock_owner = ?,
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND)
+WHERE id = ?
   AND status = 'received'
-  AND (lock_expires_at IS NULL OR lock_expires_at <= now())
+  AND (lock_expires_at IS NULL OR lock_expires_at <= NOW(3))
 `
 
 type ClaimInboxRecordParams struct {
-	ID        int64
-	LockOwner pgtype.Text
-	Column3   pgtype.Text
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
+	ID                  int64
 }
 
 // Conditional on the lease still being free, so two consumers racing the same abandoned record cannot both proceed to the handler.
 func (q *Queries) ClaimInboxRecord(ctx context.Context, arg ClaimInboxRecordParams) (int64, error) {
-	result, err := q.db.Exec(ctx, claimInboxRecord, arg.ID, arg.LockOwner, arg.Column3)
+	result, err := q.db.ExecContext(ctx, claimInboxRecord, arg.LockOwner, arg.LockDurationSeconds, arg.ID)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected(), nil
+	return result.RowsAffected()
 }
 
 const completeInboxRecord = `-- name: CompleteInboxRecord :execrows
 UPDATE message_inbox
-SET status = 'processed', processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $1 AND status = 'received' AND lock_owner = $2
+SET status = 'processed', processed_at = NOW(3), lock_owner = NULL, lock_expires_at = NULL
+WHERE id = ?
+  AND status = 'received'
+  AND lock_owner = ?
 `
 
 type CompleteInboxRecordParams struct {
 	ID        int64
-	LockOwner pgtype.Text
+	LockOwner sql.NullString
 }
 
 // The status guard is what makes this safe to call inside a handler's own transaction: a second attempt's UPDATE blocks on the row lock, then matches zero rows once the winner commits, so the loser's work rolls back instead of double-applying.
 func (q *Queries) CompleteInboxRecord(ctx context.Context, arg CompleteInboxRecordParams) (int64, error) {
-	result, err := q.db.Exec(ctx, completeInboxRecord, arg.ID, arg.LockOwner)
+	result, err := q.db.ExecContext(ctx, completeInboxRecord, arg.ID, arg.LockOwner)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected(), nil
+	return result.RowsAffected()
 }
 
 const getInboxBacklogStats = `-- name: GetInboxBacklogStats :many
 SELECT handler,
        status,
-       (failed_at IS NOT NULL)::boolean AS has_failed,
-       COUNT(*)::bigint AS message_count,
-       (EXTRACT(EPOCH FROM (now() - MIN(received_at))) * 1000000)::bigint AS oldest_age_us
+       CAST(failed_at IS NOT NULL AS SIGNED) AS has_failed,
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(received_at), NOW(3)) AS SIGNED) AS oldest_age_us
 FROM message_inbox
 WHERE status IN ('received', 'discarded')
-  AND service_name = $1
-GROUP BY handler, status, (failed_at IS NOT NULL)
+  AND service_name = ?
+GROUP BY handler, status, has_failed
 `
 
 type GetInboxBacklogStatsRow struct {
 	Handler      string
 	Status       string
-	HasFailed    bool
+	HasFailed    int64
 	MessageCount int64
 	OldestAgeUs  int64
 }
 
-// Served by the partial message_inbox_backlog_idx, so it reads only unfinished and discarded rows, never the processed history.
+// Leads on message_inbox_alert_scan_idx (status, alerted_at), so it reads only unfinished and discarded rows, never the processed history.
 func (q *Queries) GetInboxBacklogStats(ctx context.Context, serviceName string) ([]GetInboxBacklogStatsRow, error) {
-	rows, err := q.db.Query(ctx, getInboxBacklogStats, serviceName)
+	rows, err := q.db.QueryContext(ctx, getInboxBacklogStats, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +98,9 @@ func (q *Queries) GetInboxBacklogStats(ctx context.Context, serviceName string) 
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -104,7 +110,7 @@ func (q *Queries) GetInboxBacklogStats(ctx context.Context, serviceName string) 
 const getInboxRecordByMessageAndHandler = `-- name: GetInboxRecordByMessageAndHandler :one
 SELECT id, message_id, service_name, handler, message_type, request_id, parent_message_id, status, attempts, last_error, received_at, processed_at, failed_at, lock_owner, lock_expires_at
 FROM message_inbox
-WHERE message_id = $1 AND handler = $2
+WHERE message_id = ? AND handler = ?
 `
 
 type GetInboxRecordByMessageAndHandlerParams struct {
@@ -112,9 +118,27 @@ type GetInboxRecordByMessageAndHandlerParams struct {
 	Handler   string
 }
 
-func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (MessageInbox, error) {
-	row := q.db.QueryRow(ctx, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
-	var i MessageInbox
+type GetInboxRecordByMessageAndHandlerRow struct {
+	ID              int64
+	MessageID       string
+	ServiceName     string
+	Handler         string
+	MessageType     string
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
+	Status          string
+	Attempts        int32
+	LastError       sql.NullString
+	ReceivedAt      time.Time
+	ProcessedAt     sql.NullTime
+	FailedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
+}
+
+func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg GetInboxRecordByMessageAndHandlerParams) (GetInboxRecordByMessageAndHandlerRow, error) {
+	row := q.db.QueryRowContext(ctx, getInboxRecordByMessageAndHandler, arg.MessageID, arg.Handler)
+	var i GetInboxRecordByMessageAndHandlerRow
 	err := row.Scan(
 		&i.ID,
 		&i.MessageID,
@@ -137,110 +161,129 @@ func (q *Queries) GetInboxRecordByMessageAndHandler(ctx context.Context, arg Get
 
 const markInboxRecordDiscarded = `-- name: MarkInboxRecordDiscarded :execrows
 UPDATE message_inbox
-SET status = 'discarded', last_error = $1, failed_at = now(), processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $2 AND status = 'received' AND lock_owner = $3
+SET status = 'discarded',
+    last_error = ?,
+    failed_at = NOW(3),
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = ?
+  AND status = 'received'
+  AND lock_owner = ?
 `
 
 type MarkInboxRecordDiscardedParams struct {
-	LastError pgtype.Text
+	LastError sql.NullString
 	ID        int64
-	LockOwner pgtype.Text
+	LockOwner sql.NullString
 }
 
 // processed_at is stamped so the existing retention purge and its index cover discarded rows too; status is what distinguishes work that was dropped from work that was applied.
 // Guarded like MarkInboxRecordFailed, so a lapsed attempt cannot overwrite a record another attempt has already completed.
 func (q *Queries) MarkInboxRecordDiscarded(ctx context.Context, arg MarkInboxRecordDiscardedParams) (int64, error) {
-	result, err := q.db.Exec(ctx, markInboxRecordDiscarded, arg.LastError, arg.ID, arg.LockOwner)
+	result, err := q.db.ExecContext(ctx, markInboxRecordDiscarded, arg.LastError, arg.ID, arg.LockOwner)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected(), nil
+	return result.RowsAffected()
 }
 
 const markInboxRecordFailed = `-- name: MarkInboxRecordFailed :execrows
 UPDATE message_inbox
-SET attempts = attempts + 1, last_error = $1, failed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $2 AND status = 'received' AND lock_owner = $3
+SET attempts = attempts + 1,
+    last_error = ?,
+    failed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = ?
+  AND status = 'received'
+  AND lock_owner = ?
 `
 
 type MarkInboxRecordFailedParams struct {
-	LastError pgtype.Text
+	LastError sql.NullString
 	ID        int64
-	LockOwner pgtype.Text
+	LockOwner sql.NullString
 }
 
 // Guarded on status and owner: an attempt whose lease already lapsed must not clear the lease of the consumer that claimed the record after it, nor stamp a failure over a record another attempt has already completed or discarded.
 func (q *Queries) MarkInboxRecordFailed(ctx context.Context, arg MarkInboxRecordFailedParams) (int64, error) {
-	result, err := q.db.Exec(ctx, markInboxRecordFailed, arg.LastError, arg.ID, arg.LockOwner)
+	result, err := q.db.ExecContext(ctx, markInboxRecordFailed, arg.LastError, arg.ID, arg.LockOwner)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected(), nil
+	return result.RowsAffected()
 }
 
 const markInboxRecordIgnored = `-- name: MarkInboxRecordIgnored :execrows
 UPDATE message_inbox
-SET status = 'ignored', last_error = $1, processed_at = now(), lock_owner = NULL, lock_expires_at = NULL
-WHERE id = $2 AND status = 'received' AND lock_owner = $3
+SET status = 'ignored',
+    last_error = ?,
+    processed_at = NOW(3),
+    lock_owner = NULL,
+    lock_expires_at = NULL
+WHERE id = ?
+  AND status = 'received'
+  AND lock_owner = ?
 `
 
 type MarkInboxRecordIgnoredParams struct {
-	LastError pgtype.Text
+	LastError sql.NullString
 	ID        int64
-	LockOwner pgtype.Text
+	LockOwner sql.NullString
 }
 
 // Terminal like a discard, but not a failure: the failure monitor scans 'discarded' and never this.
 func (q *Queries) MarkInboxRecordIgnored(ctx context.Context, arg MarkInboxRecordIgnoredParams) (int64, error) {
-	result, err := q.db.Exec(ctx, markInboxRecordIgnored, arg.LastError, arg.ID, arg.LockOwner)
+	result, err := q.db.ExecContext(ctx, markInboxRecordIgnored, arg.LastError, arg.ID, arg.LockOwner)
 	if err != nil {
 		return 0, err
 	}
-	return result.RowsAffected(), nil
+	return result.RowsAffected()
 }
 
-const purgeProcessedInboxMessages = `-- name: PurgeProcessedInboxMessages :execrows
-WITH rows AS (
-    SELECT id FROM message_inbox
-    WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < now() - ($1 || ' hours')::interval
-    LIMIT $2
-)
+const purgeProcessedInboxMessages = `-- name: PurgeProcessedInboxMessages :execresult
 DELETE FROM message_inbox
-WHERE id IN (SELECT id FROM rows)
+WHERE status IN ('processed', 'discarded', 'ignored') AND processed_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+LIMIT ?
 `
 
 type PurgeProcessedInboxMessagesParams struct {
-	Column1 pgtype.Text
+	Column1 interface{}
 	Limit   int32
 }
 
-func (q *Queries) PurgeProcessedInboxMessages(ctx context.Context, arg PurgeProcessedInboxMessagesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, purgeProcessedInboxMessages, arg.Column1, arg.Limit)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) PurgeProcessedInboxMessages(ctx context.Context, arg PurgeProcessedInboxMessagesParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, purgeProcessedInboxMessages, arg.Column1, arg.Limit)
 }
 
-const tryInsertInboxRecord = `-- name: TryInsertInboxRecord :one
+const tryInsertInboxRecord = `-- name: TryInsertInboxRecord :execresult
 INSERT INTO message_inbox (message_id, service_name, handler, message_type, request_id, parent_message_id, lock_owner, lock_expires_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, now() + ($8 || ' seconds')::interval)
-RETURNING id
+VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    DATE_ADD(NOW(3), INTERVAL ? SECOND)
+)
 `
 
 type TryInsertInboxRecordParams struct {
-	MessageID       string
-	ServiceName     string
-	Handler         string
-	MessageType     string
-	RequestID       pgtype.Text
-	ParentMessageID pgtype.Text
-	LockOwner       pgtype.Text
-	Column8         pgtype.Text
+	MessageID           string
+	ServiceName         string
+	Handler             string
+	MessageType         string
+	RequestID           sql.NullString
+	ParentMessageID     sql.NullString
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
 }
 
-func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRecordParams) (int64, error) {
-	row := q.db.QueryRow(ctx, tryInsertInboxRecord,
+func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRecordParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, tryInsertInboxRecord,
 		arg.MessageID,
 		arg.ServiceName,
 		arg.Handler,
@@ -248,9 +291,6 @@ func (q *Queries) TryInsertInboxRecord(ctx context.Context, arg TryInsertInboxRe
 		arg.RequestID,
 		arg.ParentMessageID,
 		arg.LockOwner,
-		arg.Column8,
+		arg.LockDurationSeconds,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }

@@ -2,15 +2,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
-	"fmt"
-	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
@@ -54,12 +52,13 @@ func (r *outboxRepoImpl) OutboxStats(ctx context.Context, serviceName string) ([
 }
 
 func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessageInput) (int64, error) {
-	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.create")
+	ctx, span := outboxRepoTracer.Start(ctx, "repository.outbox.create")
 	defer span.End()
+
+	length := id.IDLength22
 
 	messageID := input.MessageID
 	if messageID == "" {
-		length := id.IDLength22
 		genID, err := id.GenID(id.MessageIDPrefix, &length)
 		if err != nil {
 			span.RecordError(err)
@@ -79,25 +78,22 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 		maxAttempts = 25
 	}
 
-	// Defer first delivery by DelaySeconds (0 = available now). Column9 is the next_run_at interval offset; it is rendered server-side as now() + ('<n>' || ' seconds')::interval, mirroring the enqueuer's retry-backoff scheduling so a re-enqueued message is not republished into a still-failing dependency.
-	delaySecs := input.DelaySeconds
-	if delaySecs < 0 {
-		delaySecs = 0
-	}
+	delaySecs := max(input.DelaySeconds, 0)
 
 	result, err := r.queries.CreateOutboxMessage(ctx, sqlc.CreateOutboxMessageParams{
 		MessageID:       messageID,
 		ServiceName:     input.ServiceName,
 		MessageType:     input.MessageType,
 		Destination:     input.Destination,
-		RoutingKey:      agentdb.PgText(input.RoutingKey),
+		RoutingKey:      db.NullString(input.RoutingKey),
 		Headers:         nil,
 		Payload:         payloadJSON,
 		MaxAttempts:     int32(maxAttempts), // #nosec G115 - small config value
-		Column9:         agentdb.PgText(strconv.Itoa(delaySecs)),
-		RequestID:       agentdb.PgText(input.Payload.RequestID),
-		ParentMessageID: agentdb.PgText(input.Payload.ParentMessageID),
+		DelaySeconds:    delaySecs,
+		RequestID:       db.NullString(input.Payload.RequestID),
+		ParentMessageID: db.NullString(input.Payload.ParentMessageID),
 	})
+
 	if err != nil {
 		span.RecordError(err)
 		return 0, err
@@ -109,45 +105,63 @@ func (r *outboxRepoImpl) Create(ctx context.Context, input messaging.OutboxMessa
 }
 
 type outboxEnqueuerRepoImpl struct {
-	pool    *pgxpool.Pool
+	dbPool  *sql.DB
 	queries *sqlc.Queries
 }
 
-func NewOutboxEnqueuerRepo(pool *pgxpool.Pool, queries *sqlc.Queries) messaging.OutboxEnqueuerRepo {
-	return &outboxEnqueuerRepoImpl{pool: pool, queries: queries}
+func NewOutboxEnqueuerRepo(dbPool *sql.DB, queries *sqlc.Queries) messaging.OutboxEnqueuerRepo {
+	return &outboxEnqueuerRepoImpl{dbPool: dbPool, queries: queries}
 }
 
 func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, serviceName, lockOwner string, limit int, lockDurationSeconds int) ([]*messaging.OutboxMessage, error) {
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.acquire_and_lock")
 	defer span.End()
 
-	tx, err := r.pool.Begin(ctx)
+	tx, err := r.dbPool.BeginTx(ctx, nil)
 	if err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback()
 
 	txQueries := r.queries.WithTx(tx)
 
-	err = txQueries.AcquireOutboxMessages(ctx, sqlc.AcquireOutboxMessagesParams{
-		LockOwner:   agentdb.PgText(lockOwner),
-		Column2:     agentdb.PgText(fmt.Sprintf("%d", lockDurationSeconds)),
-		Limit:       int32(limit), // #nosec G115 - small config value
+	ids, err := txQueries.SelectOutboxMessageIDsForLock(ctx, sqlc.SelectOutboxMessageIDsForLockParams{
 		ServiceName: serviceName,
+		Limit:       int32(limit), // #nosec G115 - small config value
+	})
+	if err != nil {
+		span.RecordError(err)
+		return nil, err
+	}
+	if len(ids) == 0 {
+		if err := tx.Commit(); err != nil {
+			span.RecordError(err)
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	err = txQueries.LockOutboxMessagesByIDs(ctx, sqlc.LockOutboxMessagesByIDsParams{
+		LockOwner:           db.NullString(lockOwner),
+		LockDurationSeconds: lockDurationSeconds,
+		Ids:                 ids,
 	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
 
-	rows, err := txQueries.GetLockedOutboxMessages(ctx, agentdb.PgText(lockOwner))
+	rows, err := txQueries.GetLockedOutboxMessagesByIDs(ctx, sqlc.GetLockedOutboxMessagesByIDsParams{
+		Ids:       ids,
+		LockOwner: db.NullString(lockOwner),
+	})
 	if err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err := tx.Commit(); err != nil {
 		span.RecordError(err)
 		return nil, err
 	}
@@ -171,16 +185,16 @@ func (r *outboxEnqueuerRepoImpl) AcquireAndLock(ctx context.Context, serviceName
 			Status:          messaging.OutboxStatus(row.Status),
 			Attempts:        int(row.Attempts),
 			MaxAttempts:     int(row.MaxAttempts),
-			NextRunAt:       row.NextRunAt.Time,
-			LockedAt:        agentdb.TimeFromPgTimestamptz(row.LockedAt),
-			LockOwner:       agentdb.StringFromPgText(row.LockOwner),
-			LockExpiresAt:   agentdb.TimeFromPgTimestamptz(row.LockExpiresAt),
-			LastError:       agentdb.StringFromPgText(row.LastError),
-			PublishedAt:     agentdb.TimeFromPgTimestamptz(row.PublishedAt),
-			RequestID:       agentdb.StringFromPgText(row.RequestID),
-			ParentMessageID: agentdb.StringFromPgText(row.ParentMessageID),
-			CreatedAt:       row.CreatedAt.Time,
-			UpdatedAt:       row.UpdatedAt.Time,
+			NextRunAt:       row.NextRunAt,
+			LockedAt:        db.TimeFromNullTime(row.LockedAt),
+			LockOwner:       db.StringFromNullString(row.LockOwner),
+			LockExpiresAt:   db.TimeFromNullTime(row.LockExpiresAt),
+			LastError:       db.StringFromNullString(row.LastError),
+			PublishedAt:     db.TimeFromNullTime(row.PublishedAt),
+			RequestID:       db.StringFromNullString(row.RequestID),
+			ParentMessageID: db.StringFromNullString(row.ParentMessageID),
+			CreatedAt:       row.CreatedAt,
+			UpdatedAt:       row.UpdatedAt,
 		}
 		messages = append(messages, msg)
 	}
@@ -210,9 +224,9 @@ func (r *outboxEnqueuerRepoImpl) MarkFailed(ctx context.Context, id int64, error
 	defer span.End()
 
 	err := r.queries.MarkOutboxMessageFailed(ctx, sqlc.MarkOutboxMessageFailedParams{
+		LastError: db.NullString(errorMsg),
+		Column2:   retryDelaySecs,
 		ID:        id,
-		LastError: agentdb.PgText(errorMsg),
-		Column2:   agentdb.PgText(fmt.Sprintf("%d", retryDelaySecs)),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -226,7 +240,22 @@ func (r *outboxEnqueuerRepoImpl) CleanupExpiredLocks(ctx context.Context, limit 
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.cleanup_expired_locks")
 	defer span.End()
 
-	count, err := r.queries.CleanupExpiredOutboxLocks(ctx, limit)
+	ids, err := r.queries.SelectExpiredOutboxLockIDs(ctx, limit)
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	result, err := r.queries.CleanupExpiredOutboxLocksByIDs(ctx, ids)
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
 	if err != nil {
 		span.RecordError(err)
 		return 0, err
@@ -239,10 +268,28 @@ func (r *outboxEnqueuerRepoImpl) PurgePublished(ctx context.Context, retentionHo
 	ctx, span := tracing.StartSpan(ctx, outboxRepoTracer, "repository.outbox.purge_published")
 	defer span.End()
 
-	count, err := r.queries.PurgePublishedOutboxMessages(ctx, sqlc.PurgePublishedOutboxMessagesParams{
-		Column1: agentdb.PgText(fmt.Sprintf("%d", retentionHours)),
-		Limit:   limit,
+	ids, err := r.queries.SelectPublishedOutboxMessageIDsForPurge(ctx, sqlc.SelectPublishedOutboxMessageIDsForPurgeParams{
+		RetentionHours: retentionHours,
+		Limit:          limit,
 	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	result, err := r.queries.PurgePublishedOutboxMessagesByIDs(ctx, sqlc.PurgePublishedOutboxMessagesByIDsParams{
+		Ids:            ids,
+		RetentionHours: retentionHours,
+	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
 	if err != nil {
 		span.RecordError(err)
 		return 0, err

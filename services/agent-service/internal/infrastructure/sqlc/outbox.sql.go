@@ -7,72 +7,53 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	"strings"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/open-mrp/api/shared/db"
 )
 
-const acquireOutboxMessages = `-- name: AcquireOutboxMessages :exec
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE status = 'pending'
-      AND message_outbox.service_name = $4
-      AND next_run_at <= now()
-      AND (locked_at IS NULL OR lock_expires_at < now())
-      AND attempts < max_attempts
-    ORDER BY next_run_at ASC
-    LIMIT $3
-)
-UPDATE message_outbox
-SET locked_at = now(),
-    lock_owner = $1,
-    lock_expires_at = now() + ($2 || ' seconds')::interval,
-    updated_at = now()
-WHERE id IN (SELECT id FROM rows)
+const cleanupExpiredOutboxLocksByIDs = `-- name: CleanupExpiredOutboxLocksByIDs :execresult
+UPDATE message_outbox FORCE INDEX (PRIMARY)
+SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+  AND lock_expires_at < NOW(3)
+ORDER BY id ASC
 `
 
-type AcquireOutboxMessagesParams struct {
-	LockOwner   pgtype.Text
-	Column2     pgtype.Text
-	Limit       int32
-	ServiceName string
-}
-
-func (q *Queries) AcquireOutboxMessages(ctx context.Context, arg AcquireOutboxMessagesParams) error {
-	_, err := q.db.Exec(ctx, acquireOutboxMessages,
-		arg.LockOwner,
-		arg.Column2,
-		arg.Limit,
-		arg.ServiceName,
-	)
-	return err
-}
-
-const cleanupExpiredOutboxLocks = `-- name: CleanupExpiredOutboxLocks :execrows
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE lock_expires_at < now()
-    LIMIT $1
-)
-UPDATE message_outbox
-SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = now()
-WHERE id IN (SELECT id FROM rows)
-`
-
-func (q *Queries) CleanupExpiredOutboxLocks(ctx context.Context, limit int32) (int64, error) {
-	result, err := q.db.Exec(ctx, cleanupExpiredOutboxLocks, limit)
-	if err != nil {
-		return 0, err
+func (q *Queries) CleanupExpiredOutboxLocksByIDs(ctx context.Context, ids []int64) (sql.Result, error) {
+	query := cleanupExpiredOutboxLocksByIDs
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	return result.RowsAffected(), nil
+	return q.db.ExecContext(ctx, query, queryParams...)
 }
 
-const createOutboxMessage = `-- name: CreateOutboxMessage :one
+const createOutboxMessage = `-- name: CreateOutboxMessage :execlastid
 INSERT INTO message_outbox (
     message_id, service_name, message_type, destination, routing_key,
     headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
-) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, now() + ($9 || ' seconds')::interval, $10, $11)
-RETURNING id
+) VALUES (
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    ?,
+    'pending',
+    ?,
+    DATE_ADD(NOW(3), INTERVAL ? SECOND),
+    ?,
+    ?
+)
 `
 
 type CreateOutboxMessageParams struct {
@@ -80,17 +61,17 @@ type CreateOutboxMessageParams struct {
 	ServiceName     string
 	MessageType     string
 	Destination     string
-	RoutingKey      pgtype.Text
+	RoutingKey      sql.NullString
 	Headers         db.NullableRawMessage
-	Payload         []byte
+	Payload         json.RawMessage
 	MaxAttempts     int32
-	Column9         pgtype.Text
-	RequestID       pgtype.Text
-	ParentMessageID pgtype.Text
+	DelaySeconds    interface{}
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
 }
 
 func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessageParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createOutboxMessage,
+	result, err := q.db.ExecContext(ctx, createOutboxMessage,
 		arg.MessageID,
 		arg.ServiceName,
 		arg.MessageType,
@@ -99,23 +80,42 @@ func (q *Queries) CreateOutboxMessage(ctx context.Context, arg CreateOutboxMessa
 		arg.Headers,
 		arg.Payload,
 		arg.MaxAttempts,
-		arg.Column9,
+		arg.DelaySeconds,
 		arg.RequestID,
 		arg.ParentMessageID,
 	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 
-const getLockedOutboxMessages = `-- name: GetLockedOutboxMessages :many
-SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at FROM message_outbox
-WHERE lock_owner = $1 AND lock_expires_at > now()
-ORDER BY next_run_at ASC
+const getLockedOutboxMessagesByIDs = `-- name: GetLockedOutboxMessagesByIDs :many
+SELECT id, message_id, service_name, message_type, destination, routing_key, headers, payload, status, attempts, max_attempts, next_run_at, locked_at, lock_owner, lock_expires_at, last_error, published_at, request_id, parent_message_id, created_at, updated_at, alerted_at FROM message_outbox FORCE INDEX (PRIMARY)
+WHERE id IN (/*SLICE:ids*/?)
+  AND lock_owner = ?
+  AND lock_expires_at > NOW(3)
+ORDER BY id ASC
 `
 
-func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner pgtype.Text) ([]MessageOutbox, error) {
-	rows, err := q.db.Query(ctx, getLockedOutboxMessages, lockOwner)
+type GetLockedOutboxMessagesByIDsParams struct {
+	Ids       []int64
+	LockOwner sql.NullString
+}
+
+func (q *Queries) GetLockedOutboxMessagesByIDs(ctx context.Context, arg GetLockedOutboxMessagesByIDsParams) ([]MessageOutbox, error) {
+	query := getLockedOutboxMessagesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	queryParams = append(queryParams, arg.LockOwner)
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,10 +145,14 @@ func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner pgtype.
 			&i.ParentMessageID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.AlertedAt,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -158,11 +162,11 @@ func (q *Queries) GetLockedOutboxMessages(ctx context.Context, lockOwner pgtype.
 
 const getOutboxBacklogStats = `-- name: GetOutboxBacklogStats :many
 SELECT status,
-       COUNT(*)::bigint AS message_count,
-       (EXTRACT(EPOCH FROM (now() - MIN(created_at))) * 1000000)::bigint AS oldest_age_us
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(created_at), NOW(3)) AS SIGNED) AS oldest_age_us
 FROM message_outbox
 WHERE status IN ('pending', 'failed')
-  AND service_name = $1
+  AND service_name = ?
 GROUP BY status
 `
 
@@ -172,9 +176,9 @@ type GetOutboxBacklogStatsRow struct {
 	OldestAgeUs  int64
 }
 
-// Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+// Ranges on status, so it reads only the unpublished rows, never the published history.
 func (q *Queries) GetOutboxBacklogStats(ctx context.Context, serviceName string) ([]GetOutboxBacklogStatsRow, error) {
-	rows, err := q.db.Query(ctx, getOutboxBacklogStats, serviceName)
+	rows, err := q.db.QueryContext(ctx, getOutboxBacklogStats, serviceName)
 	if err != nil {
 		return nil, err
 	}
@@ -187,68 +191,228 @@ func (q *Queries) GetOutboxBacklogStats(ctx context.Context, serviceName string)
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 	return items, nil
 }
 
+const lockOutboxMessagesByIDs = `-- name: LockOutboxMessagesByIDs :exec
+UPDATE message_outbox FORCE INDEX (PRIMARY)
+SET locked_at = NOW(3),
+    lock_owner = ?,
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
+    updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
+  AND status = 'pending'
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY id ASC
+`
+
+type LockOutboxMessagesByIDsParams struct {
+	LockOwner           sql.NullString
+	LockDurationSeconds interface{}
+	Ids                 []int64
+}
+
+func (q *Queries) LockOutboxMessagesByIDs(ctx context.Context, arg LockOutboxMessagesByIDsParams) error {
+	query := lockOutboxMessagesByIDs
+	var queryParams []interface{}
+	queryParams = append(queryParams, arg.LockOwner)
+	queryParams = append(queryParams, arg.LockDurationSeconds)
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
+	return err
+}
+
 const markOutboxMessageFailed = `-- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox
 SET attempts = attempts + 1,
-    last_error = $1,
+    last_error = ?,
     locked_at = NULL,
     lock_owner = NULL,
     lock_expires_at = NULL,
-    next_run_at = now() + ($2 || ' seconds')::interval,
+    next_run_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
     status = CASE WHEN attempts + 1 >= max_attempts THEN 'failed' ELSE 'pending' END,
-    updated_at = now()
-WHERE id = $3
+    updated_at = NOW(3)
+WHERE id = ?
 `
 
 type MarkOutboxMessageFailedParams struct {
-	LastError pgtype.Text
-	Column2   pgtype.Text
+	LastError sql.NullString
+	Column2   interface{}
 	ID        int64
 }
 
 func (q *Queries) MarkOutboxMessageFailed(ctx context.Context, arg MarkOutboxMessageFailedParams) error {
-	_, err := q.db.Exec(ctx, markOutboxMessageFailed, arg.LastError, arg.Column2, arg.ID)
+	_, err := q.db.ExecContext(ctx, markOutboxMessageFailed, arg.LastError, arg.Column2, arg.ID)
 	return err
 }
 
 const markOutboxMessagesPublished = `-- name: MarkOutboxMessagesPublished :exec
 UPDATE message_outbox
-SET status = 'published', published_at = now(),
+SET status = 'published', published_at = NOW(3),
     locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
-    updated_at = now()
-WHERE id = ANY($1::bigint[])
+    updated_at = NOW(3)
+WHERE id IN (/*SLICE:ids*/?)
 `
 
 func (q *Queries) MarkOutboxMessagesPublished(ctx context.Context, ids []int64) error {
-	_, err := q.db.Exec(ctx, markOutboxMessagesPublished, ids)
+	query := markOutboxMessagesPublished
+	var queryParams []interface{}
+	if len(ids) > 0 {
+		for _, v := range ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
+	}
+	_, err := q.db.ExecContext(ctx, query, queryParams...)
 	return err
 }
 
-const purgePublishedOutboxMessages = `-- name: PurgePublishedOutboxMessages :execrows
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE status = 'published' AND published_at < now() - ($1 || ' hours')::interval
-    LIMIT $2
-)
+const purgePublishedOutboxMessagesByIDs = `-- name: PurgePublishedOutboxMessagesByIDs :execresult
 DELETE FROM message_outbox
-WHERE id IN (SELECT id FROM rows)
+WHERE id IN (/*SLICE:ids*/?)
+  AND status = 'published'
+  AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+ORDER BY id ASC
 `
 
-type PurgePublishedOutboxMessagesParams struct {
-	Column1 pgtype.Text
-	Limit   int32
+type PurgePublishedOutboxMessagesByIDsParams struct {
+	Ids            []int64
+	RetentionHours interface{}
 }
 
-func (q *Queries) PurgePublishedOutboxMessages(ctx context.Context, arg PurgePublishedOutboxMessagesParams) (int64, error) {
-	result, err := q.db.Exec(ctx, purgePublishedOutboxMessages, arg.Column1, arg.Limit)
-	if err != nil {
-		return 0, err
+func (q *Queries) PurgePublishedOutboxMessagesByIDs(ctx context.Context, arg PurgePublishedOutboxMessagesByIDsParams) (sql.Result, error) {
+	query := purgePublishedOutboxMessagesByIDs
+	var queryParams []interface{}
+	if len(arg.Ids) > 0 {
+		for _, v := range arg.Ids {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:ids*/?", strings.Repeat(",?", len(arg.Ids))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	return result.RowsAffected(), nil
+	queryParams = append(queryParams, arg.RetentionHours)
+	return q.db.ExecContext(ctx, query, queryParams...)
+}
+
+const selectExpiredOutboxLockIDs = `-- name: SelectExpiredOutboxLockIDs :many
+SELECT id FROM message_outbox
+WHERE lock_expires_at < NOW(3)
+ORDER BY id ASC
+LIMIT ?
+`
+
+func (q *Queries) SelectExpiredOutboxLockIDs(ctx context.Context, limit int32) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectExpiredOutboxLockIDs, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectOutboxMessageIDsForLock = `-- name: SelectOutboxMessageIDsForLock :many
+SELECT id FROM message_outbox
+WHERE status = 'pending'
+  AND service_name = ?
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY next_run_at ASC, id ASC
+LIMIT ?
+`
+
+type SelectOutboxMessageIDsForLockParams struct {
+	ServiceName string
+	Limit       int32
+}
+
+// Scoped to the calling service so the services sharing this table do not race each other for the same rows.
+func (q *Queries) SelectOutboxMessageIDsForLock(ctx context.Context, arg SelectOutboxMessageIDsForLockParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectOutboxMessageIDsForLock, arg.ServiceName, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const selectPublishedOutboxMessageIDsForPurge = `-- name: SelectPublishedOutboxMessageIDsForPurge :many
+SELECT id FROM message_outbox
+WHERE status = 'published' AND published_at < DATE_SUB(NOW(3), INTERVAL ? HOUR)
+ORDER BY published_at ASC, id ASC
+LIMIT ?
+`
+
+type SelectPublishedOutboxMessageIDsForPurgeParams struct {
+	RetentionHours interface{}
+	Limit          int32
+}
+
+func (q *Queries) SelectPublishedOutboxMessageIDsForPurge(ctx context.Context, arg SelectPublishedOutboxMessageIDsForPurgeParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, selectPublishedOutboxMessageIDsForPurge, arg.RetentionHours, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

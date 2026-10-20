@@ -7,37 +7,44 @@ package sqlc
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
-const acquireTaskLease = `-- name: AcquireTaskLease :execrows
+const acquireTaskLease = `-- name: AcquireTaskLease :execresult
 INSERT INTO task_leases (name, holder, acquired_at, expires_at)
-VALUES ($1, $2, now(), now() + ($3 || ' seconds')::interval)
-ON CONFLICT (name) DO UPDATE SET
-    holder      = EXCLUDED.holder,
-    acquired_at = EXCLUDED.acquired_at,
-    expires_at  = EXCLUDED.expires_at
-WHERE task_leases.expires_at < now() OR task_leases.holder = EXCLUDED.holder
+VALUES (?, ?, NOW(6), DATE_ADD(NOW(6), INTERVAL ? SECOND))
+ON DUPLICATE KEY UPDATE
+    holder      = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(holder), holder),
+    acquired_at = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(acquired_at), acquired_at),
+    expires_at  = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(expires_at), expires_at)
 `
 
 type AcquireTaskLeaseParams struct {
 	Name    string
 	Holder  string
-	Column3 pgtype.Text
+	Column3 interface{}
 }
 
-func (q *Queries) AcquireTaskLease(ctx context.Context, arg AcquireTaskLeaseParams) (int64, error) {
-	result, err := q.db.Exec(ctx, acquireTaskLease, arg.Name, arg.Holder, arg.Column3)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) AcquireTaskLease(ctx context.Context, arg AcquireTaskLeaseParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, acquireTaskLease, arg.Name, arg.Holder, arg.Column3)
+}
+
+const getTaskLeaseHolder = `-- name: GetTaskLeaseHolder :one
+SELECT holder
+FROM task_leases
+WHERE name = ?
+`
+
+func (q *Queries) GetTaskLeaseHolder(ctx context.Context, name string) (string, error) {
+	row := q.db.QueryRowContext(ctx, getTaskLeaseHolder, name)
+	var holder string
+	err := row.Scan(&holder)
+	return holder, err
 }
 
 const releaseTaskLease = `-- name: ReleaseTaskLease :exec
 DELETE FROM task_leases
-WHERE name = $1 AND holder = $2
+WHERE name = ? AND holder = ?
 `
 
 type ReleaseTaskLeaseParams struct {
@@ -46,26 +53,22 @@ type ReleaseTaskLeaseParams struct {
 }
 
 func (q *Queries) ReleaseTaskLease(ctx context.Context, arg ReleaseTaskLeaseParams) error {
-	_, err := q.db.Exec(ctx, releaseTaskLease, arg.Name, arg.Holder)
+	_, err := q.db.ExecContext(ctx, releaseTaskLease, arg.Name, arg.Holder)
 	return err
 }
 
-const renewTaskLease = `-- name: RenewTaskLease :execrows
+const renewTaskLease = `-- name: RenewTaskLease :execresult
 UPDATE task_leases
-SET expires_at = now() + ($1 || ' seconds')::interval
-WHERE name = $2 AND holder = $3
+SET expires_at = DATE_ADD(NOW(6), INTERVAL ? SECOND)
+WHERE name = ? AND holder = ?
 `
 
 type RenewTaskLeaseParams struct {
-	Column1 pgtype.Text
+	Column1 interface{}
 	Name    string
 	Holder  string
 }
 
-func (q *Queries) RenewTaskLease(ctx context.Context, arg RenewTaskLeaseParams) (int64, error) {
-	result, err := q.db.Exec(ctx, renewTaskLease, arg.Column1, arg.Name, arg.Holder)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) RenewTaskLease(ctx context.Context, arg RenewTaskLeaseParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, renewTaskLease, arg.Column1, arg.Name, arg.Holder)
 }

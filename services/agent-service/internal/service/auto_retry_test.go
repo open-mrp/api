@@ -9,10 +9,10 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
 	"go.uber.org/mock/gomock"
 )
@@ -53,7 +53,7 @@ func TestMaybeAutoRetry_ReenqueuesTransientFailure(t *testing.T) {
 	outbox := &fakeOutboxRepo{}
 	s := &runnerSvc{repos: factory, outboxRepo: outbox} // no broker → emitEvent only inserts, never publishes
 
-	run := &sqlc.AgentRun{ID: "agr_1", AccountID: "acct_1", RetryCount: 0, TriggerMessageID: agentdb.PgText("msg_9")}
+	run := &sqlc.AgentRun{ID: "agr_1", AccountID: "acct_1", RetryCount: 0, TriggerMessageID: db.NullString("msg_9")}
 	if !s.maybeAutoRetry(context.Background(), runRepo, run, retryableErr()) {
 		t.Fatal("expected maybeAutoRetry to re-enqueue and return true")
 	}

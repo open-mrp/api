@@ -1,77 +1,104 @@
--- name: CreateOutboxMessage :one
+-- name: CreateOutboxMessage :execlastid
 INSERT INTO message_outbox (
     message_id, service_name, message_type, destination, routing_key,
     headers, payload, status, max_attempts, next_run_at, request_id, parent_message_id
-) VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', $8, now() + ($9 || ' seconds')::interval, $10, $11)
-RETURNING id;
+) VALUES (
+    sqlc.arg('message_id'),
+    sqlc.arg('service_name'),
+    sqlc.arg('message_type'),
+    sqlc.arg('destination'),
+    sqlc.arg('routing_key'),
+    sqlc.arg('headers'),
+    sqlc.arg('payload'),
+    'pending',
+    sqlc.arg('max_attempts'),
+    DATE_ADD(NOW(3), INTERVAL sqlc.arg('delay_seconds') SECOND),
+    sqlc.arg('request_id'),
+    sqlc.arg('parent_message_id')
+);
 
--- name: AcquireOutboxMessages :exec
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE status = 'pending'
-      AND message_outbox.service_name = $4
-      AND next_run_at <= now()
-      AND (locked_at IS NULL OR lock_expires_at < now())
-      AND attempts < max_attempts
-    ORDER BY next_run_at ASC
-    LIMIT $3
-)
-UPDATE message_outbox
-SET locked_at = now(),
-    lock_owner = $1,
-    lock_expires_at = now() + ($2 || ' seconds')::interval,
-    updated_at = now()
-WHERE id IN (SELECT id FROM rows);
+-- Scoped to the calling service so the services sharing this table do not race each other for the same rows.
+-- name: SelectOutboxMessageIDsForLock :many
+SELECT id FROM message_outbox
+WHERE status = 'pending'
+  AND service_name = sqlc.arg('service_name')
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY next_run_at ASC, id ASC
+LIMIT ?;
 
--- name: GetLockedOutboxMessages :many
-SELECT * FROM message_outbox
-WHERE lock_owner = $1 AND lock_expires_at > now()
-ORDER BY next_run_at ASC;
+-- name: LockOutboxMessagesByIDs :exec
+UPDATE message_outbox FORCE INDEX (PRIMARY)
+SET locked_at = NOW(3),
+    lock_owner = sqlc.arg('lock_owner'),
+    lock_expires_at = DATE_ADD(NOW(3), INTERVAL sqlc.arg('lock_duration_seconds') SECOND),
+    updated_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'))
+  AND status = 'pending'
+  AND next_run_at <= NOW(3)
+  AND (locked_at IS NULL OR lock_expires_at < NOW(3))
+  AND attempts < max_attempts
+ORDER BY id ASC;
+
+-- name: GetLockedOutboxMessagesByIDs :many
+SELECT * FROM message_outbox FORCE INDEX (PRIMARY)
+WHERE id IN (sqlc.slice('ids'))
+  AND lock_owner = sqlc.arg('lock_owner')
+  AND lock_expires_at > NOW(3)
+ORDER BY id ASC;
 
 -- name: MarkOutboxMessagesPublished :exec
 UPDATE message_outbox
-SET status = 'published', published_at = now(),
+SET status = 'published', published_at = NOW(3),
     locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL,
-    updated_at = now()
-WHERE id = ANY(@ids::bigint[]);
+    updated_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'));
 
 -- name: MarkOutboxMessageFailed :exec
 UPDATE message_outbox
 SET attempts = attempts + 1,
-    last_error = $1,
+    last_error = ?,
     locked_at = NULL,
     lock_owner = NULL,
     lock_expires_at = NULL,
-    next_run_at = now() + ($2 || ' seconds')::interval,
+    next_run_at = DATE_ADD(NOW(3), INTERVAL ? SECOND),
     status = CASE WHEN attempts + 1 >= max_attempts THEN 'failed' ELSE 'pending' END,
-    updated_at = now()
-WHERE id = $3;
+    updated_at = NOW(3)
+WHERE id = ?;
 
--- name: CleanupExpiredOutboxLocks :execrows
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE lock_expires_at < now()
-    LIMIT $1
-)
-UPDATE message_outbox
-SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = now()
-WHERE id IN (SELECT id FROM rows);
+-- name: SelectExpiredOutboxLockIDs :many
+SELECT id FROM message_outbox
+WHERE lock_expires_at < NOW(3)
+ORDER BY id ASC
+LIMIT ?;
 
--- name: PurgePublishedOutboxMessages :execrows
-WITH rows AS (
-    SELECT id FROM message_outbox
-    WHERE status = 'published' AND published_at < now() - ($1 || ' hours')::interval
-    LIMIT $2
-)
+-- name: CleanupExpiredOutboxLocksByIDs :execresult
+UPDATE message_outbox FORCE INDEX (PRIMARY)
+SET locked_at = NULL, lock_owner = NULL, lock_expires_at = NULL, updated_at = NOW(3)
+WHERE id IN (sqlc.slice('ids'))
+  AND lock_expires_at < NOW(3)
+ORDER BY id ASC;
+
+-- name: SelectPublishedOutboxMessageIDsForPurge :many
+SELECT id FROM message_outbox
+WHERE status = 'published' AND published_at < DATE_SUB(NOW(3), INTERVAL sqlc.arg('retention_hours') HOUR)
+ORDER BY published_at ASC, id ASC
+LIMIT ?;
+
+-- name: PurgePublishedOutboxMessagesByIDs :execresult
 DELETE FROM message_outbox
-WHERE id IN (SELECT id FROM rows);
+WHERE id IN (sqlc.slice('ids'))
+  AND status = 'published'
+  AND published_at < DATE_SUB(NOW(3), INTERVAL sqlc.arg('retention_hours') HOUR)
+ORDER BY id ASC;
 
--- Leads on message_outbox_status_next_run_at_idx, so it reads only the unpublished rows, never the published history.
+-- Ranges on status, so it reads only the unpublished rows, never the published history.
 -- name: GetOutboxBacklogStats :many
 SELECT status,
-       COUNT(*)::bigint AS message_count,
-       (EXTRACT(EPOCH FROM (now() - MIN(created_at))) * 1000000)::bigint AS oldest_age_us
+       COUNT(*) AS message_count,
+       CAST(TIMESTAMPDIFF(MICROSECOND, MIN(created_at), NOW(3)) AS SIGNED) AS oldest_age_us
 FROM message_outbox
 WHERE status IN ('pending', 'failed')
-  AND service_name = $1
+  AND service_name = ?
 GROUP BY status;

@@ -18,10 +18,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
 MYSQL_CONTAINER="openmrp-mysql-e2e"
-POSTGRES_CONTAINER="openmrp-postgres-e2e"
 
 MYSQL_CMD=(mysql -uroot -pTesting123! --protocol=tcp openmrp)
-PSQL_CMD=(psql -U openmrp -d openmrp_agents)
 
 # --- Helper: extract goose Up section from a migration file ---
 
@@ -44,32 +42,12 @@ run_mysql_sql() {
     rm -f "$log_file"
 }
 
-run_postgres_sql() {
-    local label="$1"
-    local log_file
-    log_file="$(mktemp)"
-
-    if ! docker exec -i "$POSTGRES_CONTAINER" "${PSQL_CMD[@]}" >"$log_file" 2>&1; then
-        error "$label failed."
-        sed 's/^/  /' "$log_file" >&2
-        rm -f "$log_file"
-        return 1
-    fi
-
-    rm -f "$log_file"
-}
-
 # --- Wait for containers ---
 
 info "Verifying e2e database containers are running..."
 
 if ! docker inspect "$MYSQL_CONTAINER" &>/dev/null; then
     error "Container $MYSQL_CONTAINER is not running. Run 'make e2e-up' first."
-    exit 1
-fi
-
-if ! docker inspect "$POSTGRES_CONTAINER" &>/dev/null; then
-    error "Container $POSTGRES_CONTAINER is not running. Run 'make e2e-up' first."
     exit 1
 fi
 
@@ -111,40 +89,6 @@ for seed_file in shared/db/seed/*.sql shared/db/seed/e2e/*.sql; do
 done
 
 info "Core-service seed complete."
-
-# --- Apply PostgreSQL migrations ---
-
-info "Applying agent-service PostgreSQL migrations..."
-
-for migration_file in services/agent-service/db/migrations/*.sql; do
-    if [ ! -f "$migration_file" ]; then
-        continue
-    fi
-
-    filename="$(basename "$migration_file")"
-
-    extract_up_sql "$migration_file" \
-        | run_postgres_sql "PostgreSQL migration $filename"
-done
-
-info "Agent-service migration complete."
-
-# --- Seed PostgreSQL ---
-
-info "Seeding agent-service data..."
-
-for seed_file in services/agent-service/db/seeds/*.sql; do
-    if [ ! -f "$seed_file" ]; then
-        continue
-    fi
-
-    filename="$(basename "$seed_file")"
-
-    extract_up_sql "$seed_file" \
-        | run_postgres_sql "PostgreSQL seed $filename"
-done
-
-info "Agent-service seed complete."
 
 # --- Done ---
 

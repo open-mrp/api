@@ -1,6 +1,6 @@
 # Database Migration Patterns
 
-Both databases are migrated with goose. The migration files are the source of truth for the schema.
+Every service shares one MySQL database, migrated with goose. The migration files are the source of truth for the schema.
 
 ## Where things go
 
@@ -8,10 +8,8 @@ Both databases are migrated with goose. The migration files are the source of tr
 | -------------------------- | ------------------------------------------- | -------------------------------------------------- |
 | Core schema (MySQL)        | `shared/db/migrations`                      | `make migrate-create name=add_foo`                 |
 | Core backfills (MySQL)     | `shared/db/data-migrations`                 | `make migrate-create-data name=backfill_foo`       |
-| Agent schema (Postgres)    | `services/agent-service/db/migrations`      | `make migrate-agent-create name=add_foo`           |
-| Agent backfills (Postgres) | `services/agent-service/db/data-migrations` | `make migrate-agent-create-data name=backfill_foo` |
 
-Backfills — copy a column into another, seed a row, reshape existing rows — are DML and belong in the `data-migrations` directories, tracked in their own `goose_db_version_data` table. They are separate because a PlanetScale deploy request diffs _schema only_: DML written into a schema migration runs against the dev branch and silently never reaches prod.
+Backfills — copy a column into another, seed a row, reshape existing rows — are DML and belong in `shared/db/data-migrations`, tracked in their own `goose_db_version_data` table. They are separate because a PlanetScale deploy request diffs _schema only_: DML written into a schema migration runs against the dev branch and silently never reaches prod.
 
 ## Writing one
 
@@ -47,7 +45,7 @@ Automated off the release PR. You never cut branches or open deploy requests by 
 
 While the release PR is open, `prepare-migrations` applies the pending core schema migrations to a fresh PlanetScale branch, opens a deploy request, and comments the full plan on the PR. **Review that deploy request's diff before merging** — merging is what deploys it. A deploy request may change at most 10 tables; a release over that is split automatically (`tools/schemasplit`) into several deploy requests of at most 10 tables each, listed in order in the PR comment and deployed one after another on merge.
 
-Merging runs `deploy-migrations`, which applies everything in order: core schema, agent schema, core backfills, agent backfills. The EKS rollout requires it to succeed, so a failed migration stops the release before any image ships.
+Merging runs `deploy-migrations`, which applies everything in order: schema, then backfills. The EKS rollout requires it to succeed, so a failed migration stops the release before any image ships.
 
 That order is the point: new code never meets a missing column, then never meets an empty one. The matching contract step — dropping the old column — belongs in a _later_ release, once nothing running reads it.
 
@@ -68,4 +66,4 @@ Write each batch to be repeatable. Walk a narrow index for the next page instead
 
 Expand-contract still applies: ship the code that reads both shapes first, let the backfill finish, then drop the old column in a later release.
 
-Postgres has no deploy request to review, since PlanetScale applies Postgres DDL directly. The PR comment is the review surface for it and for both sets of backfills.
+Backfills have no deploy request to review. The PR comment is the review surface for them.

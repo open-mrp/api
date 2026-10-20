@@ -37,7 +37,7 @@ func (r *agentDefinitionToolRepoImpl) DeleteByAgentID(ctx context.Context, agent
 	return nil
 }
 
-func (r *agentDefinitionToolRepoImpl) ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.ListToolsByAgentDefinitionIDRow, *apierror.APIError) {
+func (r *agentDefinitionToolRepoImpl) ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.AgentDefinitionTool, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, adtRepoTracer, "repository.agent_definition_tool.list_by_agent_definition_id")
 	defer span.End()
 	rows, err := r.queries.ListToolsByAgentDefinitionID(ctx, agentDefinitionID)

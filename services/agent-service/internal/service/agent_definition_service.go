@@ -11,20 +11,21 @@ import (
 
 	"github.com/open-mrp/api/services/agent-service/internal/agents"
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/audit"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/messaging"
+	"github.com/open-mrp/api/shared/ptrutil"
 	"github.com/open-mrp/api/shared/tracing"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 var agentDefSvcTracer = tracing.GetTracer("agent-service.agent_definition_service")
@@ -202,16 +203,16 @@ func (s *agentDefSvcImpl) CreateCustomAgent(ctx context.Context, params domain.C
 
 			if apiErr := defRepo.Insert(txCtx, sqlc.InsertAgentDefinitionParams{
 				ID:             defID,
-				AccountID:      agentdb.PgText(accountID),
+				AccountID:      db.NullString(accountID),
 				Name:           params.Name,
 				Slug:           params.Slug,
-				Description:    agentdb.PgText(params.Description),
+				Description:    db.NullString(params.Description),
 				DefinitionType: string(constants.AgentDefinitionTypeCustom),
 				CategoryCode:   params.CategoryCode,
 				TriggerType:    params.TriggerType,
 				IsActive:       true,
 				Config:         configJSON,
-				RoleID:         agentdb.PgText(params.RoleID),
+				RoleID:         db.NullString(params.RoleID),
 			}); apiErr != nil {
 				return apiErr
 			}
@@ -421,25 +422,25 @@ func (s *agentDefSvcImpl) UpdateCustomAgent(ctx context.Context, params domain.U
 				configBytes = pruned
 			}
 
-			// An empty description is stored as NULL, never "" (matches the create path's PgText behavior).
-			descUpdate := agentdb.PgText("")
+			// An empty description is stored as NULL, never "", matching the create path.
+			descUpdate := db.NullString("")
 			if params.Description != nil {
-				descUpdate = agentdb.PgText(*params.Description)
+				descUpdate = db.NullString(*params.Description)
 			}
 
 			if updateErr := txDefRepo.Update(txCtx, sqlc.UpdateAgentDefinitionParams{
-				Name:             agentdb.PgTextPtr(params.Name),
-				Slug:             agentdb.PgTextPtr(params.Slug),
+				Name:             nullableString(params.Name),
+				Slug:             nullableString(params.Slug),
 				Description:      descUpdate,
 				ClearDescription: params.ClearDescription,
-				CategoryCode:     agentdb.PgTextPtr(params.CategoryCode),
-				TriggerType:      agentdb.PgTextPtr(params.TriggerType),
+				CategoryCode:     nullableString(params.CategoryCode),
+				TriggerType:      nullableString(params.TriggerType),
 				UpdateConfig:     updateConfig,
 				NewConfig:        configBytes,
-				RoleID:           agentdb.PgTextPtr(params.RoleID),
+				RoleID:           nullableString(params.RoleID),
 				ClearRoleID:      params.ClearRoleID,
 				ID:               params.AgentDefinitionID,
-				AccountID:        agentdb.PgText(accountID),
+				AccountID:        db.NullString(accountID),
 			}); updateErr != nil {
 				return updateErr
 			}
@@ -556,7 +557,7 @@ func grantOf(identity *types.Identity) callerGrant {
 }
 
 // checkCanDriveAgent rejects starting or steering a run of an agent whose role is wider than the caller's own grant: the run acts with the agent's role, so driving it would borrow permissions the caller lacks.
-func (s *agentDefSvcImpl) checkCanDriveAgent(ctx context.Context, grant callerGrant, agentRoleID pgtype.Text) *apierror.APIError {
+func (s *agentDefSvcImpl) checkCanDriveAgent(ctx context.Context, grant callerGrant, agentRoleID sql.NullString) *apierror.APIError {
 	if grant.admin || !agentRoleID.Valid || agentRoleID.String == "" {
 		return nil
 	}
@@ -778,33 +779,18 @@ func (s *agentDefSvcImpl) ListAgentDefinitions(ctx context.Context, params domai
 		limit = 1000
 	}
 
-	filterQuery := params.Query != nil && *params.Query != ""
-	search := pgtype.Text{}
-	if filterQuery {
-		search = pgtype.Text{String: *params.Query, Valid: true}
-	}
-
 	hasCursor := params.Cursor != nil && *params.Cursor != ""
-	cursorID := ""
-	if hasCursor {
-		cursorID = *params.Cursor
-	}
 
 	defRepo := s.repos.NewAgentDefinitionRepo()
 
-	sqlParams := sqlc.ListAgentDefinitionsByAccountCursorParams{
-		AccountID:            accountID,
-		FilterDefinitionType: len(params.DefinitionTypes) > 0,
-		DefinitionTypes:      params.DefinitionTypes,
-		FilterTriggerType:    len(params.TriggerTypes) > 0,
-		TriggerTypes:         params.TriggerTypes,
-		FilterStatus:         len(params.Statuses) > 0,
-		StatusCodes:          params.Statuses,
-		FilterQuery:          filterQuery,
-		Search:               search,
-		HasCursor:            hasCursor,
-		CursorID:             cursorID,
-		Lim:                  limit + 1,
+	sqlParams := domain.AgentDefinitionPageQuery{
+		AccountID:       accountID,
+		DefinitionTypes: params.DefinitionTypes,
+		TriggerTypes:    params.TriggerTypes,
+		Statuses:        params.Statuses,
+		Query:           ptrutil.Deref(params.Query),
+		CursorID:        ptrutil.Deref(params.Cursor),
+		Limit:           limit + 1,
 	}
 
 	defs, apiErr := defRepo.ListByAccountCursor(ctx, sqlParams)
@@ -831,7 +817,7 @@ func (s *agentDefSvcImpl) ListAgentDefinitions(ctx context.Context, params domai
 
 	results := make([]domain.AgentDefinitionInfo, 0, len(defs))
 	for _, def := range defs {
-		var tools []sqlc.ListToolsByAgentDefinitionIDRow
+		var tools []sqlc.AgentDefinitionTool
 		if includesContains(params.Includes, "tools") {
 			adtRepo := s.repos.NewAgentDefinitionToolRepo()
 			var toolErr *apierror.APIError
@@ -1250,9 +1236,9 @@ func (s *agentDefSvcImpl) forkDeadChatRun(ctx context.Context, in domain.ChatRun
 		Message string `json:"message"`
 	}{Message: in.Message})
 
-	var triggerMessageID pgtype.Text
+	var triggerMessageID sql.NullString
 	if in.TriggerMessageID != "" {
-		triggerMessageID = agentdb.PgText(in.TriggerMessageID)
+		triggerMessageID = db.NullString(in.TriggerMessageID)
 	}
 
 	apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
@@ -1405,9 +1391,9 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 		return tracing.Trace(span, msgGenErr)
 	}
 
-	var triggerMessageID pgtype.Text
+	var triggerMessageID sql.NullString
 	if in.TriggerMessageID != "" {
-		triggerMessageID = agentdb.PgText(in.TriggerMessageID)
+		triggerMessageID = db.NullString(in.TriggerMessageID)
 	}
 
 	if apiErr := s.withTx(ctx, func(txCtx context.Context, txSvc *agentDefSvcImpl) *apierror.APIError {
@@ -1418,12 +1404,12 @@ func (s *agentDefSvcImpl) CreateChatRun(ctx context.Context, in domain.ChatRunIn
 			ID:                runID,
 			AccountID:         in.AccountID,
 			AgentDefinitionID: def.ID,
-			AgentConfigID:     agentdb.PgText(config.ID),
+			AgentConfigID:     db.NullString(config.ID),
 			StatusCode:        domain.RunStatusPending,
 			TriggerType:       string(constants.AgentTriggerTypeChat),
 			Input:             runInput,
 			Output:            json.RawMessage(`{}`),
-			ConversationID:    agentdb.PgText(in.ConversationID),
+			ConversationID:    db.NullString(in.ConversationID),
 			TriggerMessageID:  triggerMessageID,
 		}); insertErr != nil {
 			return insertErr
@@ -1644,14 +1630,14 @@ func (s *agentDefSvcImpl) TriggerRun(ctx context.Context, params domain.TriggerR
 				ID:                      runID,
 				AccountID:               accountID,
 				AgentDefinitionID:       def.ID,
-				AgentConfigID:           agentdb.PgText(config.ID),
+				AgentConfigID:           db.NullString(config.ID),
 				StatusCode:              domain.RunStatusPending,
 				TriggerType:             string(constants.AgentTriggerTypeManual),
 				Input:                   runInput,
 				Output:                  json.RawMessage(`{}`),
-				TriggeredByActorID:      agentdb.PgText(identity.Actor.ID),
-				TriggeredByIdentityType: agentdb.PgText(string(identity.Type)),
-				TriggeredByActorName:    agentdb.PgTextPtr(identity.Actor.Name),
+				TriggeredByActorID:      db.NullString(identity.Actor.ID),
+				TriggeredByIdentityType: db.NullString(string(identity.Type)),
+				TriggeredByActorName:    nullableString(identity.Actor.Name),
 			}); insertErr != nil {
 				return insertErr
 			}
@@ -1802,9 +1788,9 @@ func (s *agentDefSvcImpl) CancelRun(ctx context.Context, params domain.CancelRun
 						_ = txActionRepo.MarkReviewed(txCtx, sqlc.MarkAgentActionReviewedParams{
 							ID:                  a.ID,
 							StatusCode:          domain.ActionStatusRejected,
-							ReviewedBy:          agentdb.PgText(actorID),
-							ReviewedByActorType: agentdb.PgText(actorType),
-							ReviewedByActorName: agentdb.PgText(actorName),
+							ReviewedBy:          db.NullString(actorID),
+							ReviewedByActorType: db.NullString(actorType),
+							ReviewedByActorName: db.NullString(actorName),
 						})
 					}
 				}
@@ -2322,14 +2308,14 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 			metadata = []byte("{}")
 		}
 
-		var expiresAt pgtype.Timestamptz
+		var expiresAt sql.NullTime
 		if params.ExpiresAt != "" {
 			t, parseErr := parseTimestamp(params.ExpiresAt)
 			if parseErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
 			}
-			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
+			expiresAt = sql.NullTime{Time: t, Valid: true}
 		}
 
 		var result *domain.AgentMemoryInfo
@@ -2342,8 +2328,8 @@ func (s *agentDefSvcImpl) CreateAgentMemory(ctx context.Context, params domain.C
 				Category:   params.Category,
 				Content:    params.Content,
 				Metadata:   metadata,
-				EntityType: pgtype.Text{String: params.EntityType, Valid: params.EntityType != ""},
-				EntityID:   pgtype.Text{String: params.EntityID, Valid: params.EntityID != ""},
+				EntityType: sql.NullString{String: params.EntityType, Valid: params.EntityType != ""},
+				EntityID:   sql.NullString{String: params.EntityID, Valid: params.EntityID != ""},
 				Importance: params.Importance,
 				ExpiresAt:  expiresAt,
 			}); insertErr != nil {
@@ -2425,19 +2411,19 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 			metadata = []byte(*params.MetadataJSON)
 		}
 
-		var expiresAt pgtype.Timestamptz
+		var expiresAt sql.NullTime
 		if params.ExpiresAt != nil && *params.ExpiresAt != "" {
 			t, parseErr := parseTimestamp(*params.ExpiresAt)
 			if parseErr != nil {
 				return nil, meds.Idempotency.CacheErrorResponse(ctx, idempotencyKey.TypeID,
 					apierror.NewValidationErrorWithParam("Invalid expires_at: "+parseErr.Error(), "expires_at"))
 			}
-			expiresAt = pgtype.Timestamptz{Time: t, Valid: true}
+			expiresAt = sql.NullTime{Time: t, Valid: true}
 		}
 
-		var importance pgtype.Float8
+		var importance sql.NullFloat64
 		if params.Importance != nil {
-			importance = pgtype.Float8{Float64: *params.Importance, Valid: true}
+			importance = sql.NullFloat64{Float64: *params.Importance, Valid: true}
 		}
 
 		var result *domain.AgentMemoryInfo
@@ -2458,12 +2444,12 @@ func (s *agentDefSvcImpl) UpdateAgentMemory(ctx context.Context, params domain.U
 
 			if updateErr := memoryRepo.Update(txCtx, sqlc.UpdateAgentMemoryParams{
 				ID:             params.MemoryID,
-				Category:       agentdb.PgTextPtr(params.Category),
-				Content:        agentdb.PgTextPtr(params.Content),
+				Category:       nullableString(params.Category),
+				Content:        nullableString(params.Content),
 				Metadata:       metadata,
 				ClearEntity:    params.ClearEntity,
-				EntityType:     agentdb.PgTextPtr(params.EntityType),
-				EntityID:       agentdb.PgTextPtr(params.EntityID),
+				EntityType:     nullableString(params.EntityType),
+				EntityID:       nullableString(params.EntityID),
 				Importance:     importance,
 				ClearExpiresAt: params.ClearExpiresAt,
 				ExpiresAt:      expiresAt,
@@ -2591,14 +2577,8 @@ func sqlcMemoryToDomain(m *sqlc.AgentMemory) *domain.AgentMemoryInfo {
 	if m.ExpiresAt.Valid {
 		expiresAt = m.ExpiresAt.Time.Format("2006-01-02T15:04:05.000Z")
 	}
-	var createdAt string
-	if m.CreatedAt.Valid {
-		createdAt = m.CreatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-	}
-	var updatedAt string
-	if m.UpdatedAt.Valid {
-		updatedAt = m.UpdatedAt.Time.Format("2006-01-02T15:04:05.000Z")
-	}
+	createdAt := m.CreatedAt.Format("2006-01-02T15:04:05.000Z")
+	updatedAt := m.UpdatedAt.Format("2006-01-02T15:04:05.000Z")
 	return &domain.AgentMemoryInfo{
 		ID:         m.ID,
 		AccountID:  m.AccountID,
@@ -2635,8 +2615,8 @@ func sqlToAgentAccountStatusInfo(row *sqlc.AgentAccountStatus) *domain.AgentAcco
 		AccountID:         row.AccountID,
 		AgentDefinitionID: row.AgentDefinitionID,
 		StatusCode:        row.StatusCode,
-		CreatedAt:         row.CreatedAt.Time,
-		UpdatedAt:         row.UpdatedAt.Time,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
 	}
 }
 
@@ -2652,7 +2632,7 @@ func (s *agentDefSvcImpl) buildResultForAccount(ctx context.Context, defID, acco
 		return nil, apiErr
 	}
 
-	var tools []sqlc.ListToolsByAgentDefinitionIDRow
+	var tools []sqlc.AgentDefinitionTool
 	if includesContains(includes, "tools") {
 		adtRepo := s.repos.NewAgentDefinitionToolRepo()
 		var toolErr *apierror.APIError
@@ -2681,7 +2661,7 @@ func includesContains(includes []string, key string) bool {
 }
 
 // sqlToAgentDefinitionInfo converts sqlc rows into a domain AgentDefinitionInfo. When includes is non-nil, fields not listed are set to nil.
-func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsByAgentDefinitionIDRow, accountStatus *sqlc.AgentAccountStatus, includes []string) *domain.AgentDefinitionInfo {
+func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.AgentDefinitionTool, accountStatus *sqlc.AgentAccountStatus, includes []string) *domain.AgentDefinitionInfo {
 	var roleID string
 	if def.RoleID.Valid {
 		roleID = def.RoleID.String
@@ -2729,8 +2709,8 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 			AccountID:         accountStatus.AccountID,
 			AgentDefinitionID: accountStatus.AgentDefinitionID,
 			StatusCode:        accountStatus.StatusCode,
-			CreatedAt:         accountStatus.CreatedAt.Time,
-			UpdatedAt:         accountStatus.UpdatedAt.Time,
+			CreatedAt:         accountStatus.CreatedAt,
+			UpdatedAt:         accountStatus.UpdatedAt,
 		}
 	}
 
@@ -2738,7 +2718,7 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 		ID:             def.ID,
 		Name:           def.Name,
 		Slug:           def.Slug,
-		Description:    agentdb.StringFromPgText(def.Description),
+		Description:    db.StringFromNullString(def.Description),
 		DefinitionType: def.DefinitionType,
 		CategoryCode:   def.CategoryCode,
 		TriggerType:    def.TriggerType,
@@ -2747,7 +2727,14 @@ func sqlToAgentDefinitionInfo(def *sqlc.AgentDefinition, tools []sqlc.ListToolsB
 		RoleID:         roleID,
 		Tools:          domainTools,
 		AccountStatus:  domainAccountStatus,
-		CreatedAt:      def.CreatedAt.Time,
-		UpdatedAt:      def.UpdatedAt.Time,
+		CreatedAt:      def.CreatedAt,
+		UpdatedAt:      def.UpdatedAt,
 	}
+}
+
+func nullableString(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: *s, Valid: true}
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/safeconv"
 	"github.com/open-mrp/api/shared/tracing"
 )
 
@@ -45,5 +46,5 @@ func (r *agentRunEventRepoImpl) GetMaxSequence(ctx context.Context, runID string
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, tracing.Trace(span, apiErr)
 	}
-	return result, nil
+	return safeconv.Int64ToInt32(result), nil
 }

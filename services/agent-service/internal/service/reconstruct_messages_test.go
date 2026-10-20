@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/shared/db"
 )
 
 // toolCallEvent builds the event the runner emits when the model requests a tool.
@@ -19,7 +19,7 @@ func toolCallEvent(toolUseID, toolName string) sqlc.AgentRunEvent {
 // in event.Content (how tool_denied / doom_loop_detected store it) and the id in metadata.
 func toolTerminalEvent(stepType, toolUseID, content string) sqlc.AgentRunEvent {
 	meta, _ := json.Marshal(map[string]any{"tool_use_id": toolUseID, "tool_name": "x"})
-	return sqlc.AgentRunEvent{StepType: stepType, Metadata: meta, Content: agentdb.PgText(content)}
+	return sqlc.AgentRunEvent{StepType: stepType, Metadata: meta, Content: db.NullString(content)}
 }
 
 func toolResultEvent(toolUseID, result string) sqlc.AgentRunEvent {
@@ -52,7 +52,7 @@ func assertNoOrphanToolUse(t *testing.T, messages []llm.Message) {
 func TestReconstructMessages_ToolDeniedIsAnswered(t *testing.T) {
 	t.Parallel()
 	events := []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText("do the thing")},
+		{StepType: "user_message", Content: db.NullString("do the thing")},
 		toolCallEvent("toolu_1", "secret_tool"),
 		toolTerminalEvent("tool_denied", "toolu_1", `Tool "secret_tool" is not available to this agent.`),
 	}
@@ -63,7 +63,7 @@ func TestReconstructMessages_ToolDeniedIsAnswered(t *testing.T) {
 func TestReconstructMessages_DoomLoopIsAnswered(t *testing.T) {
 	t.Parallel()
 	events := []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText("go")},
+		{StepType: "user_message", Content: db.NullString("go")},
 		toolCallEvent("toolu_1", "search"),
 		toolTerminalEvent("doom_loop_detected", "toolu_1", "Called search 3 times with identical input."),
 	}
@@ -76,7 +76,7 @@ func TestReconstructMessages_DoomLoopIsAnswered(t *testing.T) {
 func TestReconstructMessages_DeniedThenSucceededBothAnswered(t *testing.T) {
 	t.Parallel()
 	events := []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText("go")},
+		{StepType: "user_message", Content: db.NullString("go")},
 		toolCallEvent("toolu_1", "secret_tool"),
 		toolTerminalEvent("tool_denied", "toolu_1", "not available"),
 		toolCallEvent("toolu_2", "search"),
@@ -91,10 +91,10 @@ func TestReconstructMessages_DeniedThenSucceededBothAnswered(t *testing.T) {
 func TestReconstructMessages_OrphanToolCallBackfilled(t *testing.T) {
 	t.Parallel()
 	events := []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText("go")},
+		{StepType: "user_message", Content: db.NullString("go")},
 		toolCallEvent("toolu_1", "search"),
 		// no result event — run crashed here
-		{StepType: "user_message", Content: agentdb.PgText("are you there?")},
+		{StepType: "user_message", Content: db.NullString("are you there?")},
 	}
 	messages := reconstructMessages(events)
 	assertNoOrphanToolUse(t, messages)

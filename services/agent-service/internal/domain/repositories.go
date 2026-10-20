@@ -10,6 +10,41 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
+type AgentDefinitionPageQuery struct {
+	AccountID       string
+	DefinitionTypes []string
+	TriggerTypes    []string
+	Statuses        []string
+	Query           string
+	CursorID        string
+	Limit           int32
+}
+
+type AgentRunPageQuery struct {
+	AccountID         string
+	StatusCode        string
+	AgentDefinitionID string
+	Query             string
+	CursorID          string
+	Limit             int32
+}
+
+type AgentMemoryPageQuery struct {
+	AccountID  string
+	Category   string
+	EntityType string
+	Query      string
+	CursorID   string
+	Limit      int32
+}
+
+type AgentTokenUsagePageQuery struct {
+	AccountID string
+	SinceDate time.Time
+	CursorID  string
+	Limit     int32
+}
+
 type AgentDefinitionRepo interface {
 	GetByID(ctx context.Context, id string) (*sqlc.AgentDefinition, *apierror.APIError)
 	GetBySlug(ctx context.Context, slug string) (*sqlc.AgentDefinition, *apierror.APIError)
@@ -18,15 +53,14 @@ type AgentDefinitionRepo interface {
 	Update(ctx context.Context, params sqlc.UpdateAgentDefinitionParams) *apierror.APIError
 	SoftDelete(ctx context.Context, id, accountID string) *apierror.APIError
 	ListByAccount(ctx context.Context, accountID string) ([]sqlc.AgentDefinition, *apierror.APIError)
-	ListByAccountFiltered(ctx context.Context, accountID string, definitionTypes, triggerTypes []string) ([]sqlc.AgentDefinition, *apierror.APIError)
-	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentDefinitionsByAccountCursorParams) ([]sqlc.AgentDefinition, *apierror.APIError)
+	ListByAccountCursor(ctx context.Context, params AgentDefinitionPageQuery) ([]sqlc.AgentDefinition, *apierror.APIError)
 	GetByAccountAndSlug(ctx context.Context, slug, accountID string) (*sqlc.AgentDefinition, *apierror.APIError)
 }
 
 type AgentDefinitionToolRepo interface {
 	Insert(ctx context.Context, params sqlc.InsertAgentDefinitionToolParams) *apierror.APIError
 	DeleteByAgentID(ctx context.Context, agentDefinitionID string) *apierror.APIError
-	ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.ListToolsByAgentDefinitionIDRow, *apierror.APIError)
+	ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.AgentDefinitionTool, *apierror.APIError)
 }
 
 type AgentConfigRepo interface {
@@ -40,7 +74,7 @@ type AgentConfigRepo interface {
 type AgentRunRepo interface {
 	Insert(ctx context.Context, params sqlc.InsertAgentRunParams) *apierror.APIError
 	GetByID(ctx context.Context, id string) (*sqlc.AgentRun, *apierror.APIError)
-	ListByAccountFiltered(ctx context.Context, params sqlc.ListAgentRunsByAccountFilteredParams) ([]sqlc.AgentRun, *apierror.APIError)
+	ListByAccountFiltered(ctx context.Context, params AgentRunPageQuery) ([]sqlc.AgentRun, *apierror.APIError)
 	UpdateStatus(ctx context.Context, id, status string) *apierror.APIError
 	MarkCancelledByUser(ctx context.Context, id string) *apierror.APIError
 	MarkRetrying(ctx context.Context, id string) (int32, *apierror.APIError)
@@ -79,13 +113,13 @@ type AgentMemoryRepo interface {
 	ListAccountMemories(ctx context.Context, accountID, entityID string, limit int32) ([]sqlc.AgentMemory, *apierror.APIError)
 	Update(ctx context.Context, params sqlc.UpdateAgentMemoryParams) *apierror.APIError
 	Delete(ctx context.Context, id, accountID string) *apierror.APIError
-	ListByAccountCursor(ctx context.Context, params sqlc.ListAgentMemoriesByAccountCursorParams) ([]sqlc.AgentMemory, *apierror.APIError)
+	ListByAccountCursor(ctx context.Context, params AgentMemoryPageQuery) ([]sqlc.AgentMemory, *apierror.APIError)
 }
 
 type AgentTokenUsageRepo interface {
 	Upsert(ctx context.Context, params sqlc.UpsertAgentTokenUsageParams) *apierror.APIError
 	GetByAccountAndDate(ctx context.Context, accountID string, date time.Time) (*sqlc.AgentTokenUsage, *apierror.APIError)
-	ListByAccount(ctx context.Context, params sqlc.ListAgentTokenUsageByAccountParams) ([]sqlc.AgentTokenUsage, *apierror.APIError)
+	ListByAccount(ctx context.Context, params AgentTokenUsagePageQuery) ([]sqlc.AgentTokenUsage, *apierror.APIError)
 	GetMonthlyUsage(ctx context.Context, accountID string, sinceDate time.Time) (inputTokens, outputTokens int64, apiErr *apierror.APIError)
 }
 

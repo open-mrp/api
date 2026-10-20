@@ -15,7 +15,7 @@ EDITOR_TEMP_IGNORE = [
 k8s_yaml('./infra/development/kubernetes/config/secrets.yaml')
 k8s_yaml('./infra/development/kubernetes/config/app-config.yaml')
 
-# MySQL/PostgreSQL run on the host via Docker Compose; pods reach them via host.minikube.internal
+# MySQL runs on the host via Docker Compose; pods reach it via host.minikube.internal
 # (Minikube) or equivalent (e.g. Docker Desktop). Services fail with "connection refused" if this
 # has not been started.
 local_resource(

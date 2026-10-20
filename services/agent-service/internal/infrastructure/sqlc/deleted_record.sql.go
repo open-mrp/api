@@ -7,25 +7,26 @@ package sqlc
 
 import (
 	"context"
+	"encoding/json"
 )
 
 const countDeletedRecordsInAccount = `-- name: CountDeletedRecordsInAccount :one
 SELECT COUNT(*)
 FROM deleted_record
-WHERE resource_type = $1
-AND resource_id = $2
-AND data->>'account_id' = $3::text
+WHERE resource_type = ?
+AND resource_id = ?
+AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.account_id')) = CAST(? AS CHAR)
 `
 
 type CountDeletedRecordsInAccountParams struct {
 	ResourceType string
 	ResourceID   string
-	AccountID    string
+	AccountID    interface{}
 }
 
 // Only a snapshot that records its owner under account_id can match.
 func (q *Queries) CountDeletedRecordsInAccount(ctx context.Context, arg CountDeletedRecordsInAccountParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countDeletedRecordsInAccount, arg.ResourceType, arg.ResourceID, arg.AccountID)
+	row := q.db.QueryRowContext(ctx, countDeletedRecordsInAccount, arg.ResourceType, arg.ResourceID, arg.AccountID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -37,19 +38,19 @@ INSERT INTO deleted_record (
     resource_id,
     data
 ) VALUES (
-    $1,
-    $2,
-    $3
+    ?,
+    ?,
+    ?
 )
 `
 
 type InsertDeletedRecordParams struct {
 	ResourceType string
 	ResourceID   string
-	Data         []byte
+	Data         json.RawMessage
 }
 
 func (q *Queries) InsertDeletedRecord(ctx context.Context, arg InsertDeletedRecordParams) error {
-	_, err := q.db.Exec(ctx, insertDeletedRecord, arg.ResourceType, arg.ResourceID, arg.Data)
+	_, err := q.db.ExecContext(ctx, insertDeletedRecord, arg.ResourceType, arg.ResourceID, arg.Data)
 	return err
 }

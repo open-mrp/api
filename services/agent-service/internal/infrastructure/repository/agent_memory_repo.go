@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -57,8 +57,8 @@ func (r *agentMemoryRepoImpl) ListByEntity(ctx context.Context, accountID, entit
 	defer span.End()
 	rows, err := r.queries.ListMemoriesByEntity(ctx, sqlc.ListMemoriesByEntityParams{
 		AccountID:  accountID,
-		EntityType: agentdb.PgText(entityType),
-		EntityID:   agentdb.PgText(entityID),
+		EntityType: db.NullString(entityType),
+		EntityID:   db.NullString(entityID),
 		Limit:      limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -72,7 +72,7 @@ func (r *agentMemoryRepoImpl) ListAccountMemories(ctx context.Context, accountID
 	defer span.End()
 	rows, err := r.queries.ListAccountMemories(ctx, sqlc.ListAccountMemoriesParams{
 		AccountID: accountID,
-		EntityID:  agentdb.PgText(entityID),
+		EntityID:  db.NullString(entityID),
 		Limit:     limit,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
@@ -118,10 +118,11 @@ func (r *agentMemoryRepoImpl) Delete(ctx context.Context, id, accountID string) 
 	return nil
 }
 
-func (r *agentMemoryRepoImpl) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentMemoriesByAccountCursorParams) ([]sqlc.AgentMemory, *apierror.APIError) {
+func (r *agentMemoryRepoImpl) ListByAccountCursor(ctx context.Context, params domain.AgentMemoryPageQuery) ([]sqlc.AgentMemory, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, memoryRepoTracer, "repository.agent_memory.list_by_account_cursor")
 	defer span.End()
-	rows, err := r.queries.ListAgentMemoriesByAccountCursor(ctx, params)
+	query, args := buildAgentMemoryListQuery(params)
+	rows, err := queryList(ctx, r.queries.DB(), query, args, scanAgentMemory)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

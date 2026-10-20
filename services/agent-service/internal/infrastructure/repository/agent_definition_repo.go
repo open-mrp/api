@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -73,7 +73,7 @@ func (r *agentDefinitionRepoImpl) SoftDelete(ctx context.Context, id, accountID 
 	defer span.End()
 	if apiErr := db.MapSQLError(r.queries.SoftDeleteAgentDefinition(ctx, sqlc.SoftDeleteAgentDefinitionParams{
 		ID:        id,
-		AccountID: agentdb.PgText(accountID),
+		AccountID: db.NullString(accountID),
 	})); apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
@@ -83,33 +83,18 @@ func (r *agentDefinitionRepoImpl) SoftDelete(ctx context.Context, id, accountID 
 func (r *agentDefinitionRepoImpl) ListByAccount(ctx context.Context, accountID string) ([]sqlc.AgentDefinition, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, defRepoTracer, "repository.agent_definition.list_by_account")
 	defer span.End()
-	rows, err := r.queries.ListAgentDefinitionsByAccount(ctx, agentdb.PgText(accountID))
+	rows, err := r.queries.ListAgentDefinitionsByAccount(ctx, db.NullString(accountID))
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 	return rows, nil
 }
 
-func (r *agentDefinitionRepoImpl) ListByAccountFiltered(ctx context.Context, accountID string, definitionTypes, triggerTypes []string) ([]sqlc.AgentDefinition, *apierror.APIError) {
-	ctx, span := tracing.StartSpan(ctx, defRepoTracer, "repository.agent_definition.list_by_account_filtered")
-	defer span.End()
-	rows, err := r.queries.ListAgentDefinitionsByAccountFiltered(ctx, sqlc.ListAgentDefinitionsByAccountFilteredParams{
-		AccountID:            agentdb.PgText(accountID),
-		FilterDefinitionType: len(definitionTypes) > 0,
-		DefinitionTypes:      definitionTypes,
-		FilterTriggerType:    len(triggerTypes) > 0,
-		TriggerTypes:         triggerTypes,
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-	return rows, nil
-}
-
-func (r *agentDefinitionRepoImpl) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentDefinitionsByAccountCursorParams) ([]sqlc.AgentDefinition, *apierror.APIError) {
+func (r *agentDefinitionRepoImpl) ListByAccountCursor(ctx context.Context, params domain.AgentDefinitionPageQuery) ([]sqlc.AgentDefinition, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, defRepoTracer, "repository.agent_definition.list_by_account_cursor")
 	defer span.End()
-	rows, err := r.queries.ListAgentDefinitionsByAccountCursor(ctx, params)
+	query, args := buildAgentDefinitionListQuery(params)
+	rows, err := queryList(ctx, r.queries.DB(), query, args, scanAgentDefinition)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -121,7 +106,7 @@ func (r *agentDefinitionRepoImpl) GetByAccountAndSlug(ctx context.Context, slug,
 	defer span.End()
 	row, err := r.queries.GetAgentDefinitionByAccountAndSlug(ctx, sqlc.GetAgentDefinitionByAccountAndSlugParams{
 		Slug:      slug,
-		AccountID: agentdb.PgText(accountID),
+		AccountID: db.NullString(accountID),
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

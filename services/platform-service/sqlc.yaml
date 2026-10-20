@@ -51,7 +51,3 @@ sql:
             go_type:
               import: "github.com/open-mrp/api/shared/db"
               type: "NullableRawMessage"
-          - column: "account_followup.activity_summary"
-            go_type:
-              import: "github.com/open-mrp/api/shared/db"
-              type: "NullableRawMessage"

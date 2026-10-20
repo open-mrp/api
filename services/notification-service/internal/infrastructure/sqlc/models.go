@@ -13,20 +13,15 @@ import (
 )
 
 type Account struct {
-	ID                           string
-	Name                         string
-	AccountTypeCode              string
-	OnboardingStatusCode         string
-	AccountBillingID             sql.NullString
-	DefaultBillingAddressID      sql.NullString
-	DefaultShippingAddressID     sql.NullString
-	UpdatedAt                    time.Time
-	CreatedAt                    time.Time
-	AccountPlanID                sql.NullString
-	InternalStripeCustomerID     sql.NullString
-	InternalStripeSubscriptionID sql.NullString
-	SubscriptionStatus           sql.NullString
-	SubscriptionCurrentPeriodEnd sql.NullTime
+	ID                       string
+	Name                     string
+	AccountTypeCode          string
+	OnboardingStatusCode     string
+	AccountBillingID         sql.NullString
+	DefaultBillingAddressID  sql.NullString
+	DefaultShippingAddressID sql.NullString
+	UpdatedAt                time.Time
+	CreatedAt                time.Time
 }
 
 type AccountAddress struct {
@@ -68,38 +63,6 @@ type AccountBranding struct {
 	WebsiteUrl      sql.NullString
 	UpdatedAt       time.Time
 	CreatedAt       time.Time
-}
-
-type AccountFollowup struct {
-	ID                   string
-	AccountID            string
-	SandboxAccountID     sql.NullString
-	UserID               string
-	AccountName          string
-	RegistrantName       string
-	RegistrantEmail      string
-	RegisteredAt         time.Time
-	Status               string
-	ScheduledFor         time.Time
-	SkipReason           sql.NullString
-	Attempts             int32
-	LastError            sql.NullString
-	ActivitySummary      json.RawMessage
-	LlmModel             sql.NullString
-	PromptVersion        sql.NullString
-	Engagement           sql.NullString
-	InternalSummary      sql.NullString
-	DraftSubject         sql.NullString
-	DraftBody            sql.NullString
-	FinalSubject         sql.NullString
-	FinalBody            sql.NullString
-	ReviewTokenHash      sql.NullString
-	ReviewTokenExpiresAt sql.NullTime
-	DraftedAt            sql.NullTime
-	ReviewedAt           sql.NullTime
-	SentAt               sql.NullTime
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
 }
 
 type AccountGroup struct {
@@ -153,43 +116,11 @@ type AccountInventorySetting struct {
 	UpdatedAt           time.Time
 }
 
-type AccountPlan struct {
-	ID                   int64
-	TypeID               string
-	Name                 string
-	PlanTypeCode         string
-	Version              int32
-	PricePerSeat         string
-	PricePerMonth        sql.NullString
-	SeatMinimum          sql.NullInt32
-	StripePricingPlanID  sql.NullString
-	RegistrationLimit    sql.NullInt32
-	DisplayFeatures      json.RawMessage
-	DisplayOrder         int32
-	IsHighlighted        bool
-	ButtonText           string
-	IncludesPreviousPlan sql.NullString
-	IsPubliclyVisible    bool
-	EffectiveAt          time.Time
-	ExpiresAt            sql.NullTime
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-}
-
 type AccountPlanFeature struct {
 	ID            int64
 	AccountPlanID string
 	Key           string
 	Enabled       bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
-}
-
-type AccountPlanLimit struct {
-	ID            int64
-	AccountPlanID string
-	Key           string
-	Value         sql.NullInt32
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -392,21 +323,6 @@ type AdjustmentType struct {
 	Code      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
-}
-
-type AgentTokenBilling struct {
-	ID                     string
-	AccountID              string
-	PeriodStart            time.Time
-	PeriodEnd              time.Time
-	TotalInputTokens       int64
-	TotalOutputTokens      int64
-	TotalTokens            int64
-	TokensReportedToStripe int64
-	StripeMeteredItemID    sql.NullString
-	RunCount               int32
-	CreatedAt              time.Time
-	UpdatedAt              time.Time
 }
 
 type Announcement struct {
@@ -2081,38 +1997,6 @@ type RegistrationFlowsShippingTerm struct {
 	B string
 }
 
-type RegistrationQueue struct {
-	ID                    int64
-	Email                 string
-	Name                  string
-	PlanCode              string
-	RegistrationSessionID string
-	Contacted             bool
-	CreatedAt             time.Time
-	UpdatedAt             time.Time
-}
-
-type RegistrationSession struct {
-	ID                      int64
-	TypeID                  string
-	Email                   string
-	PlanCode                string
-	Step                    string
-	VerificationToken       string
-	IsEmailVerified         bool
-	IsExistingUser          sql.NullBool
-	UserID                  sql.NullString
-	AccountID               sql.NullString
-	StripeCustomerID        sql.NullString
-	StripeCheckoutSessionID sql.NullString
-	StripeSubscriptionID    sql.NullString
-	PaymentCompleted        bool
-	SessionData             json.RawMessage
-	CompletedAt             sql.NullTime
-	CreatedAt               time.Time
-	UpdatedAt               time.Time
-}
-
 type RequestLog struct {
 	ID                   string
 	Method               string
@@ -2480,15 +2364,6 @@ type StorageLocationType struct {
 	ID        string
 	Code      string
 	Name      string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-type StripeEventLog struct {
-	ID        string
-	EventID   string
-	EventType string
-	ObjectID  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

@@ -20013,59 +20013,6 @@ func (mr *MockLocationRepoMockRecorder) Update(ctx, params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockLocationRepo)(nil).Update), ctx, params)
 }
 
-// MockStripeEventLogRepo is a mock of StripeEventLogRepo interface.
-type MockStripeEventLogRepo struct {
-	ctrl     *gomock.Controller
-	recorder *MockStripeEventLogRepoMockRecorder
-	isgomock struct{}
-}
-
-// MockStripeEventLogRepoMockRecorder is the mock recorder for MockStripeEventLogRepo.
-type MockStripeEventLogRepoMockRecorder struct {
-	mock *MockStripeEventLogRepo
-}
-
-// NewMockStripeEventLogRepo creates a new mock instance.
-func NewMockStripeEventLogRepo(ctrl *gomock.Controller) *MockStripeEventLogRepo {
-	mock := &MockStripeEventLogRepo{ctrl: ctrl}
-	mock.recorder = &MockStripeEventLogRepoMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockStripeEventLogRepo) EXPECT() *MockStripeEventLogRepoMockRecorder {
-	return m.recorder
-}
-
-// Create mocks base method.
-func (m *MockStripeEventLogRepo) Create(ctx context.Context, id, eventID, objectID, eventType string) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, id, eventID, objectID, eventType)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockStripeEventLogRepoMockRecorder) Create(ctx, id, eventID, objectID, eventType any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockStripeEventLogRepo)(nil).Create), ctx, id, eventID, objectID, eventType)
-}
-
-// Exists mocks base method.
-func (m *MockStripeEventLogRepo) Exists(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Exists", ctx, eventID, objectID)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// Exists indicates an expected call of Exists.
-func (mr *MockStripeEventLogRepoMockRecorder) Exists(ctx, eventID, objectID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockStripeEventLogRepo)(nil).Exists), ctx, eventID, objectID)
-}
-
 // MockSupplierRepo is a mock of SupplierRepo interface.
 type MockSupplierRepo struct {
 	ctrl     *gomock.Controller

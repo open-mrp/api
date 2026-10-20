@@ -99,7 +99,6 @@ type RepoFactory interface {
 	NewRegistrationFlowRepo() RegistrationFlowRepo
 	NewShippingCaseRepo() ShippingCaseRepo
 	NewSysPropertyRepo() SysPropertyRepo
-	NewStripeEventLogRepo() StripeEventLogRepo
 	NewOrderPaymentIntentRepo() OrderPaymentIntentRepo
 	NewCustomerRegistrationRepo() CustomerRegistrationRepo
 	NewShipmentRepo() ShipmentRepo

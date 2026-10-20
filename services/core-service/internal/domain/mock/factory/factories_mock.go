@@ -1371,20 +1371,6 @@ func (mr *MockRepoFactoryMockRecorder) NewShippingTermRepo() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewShippingTermRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewShippingTermRepo))
 }
 
-// NewStripeEventLogRepo mocks base method.
-func (m *MockRepoFactory) NewStripeEventLogRepo() domain.StripeEventLogRepo {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "NewStripeEventLogRepo")
-	ret0, _ := ret[0].(domain.StripeEventLogRepo)
-	return ret0
-}
-
-// NewStripeEventLogRepo indicates an expected call of NewStripeEventLogRepo.
-func (mr *MockRepoFactoryMockRecorder) NewStripeEventLogRepo() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewStripeEventLogRepo", reflect.TypeOf((*MockRepoFactory)(nil).NewStripeEventLogRepo))
-}
-
 // NewSupplierMaterialRepo mocks base method.
 func (m *MockRepoFactory) NewSupplierMaterialRepo() domain.SupplierMaterialRepo {
 	m.ctrl.T.Helper()

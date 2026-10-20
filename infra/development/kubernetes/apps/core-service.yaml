@@ -46,11 +46,6 @@ spec:
               value: http
             - name: OTEL_EXPORTER_OTLP_INSECURE
               value: "true"
-            - name: AUTH_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  key: AUTH_SERVICE_URL
-                  name: app-config
             - name: DB_URL
               valueFrom:
                 secretKeyRef:

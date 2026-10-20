@@ -181,7 +181,7 @@ func Run(
 	if err != nil {
 		return err
 	}
-	grpc.NewBillingHandler(server.Server(), billingSvc, stripeWebhookSvc, cfg.StripePublishableKey)
+	grpc.NewBillingHandler(server.Server(), billingSvc, stripeWebhookSvc)
 
 	logger.Info("Billing service starting", "port", cfg.Port)
 

@@ -228,45 +228,6 @@ func (c *AuthCoreClient) GetAdminRole(ctx context.Context) (string, *apierror.AP
 	return resp.RoleId, nil
 }
 
-func (c *AuthCoreClient) CompleteRegistration(ctx context.Context, input domain.CompleteAccountRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
-	ctx = prepareCtx(ctx)
-
-	pbReq := &pb.CompleteRegistrationRequest{
-		UserId:           input.UserID,
-		PlanCode:         input.PlanCode,
-		StripeCustomerId: input.StripeCustomerID,
-		UserName:         input.UserName,
-		UserEmail:        input.UserEmail,
-		AccountData: &pb.RegistrationAccountData{
-			AccountName: input.AccountName,
-		},
-	}
-
-	if input.BusinessAddress != nil {
-		pbReq.AccountData.BusinessAddress = &pb.RegistrationAddress{
-			Line1:      &input.BusinessAddress.Line1,
-			Line2:      &input.BusinessAddress.Line2,
-			City:       &input.BusinessAddress.City,
-			State:      &input.BusinessAddress.State,
-			PostalCode: &input.BusinessAddress.PostalCode,
-			Country:    &input.BusinessAddress.Country,
-		}
-	}
-
-	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.complete_registration", coreServiceName,
-		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CompleteRegistrationResponse, error) {
-			return c.client.CompleteRegistration(ctx, pbReq, opts...)
-		})
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	return &domain.CompleteRegistrationOutput{
-		AccountID: resp.AccountId,
-		SandboxID: resp.SandboxId,
-	}, nil
-}
-
 func convertAccountModeFromProto(m pb.AccountMode) constants.AccountMode {
 	switch m {
 	case pb.AccountMode_ACCOUNT_MODE_PRODUCTION:

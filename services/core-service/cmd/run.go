@@ -149,16 +149,6 @@ func Run(
 	repoFactory := repository.NewRepoFactory(queries, payloads)
 	txManager := service.NewTransactionManager(db, queries, payloads)
 
-	// Connect to auth-service lazily (no WaitForReady) to avoid a startup deadlock:
-	// auth-service waits for core-service to be ready, so core-service cannot
-	// block on auth-service here. The gRPC client dials in the background and
-	// reconnects on demand; the first tenancy call will establish the connection.
-	authClient, err := grpc.NewCoreAuthClient(cfg.AuthServiceURL)
-	if err != nil {
-		return err
-	}
-	defer authClient.Close()
-
 	mediatorFactory := mediator.NewMediatorFactory()
 
 	// Branding logos are stored as object keys in the same bucket the upload endpoint writes to, so every document that prints one signs or reads it from here.
@@ -1048,7 +1038,6 @@ func Run(
 
 	tenancySvc := service.NewTenancySvc(&service.TenancySvcConfig{
 		RepoFactory:      repoFactory,
-		AuthClient:       authClient,
 		S3Client:         s3Store,
 		UserPhotosBucket: cfg.UserPhotosBucket,
 	})

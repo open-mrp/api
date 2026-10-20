@@ -96,11 +96,6 @@ spec:
                 configMapKeyRef:
                   key: PLATFORM_SERVICE_URL
                   name: app-config
-            - name: BILLING_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  key: BILLING_SERVICE_URL
-                  name: app-config
             - name: CURSOR_HMAC_KEY
               valueFrom:
                 secretKeyRef:

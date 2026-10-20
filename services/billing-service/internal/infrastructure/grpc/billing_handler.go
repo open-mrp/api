@@ -16,20 +16,14 @@ import (
 type billingHandler struct {
 	pb.UnimplementedBillingServiceServer
 
-	billingSvc           domain.BillingSvc
-	stripeWebhookSvc     domain.StripeWebhookSvc
-	stripePublishableKey string
+	billingSvc       domain.BillingSvc
+	stripeWebhookSvc domain.StripeWebhookSvc
 }
 
-func NewBillingHandler(server *grpc.Server, billingSvc domain.BillingSvc, stripeWebhookSvc domain.StripeWebhookSvc, stripePublishableKey ...string) *billingHandler {
-	var pubKey string
-	if len(stripePublishableKey) > 0 {
-		pubKey = stripePublishableKey[0]
-	}
+func NewBillingHandler(server *grpc.Server, billingSvc domain.BillingSvc, stripeWebhookSvc domain.StripeWebhookSvc) *billingHandler {
 	handler := &billingHandler{
-		billingSvc:           billingSvc,
-		stripeWebhookSvc:     stripeWebhookSvc,
-		stripePublishableKey: pubKey,
+		billingSvc:       billingSvc,
+		stripeWebhookSvc: stripeWebhookSvc,
 	}
 
 	pb.RegisterBillingServiceServer(server, handler)
@@ -161,33 +155,6 @@ func (h *billingHandler) ListPricingPlans(ctx context.Context, req *pb.ListPrici
 			HasNextPage: result.PageInfo.HasNextPage,
 			HasPrevPage: result.PageInfo.HasPrevPage,
 		},
-	}, nil
-}
-
-func (h *billingHandler) CreateCustomer(ctx context.Context, req *pb.CreateCustomerRequest) (*pb.CreateCustomerResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	accountID := req.Metadata["account_id"]
-
-	var result *domain.EnsureBillingCustomerResult
-	var apiErr *apierror.APIError
-
-	if accountID != "" {
-		result, apiErr = h.billingSvc.EnsureBillingCustomer(ctx, accountID)
-	} else {
-		result, apiErr = h.billingSvc.CreateRegistrationCustomer(ctx, req.Email, req.Name, req.IdempotencyKey, req.Metadata)
-	}
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.CreateCustomerResponse{
-		CustomerId: result.StripeCustomerID,
 	}, nil
 }
 
@@ -479,101 +446,4 @@ func (h *billingHandler) PreviewPlanChange(ctx context.Context, req *pb.PreviewP
 			IsEstimate:                 result.IsEstimate,
 		},
 	}, nil
-}
-
-func (h *billingHandler) SetupBillingProfile(ctx context.Context, req *pb.SetupBillingProfileRequest) (*pb.SetupBillingProfileResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	accountID := req.GetAccountId()
-	if accountID == "" {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.billingSvc.SetupBillingProfile(ctx, accountID)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.SetupBillingProfileResponse{
-		BillingProfileId: result.ProfileID,
-		BillingCadenceId: result.CadenceID,
-	}, nil
-}
-
-func (h *billingHandler) SubscribeToPricingPlan(ctx context.Context, req *pb.SubscribeToPricingPlanRequest) (*pb.SubscribeToPricingPlanResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	if req.StripeCustomerId == "" {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("stripe_customer_id is required"))
-	}
-	if req.PlanCode == "" {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("plan_code is required"))
-	}
-
-	apiErr := h.billingSvc.SubscribeToPricingPlan(ctx, req.StripeCustomerId, req.PlanCode)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.SubscribeToPricingPlanResponse{}, nil
-}
-
-func (h *billingHandler) CreateSetupIntent(ctx context.Context, req *pb.CreateSetupIntentRequest) (*pb.CreateSetupIntentResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.billingSvc.CreateSetupIntent(ctx, req.CustomerId, req.IdempotencyKey)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.CreateSetupIntentResponse{
-		SetupIntentId:  result.SetupIntentID,
-		ClientSecret:   result.ClientSecret,
-		PublishableKey: h.stripePublishableKey,
-	}, nil
-}
-
-func (h *billingHandler) GetSetupIntentStatus(ctx context.Context, req *pb.GetSetupIntentStatusRequest) (*pb.GetSetupIntentStatusResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	result, apiErr := h.billingSvc.GetSetupIntentStatus(ctx, req.SetupIntentId)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.GetSetupIntentStatusResponse{
-		Status:          result.Status,
-		PaymentMethodId: result.PaymentMethodID,
-	}, nil
-}
-
-func (h *billingHandler) ValidateStripePricingPlan(ctx context.Context, req *pb.ValidateStripePricingPlanRequest) (*pb.ValidateStripePricingPlanResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	if req.PlanCode == "" {
-		return nil, contracts.ConvertAPIErrorToGRPC(apierror.NewValidationError("plan_code is required"))
-	}
-
-	apiErr := h.billingSvc.ValidateStripePricingPlan(ctx, req.PlanCode)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.ValidateStripePricingPlanResponse{Valid: true}, nil
 }

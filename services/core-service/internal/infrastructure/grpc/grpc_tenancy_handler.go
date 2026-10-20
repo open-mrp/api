@@ -60,18 +60,6 @@ func tenancyAccountPlanToProto(p *domain.TenancyAccountPlan) *pb.TenancyAccountP
 	return proto
 }
 
-func tenancyPendingRegistrationToProto(pr *domain.TenancyPendingRegistration) *pb.TenancyPendingRegistrationProto {
-	if pr == nil {
-		return nil
-	}
-	return &pb.TenancyPendingRegistrationProto{
-		SessionId: pr.SessionID,
-		PlanCode:  pr.PlanCode,
-		Step:      pr.Step,
-		CreatedAt: timestamppb.New(pr.CreatedAt),
-	}
-}
-
 func tenancyCurrentAccountToProto(ca *domain.TenancyCurrentAccount) *pb.TenancyCurrentAccountProto {
 	if ca == nil {
 		return nil
@@ -124,10 +112,9 @@ func tenancyToProto(t *domain.Tenancy) *pb.GetTenancyResponse {
 	}
 
 	resp := &pb.GetTenancyResponse{
-		HasTenancy:          t.HasTenancy,
-		CurrentAccount:      tenancyCurrentAccountToProto(t.CurrentAccount),
-		OwnerAccount:        tenancyOwnerAccountToProto(t.OwnerAccount),
-		PendingRegistration: tenancyPendingRegistrationToProto(t.PendingRegistration),
+		HasTenancy:     t.HasTenancy,
+		CurrentAccount: tenancyCurrentAccountToProto(t.CurrentAccount),
+		OwnerAccount:   tenancyOwnerAccountToProto(t.OwnerAccount),
 	}
 
 	if t.Sandboxes != nil {

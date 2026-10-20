@@ -17,8 +17,6 @@ type StripeClient interface {
 
 	// V2 Pricing Plan APIs
 	GetPricingPlan(ctx context.Context, pricingPlanID string) (*StripePricingPlan, error)
-	CreateBillingProfile(ctx context.Context, customerID, idempotencyKey string) (profileID string, err error)
-	CreateBillingCadence(ctx context.Context, billingProfileID, idempotencyKey string) (cadenceID string, err error)
 	CreateBillingIntent(ctx context.Context, cadenceID string, actions []BillingIntentAction, idempotencyKey string) (intentID string, err error)
 	ReserveBillingIntent(ctx context.Context, intentID string) (*BillingIntentReservation, error)
 	CreatePaymentIntent(ctx context.Context, amountCents int64, currency, customerID, returnURL string) (paymentIntentID string, err error)
@@ -27,11 +25,6 @@ type StripeClient interface {
 
 	// FetchObject fetches a Stripe object by its API path (used for v2 thin event related_object).
 	FetchObject(ctx context.Context, objectURL string) ([]byte, error)
-
-	// CreateSetupIntent creates a Stripe Setup Intent for collecting a payment method.
-	CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*StripeSetupIntent, error)
-	// GetSetupIntent retrieves the current state of a Stripe Setup Intent.
-	GetSetupIntent(ctx context.Context, setupIntentID string) (*StripeSetupIntent, error)
 
 	// ReportMeterEvent reports a usage meter event to the Stripe V2 billing/meter_events API.
 	ReportMeterEvent(ctx context.Context, eventName, stripeCustomerID string, value int, idempotencyKey string) error
@@ -135,14 +128,6 @@ func (e *ErrBillingIntentConflict) Unwrap() error {
 // BillingIntentCommitResult holds IDs extracted from a committed billing intent.
 type BillingIntentCommitResult struct {
 	PricingPlanSubscriptionIDs []string
-}
-
-// StripeSetupIntent represents a Stripe Setup Intent for collecting payment methods.
-type StripeSetupIntent struct {
-	ID              string
-	ClientSecret    string // #nosec G117 -- Stripe ephemeral client secret
-	Status          string
-	PaymentMethodID *string
 }
 
 // NotificationClient is the interface for calling notification-service RPCs.

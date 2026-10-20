@@ -643,7 +643,7 @@ var pathSpecificIDSeeds = map[string]string{
 	"/v1/sales/accounts/":                                         SeedCustomerAccountID,
 	"/v1/sales/customers/":                                        SeedCustomerAccountID,
 
-	// NOTE: purchase-orders, registration-sessions, and customer-accounts/tenancy
+	// NOTE: purchase-orders and customer-accounts/tenancy
 	// are excluded from test discovery in spec.go (excludedPaths).
 }
 

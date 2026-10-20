@@ -47,34 +47,8 @@ type BillingSvc interface {
 	// EnsureBillingCustomer links or fetches a Stripe customer for an account. If one already exists it is returned; otherwise a new one is created. Also creates a billing profile if one doesn't exist.
 	EnsureBillingCustomer(ctx context.Context, accountID string) (*EnsureBillingCustomerResult, *apierror.APIError)
 
-	// CreateRegistrationCustomer creates a Stripe customer for a registration session before an account exists. Uses the provided email/name directly.
-	CreateRegistrationCustomer(ctx context.Context, email, name, idempotencyKey string, metadata map[string]string) (*EnsureBillingCustomerResult, *apierror.APIError)
-
 	// SwitchPlan initiates a plan switch using v2 billing intents.
 	SwitchPlan(ctx context.Context, accountID string, planID string) (*SwitchPlanResult, *apierror.APIError)
-
-	// SetupBillingProfile creates a billing profile and cadence for an account.
-	SetupBillingProfile(ctx context.Context, accountID string) (*BillingProfileResult, *apierror.APIError)
-
-	// SubscribeToPricingPlan subscribes a Stripe customer to a v2 pricing plan.
-	SubscribeToPricingPlan(ctx context.Context, stripeCustomerID, planCode string) *apierror.APIError
-
-	// CreateSetupIntent creates a Stripe Setup Intent for collecting a payment method.
-	CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*SetupIntentResult, *apierror.APIError)
-
-	// GetSetupIntentStatus returns the current status of a Stripe Setup Intent.
-	GetSetupIntentStatus(ctx context.Context, setupIntentID string) (*SetupIntentResult, *apierror.APIError)
-
-	// ValidateStripePricingPlan checks whether the Stripe pricing plan for a given plan code is accessible. Returns nil if valid or free plan.
-	ValidateStripePricingPlan(ctx context.Context, planCode string) *apierror.APIError
-}
-
-// SetupIntentResult holds the result of a Setup Intent operation.
-type SetupIntentResult struct {
-	SetupIntentID   string
-	ClientSecret    string // #nosec G117 -- Stripe ephemeral client secret
-	Status          string
-	PaymentMethodID *string
 }
 
 // CoreClient is the interface for calling core-service RPCs from the billing service layer.

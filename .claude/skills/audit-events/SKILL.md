@@ -50,4 +50,3 @@ type AccountGroup struct {
 ## Exceptions (no resource audit)
 
 - Address-validation validate action — no persisted domain state.
-- Utils request-demo — marketing, not an API resource.

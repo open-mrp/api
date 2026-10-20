@@ -3225,21 +3225,6 @@ func (mr *MockAccountSvcMockRecorder) ClearAccountStripeCustomer(ctx, accountID 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClearAccountStripeCustomer", reflect.TypeOf((*MockAccountSvc)(nil).ClearAccountStripeCustomer), ctx, accountID)
 }
 
-// CompleteRegistration mocks base method.
-func (m *MockAccountSvc) CompleteRegistration(ctx context.Context, input domain.CompleteRegistrationInput) (*domain.CompleteRegistrationOutput, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CompleteRegistration", ctx, input)
-	ret0, _ := ret[0].(*domain.CompleteRegistrationOutput)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// CompleteRegistration indicates an expected call of CompleteRegistration.
-func (mr *MockAccountSvcMockRecorder) CompleteRegistration(ctx, input any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRegistration", reflect.TypeOf((*MockAccountSvc)(nil).CompleteRegistration), ctx, input)
-}
-
 // GetAccount mocks base method.
 func (m *MockAccountSvc) GetAccount(ctx context.Context, accountID string) (*domain.Account, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -9456,20 +9441,6 @@ func (m *MockUtilsSvc) EmailRecord(ctx context.Context, params domain.EmailRecor
 func (mr *MockUtilsSvcMockRecorder) EmailRecord(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EmailRecord", reflect.TypeOf((*MockUtilsSvc)(nil).EmailRecord), ctx, params)
-}
-
-// RequestDemo mocks base method.
-func (m *MockUtilsSvc) RequestDemo(ctx context.Context, params domain.RequestDemoParams) *apierror.APIError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequestDemo", ctx, params)
-	ret0, _ := ret[0].(*apierror.APIError)
-	return ret0
-}
-
-// RequestDemo indicates an expected call of RequestDemo.
-func (mr *MockUtilsSvcMockRecorder) RequestDemo(ctx, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequestDemo", reflect.TypeOf((*MockUtilsSvc)(nil).RequestDemo), ctx, params)
 }
 
 // SendInvoiceEmail mocks base method.

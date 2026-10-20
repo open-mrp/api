@@ -19,7 +19,6 @@ import (
 	"github.com/stripe/stripe-go/v84/customer"
 	"github.com/stripe/stripe-go/v84/paymentintent"
 	"github.com/stripe/stripe-go/v84/paymentmethod"
-	"github.com/stripe/stripe-go/v84/setupintent"
 	"github.com/stripe/stripe-go/v84/webhook"
 )
 
@@ -271,57 +270,6 @@ func extractRateCardID(comp map[string]any) string {
 		}
 	}
 	return ""
-}
-
-func (c *stripeClientImpl) CreateBillingProfile(ctx context.Context, customerID, idempotencyKey string) (string, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_profile")
-	defer span.End()
-
-	body := fmt.Sprintf(`{"customer":"%s"}`, customerID)
-	resp, err := stripe.RawRequest(http.MethodPost, "/v2/billing/profiles", body, &stripe.RawParams{
-		Params: stripe.Params{
-			IdempotencyKey: stripe.String(idempotencyKey),
-		},
-	})
-	if err != nil {
-		span.RecordError(err)
-		return "", fmt.Errorf("failed to create billing profile: %w", err)
-	}
-	var result struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
-		return "", fmt.Errorf("failed to parse billing profile response: %w", err)
-	}
-
-	return result.ID, nil
-}
-
-func (c *stripeClientImpl) CreateBillingCadence(ctx context.Context, billingProfileID, idempotencyKey string) (string, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_billing_cadence")
-	defer span.End()
-
-	body := fmt.Sprintf(`{
-		"payer":{"billing_profile":"%s"},
-		"billing_cycle":{"type":"month","interval_count":1}
-	}`, billingProfileID)
-	resp, err := stripe.RawRequest(http.MethodPost, "/v2/billing/cadences", body, &stripe.RawParams{
-		Params: stripe.Params{
-			IdempotencyKey: stripe.String(idempotencyKey),
-		},
-	})
-	if err != nil {
-		span.RecordError(err)
-		return "", fmt.Errorf("failed to create billing cadence: %w", err)
-	}
-	var result struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(resp.RawJSON, &result); err != nil {
-		return "", fmt.Errorf("failed to parse billing cadence response: %w", err)
-	}
-
-	return result.ID, nil
 }
 
 func (c *stripeClientImpl) CreateBillingIntent(ctx context.Context, cadenceID string, actions []domain.BillingIntentAction, idempotencyKey string) (string, error) {
@@ -659,51 +607,6 @@ func parseBillingIntentConflict(err error) (string, bool) {
 		return "", false
 	}
 	return intentID, true
-}
-
-func (c *stripeClientImpl) CreateSetupIntent(ctx context.Context, customerID, idempotencyKey string) (*domain.StripeSetupIntent, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.create_setup_intent")
-	defer span.End()
-
-	params := &stripe.SetupIntentParams{
-		Customer:           stripe.String(customerID),
-		PaymentMethodTypes: stripe.StringSlice([]string{"card"}),
-	}
-	params.IdempotencyKey = stripe.String(idempotencyKey)
-
-	si, err := setupintent.New(params)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to create Setup Intent: %w", err)
-	}
-
-	return &domain.StripeSetupIntent{
-		ID:           si.ID,
-		ClientSecret: si.ClientSecret,
-		Status:       string(si.Status),
-	}, nil
-}
-
-func (c *stripeClientImpl) GetSetupIntent(ctx context.Context, setupIntentID string) (*domain.StripeSetupIntent, error) {
-	_, span := stripeClientTracer.Start(ctx, "stripe_client.get_setup_intent")
-	defer span.End()
-
-	si, err := setupintent.Get(setupIntentID, nil)
-	if err != nil {
-		span.RecordError(err)
-		return nil, fmt.Errorf("failed to get Setup Intent: %w", err)
-	}
-
-	result := &domain.StripeSetupIntent{
-		ID:           si.ID,
-		ClientSecret: si.ClientSecret,
-		Status:       string(si.Status),
-	}
-	if si.PaymentMethod != nil {
-		result.PaymentMethodID = &si.PaymentMethod.ID
-	}
-
-	return result, nil
 }
 
 func (c *stripeClientImpl) VerifyWebhookSignature(payload []byte, signature string) (*domain.StripeEvent, error) {

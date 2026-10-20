@@ -72,14 +72,6 @@ func (s *StripeClient) GetPricingPlan(_ context.Context, _ string) (*domain.Stri
 	return &domain.StripePricingPlan{}, nil
 }
 
-func (s *StripeClient) CreateBillingProfile(_ context.Context, _, _ string) (string, error) {
-	return "bp_stub", nil
-}
-
-func (s *StripeClient) CreateBillingCadence(_ context.Context, _, _ string) (string, error) {
-	return "bc_stub", nil
-}
-
 func (s *StripeClient) CreateBillingIntent(_ context.Context, _ string, _ []domain.BillingIntentAction, _ string) (string, error) {
 	return "bi_stub", nil
 }
@@ -104,35 +96,8 @@ func (s *StripeClient) FetchObject(_ context.Context, _ string) ([]byte, error) 
 	return []byte("{}"), nil
 }
 
-// stubSequence gives each stubbed Stripe object a distinct ID. A constant ID would make two
-// registrations indistinguishable, so a session confirming against another session's setup
-// intent would look identical to one confirming against its own.
+// stubSequence gives each stubbed Stripe object a distinct ID.
 var stubSequence atomic.Uint64
-
-// CreateSetupIntent mints an intent in the state Stripe creates one in: awaiting a card. The
-// client secret follows Stripe's `<id>_secret_<key>` shape, because that is what the browser is
-// given and what the intent ID is read back out of.
-func (s *StripeClient) CreateSetupIntent(_ context.Context, _, _ string) (*domain.StripeSetupIntent, error) {
-	id := fmt.Sprintf("seti_stub_%d", stubSequence.Add(1))
-	return &domain.StripeSetupIntent{
-		ID:           id,
-		ClientSecret: id + "_secret_stub",
-		Status:       "requires_payment_method",
-	}, nil
-}
-
-// GetSetupIntent reports the intent as succeeded. The server only ever reads an intent after
-// the browser has confirmed the card against it, so that is the state this call observes; an
-// intent still awaiting payment would leave the confirm path permanently unreachable in tests.
-func (s *StripeClient) GetSetupIntent(_ context.Context, setupIntentID string) (*domain.StripeSetupIntent, error) {
-	paymentMethodID := "pm_stub"
-	return &domain.StripeSetupIntent{
-		ID:              setupIntentID,
-		ClientSecret:    setupIntentID + "_secret_stub",
-		Status:          "succeeded",
-		PaymentMethodID: &paymentMethodID,
-	}, nil
-}
 
 func (s *StripeClient) ReportMeterEvent(_ context.Context, _, _ string, _ int, _ string) error {
 	return nil

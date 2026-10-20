@@ -612,9 +612,6 @@ type AccountSvc interface {
 	// GetAccountByStripeCustomerID resolves an account from a Stripe customer ID.
 	GetAccountByStripeCustomerID(ctx context.Context, stripeCustomerID string) (accountID string, planCode string, err *apierror.APIError)
 
-	// CompleteRegistration creates the production account, sandbox, owner roles, account-user records, business address, and portal for a newly registered user. Returns the new account ID and sandbox account ID.
-	CompleteRegistration(ctx context.Context, input CompleteRegistrationInput) (*CompleteRegistrationOutput, *apierror.APIError)
-
 	// UpdateAgentSpendingCap sets or removes the monthly agent LLM spending cap for the caller's account. Pass nil to remove the cap.
 	UpdateAgentSpendingCap(ctx context.Context, capCents *int64) (*int64, *apierror.APIError)
 
@@ -644,23 +641,6 @@ type AccountSvc interface {
 	GetAccountFaviconURL(ctx context.Context, accountID string) (*string, *apierror.APIError)
 }
 
-// CompleteRegistrationInput carries the data needed to finalize a registration.
-type CompleteRegistrationInput struct {
-	UserID               string
-	PlanCode             string
-	StripeCustomerID     string
-	StripeSubscriptionID string
-	UserName             string
-	UserEmail            string
-	AccountData          RegistrationAccountData
-	BusinessAddress      *RegistrationAddress
-}
-
-// RegistrationAccountData holds the business profile information collected during onboarding.
-type RegistrationAccountData struct {
-	AccountName string
-}
-
 // RegistrationAddress is a structured postal address collected during registration.
 type RegistrationAddress struct {
 	Line1      string
@@ -669,12 +649,6 @@ type RegistrationAddress struct {
 	State      string
 	PostalCode string
 	Country    string
-}
-
-// CompleteRegistrationOutput holds the IDs of the newly created accounts.
-type CompleteRegistrationOutput struct {
-	AccountID string
-	SandboxID string
 }
 
 // BatchSvc handles all batch-related business logic.
@@ -1640,7 +1614,6 @@ type UtilsSvc interface {
 	SendSalesOrderAcknowledgement(ctx context.Context, params SendSalesOrderAcknowledgementParams) *apierror.APIError
 	// SendPurchaseOrderSubmission mails a purchase order submission off the back of CoreEventPurchaseOrderSubmitted.
 	SendPurchaseOrderSubmission(ctx context.Context, params SendPurchaseOrderSubmissionParams) *apierror.APIError
-	RequestDemo(ctx context.Context, params RequestDemoParams) *apierror.APIError
 	SubmitFeedback(ctx context.Context, params SubmitFeedbackParams) *apierror.APIError
 }
 
@@ -1834,15 +1807,6 @@ type PortalRegistrationSessionSvc interface {
 	AbandonSession(ctx context.Context, typeID string) (*PortalRegistrationSession, *apierror.APIError)
 	// ListSessions returns the seller account's registration sessions for the customer-service follow-up view (seller-facing; scoped to the caller's account).
 	ListSessions(ctx context.Context, params ListPortalRegistrationSessionsParams) (*ListPortalRegistrationSessionsResult, *apierror.APIError)
-}
-
-// CreateAccountParams holds the parameters for creating a production account during registration.
-type CreateAccountParams struct {
-	ID                   string
-	Name                 string
-	PlanCode             string
-	StripeCustomerID     string
-	StripeSubscriptionID string
 }
 
 // OperatingCalendarSvc manages the day-sets a ship-by commitment is resolved against.

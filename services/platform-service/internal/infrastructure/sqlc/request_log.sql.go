@@ -137,7 +137,7 @@ func (q *Queries) CreateRequestLog(ctx context.Context, arg CreateRequestLogPara
 
 const deleteExpiredRequestLogs = `-- name: DeleteExpiredRequestLogs :execresult
 DELETE FROM request_log
-WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 7 YEAR)
+WHERE occurred_at < DATE_SUB(NOW(3), INTERVAL 90 DAY)
 LIMIT ?
 `
 

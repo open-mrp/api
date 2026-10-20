@@ -24,35 +24,19 @@ import (
 
 const portalRegSessionsPath = "/v1/sales/portal-registration-sessions"
 
-// newPortalBuyerClient registers a fresh, email-verified user with no account and
-// returns a client authenticated as that user — the "buyer" persona a portal
-// registration is scoped to. Reuses the self-serve registration flow helpers.
+// newPortalBuyerClient registers a fresh user with no account and returns a client
+// authenticated as that user — the "buyer" persona a portal registration is scoped to.
 func newPortalBuyerClient(t *testing.T) *Client {
 	t.Helper()
 
-	status, body, err := apiClient.Post(registrationSessionsPath, map[string]any{
-		"email":     uniqueRegistrationEmail(),
-		"plan_code": "free",
+	resp, err := apiClient.PostFull(covAuthUsersRegisterPath, map[string]any{
+		"email":        covAuthUsersUniqueEmail("e2e-portal-buyer"),
+		"password":     covAuthUsersPassword,
+		"name":         "E2E Portal Buyer",
+		"account_slug": SeedAccountSlug,
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	sessionID := jsonField(parseJSON(body), "id")
-	require.NotEmpty(t, sessionID)
-
-	// Verify the email (stands in for the emailed link) so the user can be created.
-	token := registrationVerificationToken(t, sessionID)
-	status, body, err = apiClient.Put(verifyTokenPath(token), nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	// Create the user — the response logs them in via cookie. We stop here: the
-	// buyer has a user identity but no account, exactly the portal buyer persona.
-	resp, err := apiClient.PostFull(registrationSessionsPath+"/"+sessionID+"/users", map[string]any{
-		"name":     "E2E Portal Buyer",
-		"password": "P@ssw0rd123!",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	requireStatus(t, 200, resp.StatusCode, resp.Body)
 
 	return apiClient.WithBearerToken(accessTokenFromSetCookie(t, resp.Header), "")
 }

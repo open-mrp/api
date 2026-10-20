@@ -4,13 +4,10 @@ import (
 	"cmp"
 	"fmt"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	"github.com/open-mrp/api/shared/env"
-	"github.com/open-mrp/api/shared/messaging"
 )
 
 var (
@@ -27,20 +24,7 @@ const (
 	envAWSRegion      = "AWS_REGION"
 	envPayloadsBucket = "PAYLOADS_BUCKET"
 
-	envStripeSecretKey                = "STRIPE_SECRET_KEY"
-	envAccountFollowupEnabled         = "ACCOUNT_FOLLOWUP_ENABLED"
-	envAccountFollowupReviewerEmail   = "ACCOUNT_FOLLOWUP_REVIEWER_EMAIL"
-	envAccountFollowupFromAddress     = "ACCOUNT_FOLLOWUP_FROM_ADDRESS"
-	envAccountFollowupSignature       = "ACCOUNT_FOLLOWUP_SIGNATURE"
-	envAccountFollowupReviewBaseURL   = "ACCOUNT_FOLLOWUP_REVIEW_BASE_URL"
-	envAccountFollowupModel           = "ACCOUNT_FOLLOWUP_MODEL"
-	envAccountFollowupDelay           = "ACCOUNT_FOLLOWUP_DELAY"
-	envAccountFollowupPollInterval    = "ACCOUNT_FOLLOWUP_POLL_INTERVAL"
-	envAccountFollowupExcludedDomains = "ACCOUNT_FOLLOWUP_EXCLUDED_DOMAINS"
-	defaultAccountFollowupReviewer    = messaging.DefaultOperatorEmail
-	defaultAccountFollowupReviewURL   = "https://api.openmrp.ai/account-followups/review"
-	defaultAccountFollowupModel       = "claude-haiku-4.5"
-	defaultAWSRegion                  = "us-east-2"
+	defaultAWSRegion = "us-east-2"
 )
 
 // config represents the configuration for the platform service.
@@ -66,36 +50,6 @@ type config struct {
 	// PayloadsBucket (optional; default: "") is the S3 bucket the api-gateway writes request log bodies
 	// to. When empty, only logs whose bodies were stored inline can return them.
 	PayloadsBucket string
-
-	// AccountFollowupEnabled (optional; default: false) turns on drafting follow-ups for new registrants. Registrations are recorded either way, so enabling it later still drafts for everyone since.
-	AccountFollowupEnabled bool
-
-	// StripeSecretKey (required when AccountFollowupEnabled) authenticates follow-up drafting to the Stripe AI Gateway.
-	StripeSecretKey string
-
-	// AccountFollowupReviewerEmail (optional; default: messaging.DefaultOperatorEmail) receives every draft for approval.
-	AccountFollowupReviewerEmail string
-
-	// AccountFollowupFromAddress (optional; default: the follow-up service's default) sends every approved follow-up.
-	AccountFollowupFromAddress string
-
-	// AccountFollowupSignature (optional; default: the follow-up service's default) closes every follow-up.
-	AccountFollowupSignature string
-
-	// AccountFollowupReviewBaseURL (optional; default: "https://api.openmrp.ai/account-followups/review") is the review page linked from each review email.
-	AccountFollowupReviewBaseURL string
-
-	// AccountFollowupModel (optional; default: "claude-haiku-4.5") is the gateway model that drafts follow-ups. A short paragraph from a structured summary does not need a larger model.
-	AccountFollowupModel string
-
-	// AccountFollowupDelay (optional; default: 24h) is how long after registering a follow-up is drafted.
-	AccountFollowupDelay time.Duration
-
-	// AccountFollowupPollInterval (optional; default: 1h) is how often due follow-ups are looked for.
-	AccountFollowupPollInterval time.Duration
-
-	// AccountFollowupExcludedDomains (optional; default: the team's and test domains) is a comma-separated list of registrant domains that never get a follow-up.
-	AccountFollowupExcludedDomains []string
 }
 
 // withDefaults sets the default values for the configuration.
@@ -114,16 +68,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		platformMode = constants.PlatformMode(p)
 	}
 
-	followupEnabled, _ := strconv.ParseBool(env.GetEnv(envAccountFollowupEnabled, getenv))
-	followupDelay, _ := time.ParseDuration(env.GetEnv(envAccountFollowupDelay, getenv))
-	followupPollInterval, _ := time.ParseDuration(env.GetEnv(envAccountFollowupPollInterval, getenv))
-	var excludedDomains []string
-	for _, d := range strings.Split(env.GetEnv(envAccountFollowupExcludedDomains, getenv), ",") {
-		if d = strings.TrimSpace(d); d != "" {
-			excludedDomains = append(excludedDomains, d)
-		}
-	}
-
 	return &config{
 		Port:           port,
 		DBURL:          env.GetEnv(envDBURL, getenv),
@@ -132,17 +76,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		PlatformMode:   platformMode,
 		AWSRegion:      cmp.Or(env.GetEnv(envAWSRegion, getenv), defaultAWSRegion),
 		PayloadsBucket: env.GetEnv(envPayloadsBucket, getenv),
-
-		AccountFollowupEnabled:         followupEnabled,
-		StripeSecretKey:                env.GetEnv(envStripeSecretKey, getenv),
-		AccountFollowupReviewerEmail:   cmp.Or(env.GetEnv(envAccountFollowupReviewerEmail, getenv), defaultAccountFollowupReviewer),
-		AccountFollowupFromAddress:     env.GetEnv(envAccountFollowupFromAddress, getenv),
-		AccountFollowupSignature:       env.GetEnv(envAccountFollowupSignature, getenv),
-		AccountFollowupReviewBaseURL:   cmp.Or(env.GetEnv(envAccountFollowupReviewBaseURL, getenv), defaultAccountFollowupReviewURL),
-		AccountFollowupModel:           cmp.Or(env.GetEnv(envAccountFollowupModel, getenv), defaultAccountFollowupModel),
-		AccountFollowupDelay:           followupDelay,
-		AccountFollowupPollInterval:    followupPollInterval,
-		AccountFollowupExcludedDomains: excludedDomains,
 	}
 }
 
@@ -159,9 +92,6 @@ func (c *config) validate() error {
 	}
 	if len(c.CursorHMACKey) == 0 {
 		return fmt.Errorf("platform-service: CURSOR_HMAC_KEY is required")
-	}
-	if c.AccountFollowupEnabled && c.StripeSecretKey == "" {
-		return fmt.Errorf("platform-service: %s is required when %s is set", envStripeSecretKey, envAccountFollowupEnabled)
 	}
 	return nil
 }

@@ -81,36 +81,6 @@ func (h *gRPCHandler) EmailRecord(ctx context.Context, req *pb.EmailRecordReques
 	return &pb.EmailRecordResponse{}, nil
 }
 
-func (h *gRPCHandler) RequestDemo(ctx context.Context, req *pb.RequestDemoRequest) (*pb.RequestDemoResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	ctx, finalizeIdempotency := contracts.WithIdempotencyTracking(ctx)
-	defer finalizeIdempotency()
-
-	params := domain.RequestDemoParams{
-		Name:    req.Name,
-		Email:   req.Email,
-		Company: req.Company,
-	}
-	if req.PhoneNumber != nil {
-		params.PhoneNumber = req.PhoneNumber
-	}
-	if req.Message != nil {
-		params.Message = req.Message
-	}
-
-	apiErr := h.utilsSvc.RequestDemo(ctx, params)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.RequestDemoResponse{
-		Message: "Demo request submitted successfully.",
-	}, nil
-}
-
 func (h *gRPCHandler) SubmitFeedback(ctx context.Context, req *pb.SubmitFeedbackRequest) (*pb.SubmitFeedbackResponse, error) {
 	if req == nil {
 		return nil, contracts.NewMissingGRPCRequestDataError()

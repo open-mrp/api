@@ -32,50 +32,6 @@ func NewRegistrationRepo(queries *sqlc.Queries) domain.RegistrationRepo {
 	return &registrationRepoImpl{queries: queries}
 }
 
-func (r *registrationRepoImpl) CreateAccountForRegistration(ctx context.Context, params domain.CreateAccountParams) *apierror.APIError {
-	ctx, span := registrationRepoTracer.Start(ctx, "repository.registration.create_account")
-	defer span.End()
-
-	planTypeID, err := r.queries.GetAccountPlanTypeIDByCode(ctx, params.PlanCode)
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	subscriptionStatus := constants.SubscriptionStatusTrialing
-	if params.PlanCode == string(constants.PlanCodeFree) {
-		subscriptionStatus = constants.SubscriptionStatusActive
-	}
-
-	billingID, genErr := id.GenID(id.AccountBillingIDPrefix, nil)
-	if genErr != nil {
-		return tracing.Trace(span, genErr)
-	}
-
-	err = r.queries.CreateAccountBilling(ctx, sqlc.CreateAccountBillingParams{
-		ID:                           billingID,
-		AccountPlanID:                planTypeID,
-		InternalStripeCustomerID:     nullStr(params.StripeCustomerID),
-		InternalStripeSubscriptionID: nullStr(params.StripeSubscriptionID),
-		SubscriptionStatus:           sql.NullString{String: subscriptionStatus.String(), Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	err = r.queries.CreateAccountForRegistration(ctx, sqlc.CreateAccountForRegistrationParams{
-		ID:                   params.ID,
-		Name:                 params.Name,
-		AccountTypeCode:      string(domain.AccountTypeCompany),
-		OnboardingStatusCode: "active",
-		AccountBillingID:     sql.NullString{String: billingID, Valid: true},
-	})
-	if apiErr := db.MapSQLError(err); apiErr != nil {
-		return tracing.Trace(span, apiErr)
-	}
-
-	return nil
-}
-
 func (r *registrationRepoImpl) CreateAccountUser(ctx context.Context, accountID, userID, roleID string) *apierror.APIError {
 	ctx, span := registrationRepoTracer.Start(ctx, "repository.registration.create_account_user")
 	defer span.End()

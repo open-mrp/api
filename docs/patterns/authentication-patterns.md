@@ -105,7 +105,6 @@ These behaviors deliberately omit standard identity checks or use non-JWT verifi
 |------|-----------|
 | **Address validation** (`core-service` address validation service: autocomplete, place details, validate) | No tenant identity gate; proxies to Google APIs. Exposed with **`Public: true`** on gateway for checkout-style flows. |
 | **Account by slug** (`GetAccountBySlug`) | Minimal public account lookup without authentication; gateway endpoint remains internal OpenAPI only unless product opts into **`Public: true`**. |
-| **Request demo** (`utilsSvc.RequestDemo`) | Logs demo requests without **`CheckIsAuthenticated`**; included in public OpenAPI (**`Public: true`**). |
 | **Stripe webhooks** | **`Public: false`** in OpenAPI; verified via Stripe signature in the billing path, not JWT. |
 
 For contrast, **`SubmitFeedback`** requires **`CheckIsAssignedActor`** in core-service—it is **not** anonymous.

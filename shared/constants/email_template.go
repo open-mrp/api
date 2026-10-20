@@ -10,20 +10,12 @@ const (
 	EmailTemplatePasswordReset EmailTemplate = "password_reset"
 	// EmailTemplatePasswordUpdated indicates that the email template is for a password updated email.
 	EmailTemplatePasswordUpdated EmailTemplate = "password_updated"
-	// EmailTemplateRegistrationVerify indicates that the email template is for a registration verify email.
-	EmailTemplateRegistrationVerify EmailTemplate = "registration_verify"
-	// EmailTemplateRegistrationVerifyExisting indicates that the email template is for a registration verify existing email.
-	EmailTemplateRegistrationVerifyExisting EmailTemplate = "registration_verify_existing"
 	// EmailTemplateEnterpriseRequest indicates that the email template is for a enterprise request email.
 	EmailTemplateEnterpriseRequest EmailTemplate = "enterprise_request"
 	// EmailTemplateInternalErrorAlert indicates that the email template is for a 5xx internal error alert.
 	EmailTemplateInternalErrorAlert EmailTemplate = "internal_error_alert"
-	// EmailTemplateNewRegistrationAlert indicates that the email template is for a new account registration alert.
-	EmailTemplateNewRegistrationAlert EmailTemplate = "new_registration_alert"
 	// EmailTemplatePlanChangeAlert indicates that the email template is for a plan change alert.
 	EmailTemplatePlanChangeAlert EmailTemplate = "plan_change_alert"
-	// EmailTemplateRegistrationLimitAlert indicates that the email template is for a registration limit reached alert.
-	EmailTemplateRegistrationLimitAlert EmailTemplate = "registration_limit_alert"
 	// EmailTemplateNewUserWelcome indicates that the email template is for a new user welcome email with a temporary password.
 	EmailTemplateNewUserWelcome EmailTemplate = "new_user_welcome"
 	// EmailTemplateOrderCheckout indicates that the email template is for an order checkout email.
@@ -43,16 +35,8 @@ const (
 	EmailTemplateChatMessage EmailTemplate = "chat_message"
 	// EmailTemplateMessageFailureAlert indicates that the email template is for the async message failure monitor digest (failed/stuck inbox and outbox rows).
 	EmailTemplateMessageFailureAlert EmailTemplate = "message_failure_alert"
-	// EmailTemplateDemoRequest indicates that the email template is for a demo request from the marketing site.
-	EmailTemplateDemoRequest EmailTemplate = "demo_request"
 	// EmailTemplateDashboardFeedback indicates that the email template is for in-app feedback submitted from the dashboard.
 	EmailTemplateDashboardFeedback EmailTemplate = "dashboard_feedback"
-	// EmailTemplateAccountFollowup is the personal, plain-text follow-up a new registrant receives a day after signing up. Its body is composed and reviewed before it is published, so the template only carries it.
-	EmailTemplateAccountFollowup EmailTemplate = "account_followup"
-	// EmailTemplateAccountFollowupReview asks the reviewer to approve a drafted account follow-up, with the registrant's activity alongside the draft.
-	EmailTemplateAccountFollowupReview EmailTemplate = "account_followup_review"
-	// EmailTemplateAccountFollowupContext is the internal note threaded under a sent account follow-up, so the reviewer's inbox holds the activity summary next to the registrant's reply.
-	EmailTemplateAccountFollowupContext EmailTemplate = "account_followup_context"
 )
 
 func (t EmailTemplate) IsValid() bool {
@@ -60,13 +44,9 @@ func (t EmailTemplate) IsValid() bool {
 	case EmailTemplateWelcome,
 		EmailTemplatePasswordReset,
 		EmailTemplatePasswordUpdated,
-		EmailTemplateRegistrationVerify,
-		EmailTemplateRegistrationVerifyExisting,
 		EmailTemplateEnterpriseRequest,
 		EmailTemplateInternalErrorAlert,
-		EmailTemplateNewRegistrationAlert,
 		EmailTemplatePlanChangeAlert,
-		EmailTemplateRegistrationLimitAlert,
 		EmailTemplateNewUserWelcome,
 		EmailTemplateOrderCheckout,
 		EmailTemplatePurchaseOrderSubmission,
@@ -76,18 +56,14 @@ func (t EmailTemplate) IsValid() bool {
 		EmailTemplateAlreadyRegistered,
 		EmailTemplateChatMessage,
 		EmailTemplateMessageFailureAlert,
-		EmailTemplateDemoRequest,
-		EmailTemplateDashboardFeedback,
-		EmailTemplateAccountFollowup,
-		EmailTemplateAccountFollowupReview,
-		EmailTemplateAccountFollowupContext:
+		EmailTemplateDashboardFeedback:
 		return true
 	}
 	return false
 }
 
 func (t EmailTemplate) EnumValues() []string {
-	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateRegistrationVerify), string(EmailTemplateRegistrationVerifyExisting), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplateNewRegistrationAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateRegistrationLimitAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDemoRequest), string(EmailTemplateDashboardFeedback), string(EmailTemplateAccountFollowup), string(EmailTemplateAccountFollowupReview), string(EmailTemplateAccountFollowupContext)}
+	return []string{string(EmailTemplateWelcome), string(EmailTemplatePasswordReset), string(EmailTemplatePasswordUpdated), string(EmailTemplateEnterpriseRequest), string(EmailTemplateInternalErrorAlert), string(EmailTemplatePlanChangeAlert), string(EmailTemplateNewUserWelcome), string(EmailTemplateOrderCheckout), string(EmailTemplatePurchaseOrderSubmission), string(EmailTemplateStatementOfAccount), string(EmailTemplateInvoice), string(EmailTemplateOrderAcknowledgement), string(EmailTemplateAlreadyRegistered), string(EmailTemplateChatMessage), string(EmailTemplateMessageFailureAlert), string(EmailTemplateDashboardFeedback)}
 }
 
 // SendsAsMerchant reports whether the template carries a merchant's own correspondence with their counterparty — an order, an invoice, a statement — rather than Augno's relationship with a user. Only these may leave from an account's configured sender: a password reset arriving from a tenant's domain reads as a spoof of exactly the mail it is meant to authenticate, and puts that tenant's sending reputation behind our credential flow.
@@ -103,9 +79,4 @@ func (t EmailTemplate) SendsAsMerchant() bool {
 		return true
 	}
 	return false
-}
-
-// IsPlainText reports whether the template renders text/plain rather than HTML. A personal note from a person reads as one only without letterhead, and plain-text bodies must not be HTML-escaped.
-func (t EmailTemplate) IsPlainText() bool {
-	return t == EmailTemplateAccountFollowup
 }

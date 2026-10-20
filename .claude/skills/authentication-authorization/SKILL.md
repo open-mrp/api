@@ -44,7 +44,7 @@ Permissions are `domain:action` (`products:read`). Domains snake_case; actions `
 6. Scope queries to *identity.TargetAccountID
 ```
 
-Anonymous / alternate-auth RPCs must stay on the allowlist in `authentication-patterns.md` (address validation, GetAccountBySlug, RequestDemo, Stripe webhooks).
+Anonymous / alternate-auth RPCs must stay on the allowlist in `authentication-patterns.md` (address validation, GetAccountBySlug, Stripe webhooks).
 
 ## Cross-account permission domain
 

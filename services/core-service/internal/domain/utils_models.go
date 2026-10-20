@@ -73,15 +73,6 @@ type EmailRecordParams struct {
 	Type EmailRecordType
 }
 
-// RequestDemoParams holds parameters for submitting a demo request.
-type RequestDemoParams struct {
-	Name        string
-	Email       string
-	Company     string
-	PhoneNumber *string
-	Message     *string
-}
-
 // SubmitFeedbackParams holds parameters for submitting user feedback.
 type SubmitFeedbackParams struct {
 	Question string

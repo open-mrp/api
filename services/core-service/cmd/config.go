@@ -40,7 +40,6 @@ const (
 	envFrontendURL                = "FRONTEND_URL"
 	envPortalURL                  = "PORTAL_URL"
 	envOperatorEmail              = "OPERATOR_EMAIL"
-	envAuthServiceURL             = "AUTH_SERVICE_URL"
 	envVercelAPIToken             = "VERCEL_API_TOKEN" // #nosec G101 - Env var name, not a credential
 	envVercelProjectID            = "VERCEL_PROJECT_ID"
 	envVercelTeamID               = "VERCEL_TEAM_ID"
@@ -116,11 +115,8 @@ type config struct {
 
 	// PortalURL (optional; default: "https://portal.openmrp.ai") is the base URL of the customer portal; links for a merchant without a verified custom domain go to {PortalURL}/{slug}.
 	PortalURL string
-	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts and marketing-site demo requests.
+	// OperatorEmail (optional; default: messaging.DefaultOperatorEmail) receives operator alerts.
 	OperatorEmail string
-
-	// AuthServiceURL (required) is the gRPC address of auth-service.
-	AuthServiceURL string
 
 	// VercelAPIToken (required in production) authenticates portal custom domain calls to the Vercel API. When empty outside production, the stub portal domain provider is used instead.
 	VercelAPIToken string
@@ -175,7 +171,6 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		FrontendURL:                env.GetEnv(envFrontendURL, getenv),
 		PortalURL:                  cmp.Or(env.GetEnv(envPortalURL, getenv), defaultPortalURL),
 		OperatorEmail:              cmp.Or(env.GetEnv(envOperatorEmail, getenv), messaging.DefaultOperatorEmail),
-		AuthServiceURL:             env.GetEnv(envAuthServiceURL, getenv),
 		VercelAPIToken:             env.GetEnv(envVercelAPIToken, getenv),
 		VercelProjectID:            env.GetEnv(envVercelProjectID, getenv),
 		VercelTeamID:               env.GetEnv(envVercelTeamID, getenv),
@@ -212,9 +207,6 @@ func (c *config) validate() error {
 	}
 	if c.FrontendURL == "" {
 		return fmt.Errorf("core-service: FRONTEND_URL is required")
-	}
-	if c.AuthServiceURL == "" {
-		return fmt.Errorf("core-service: AUTH_SERVICE_URL is required")
 	}
 
 	if !c.PlatformMode.IsTest() {

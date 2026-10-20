@@ -8,8 +8,6 @@ type RepoFactory interface {
 	NewRefreshTokenRepo() RefreshTokenRepo
 	NewAPIKeyRepo() APIKeyRepo
 	NewDocAPIKeyRepo() DocAPIKeyRepo
-	NewRegistrationSessionRepo() RegistrationSessionRepo
-	NewRegistrationQueueRepo() RegistrationQueueRepo
 	NewIdempotencyKeyRepo() IdempotencyKeyRepo
 	NewOutboxRepo() messaging.OutboxRepo
 }
@@ -22,7 +20,6 @@ type Mediators struct {
 	Password     PasswordMed
 	RefreshToken RefreshTokenMed
 	Idempotency  IdempotencyMed
-	Registration RegistrationMed
 }
 
 // MediatorFactory builds mediators bound to a given repository factory (e.g., per transaction).

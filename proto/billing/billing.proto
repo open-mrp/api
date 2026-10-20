@@ -16,9 +16,6 @@ service BillingService {
   // ProcessWebhookEvent verifies and processes an incoming Stripe webhook event.
   rpc ProcessWebhookEvent(ProcessWebhookEventRequest) returns (ProcessWebhookEventResponse);
 
-  // CreateCustomer creates a Stripe customer for a registration session.
-  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
-
   // GetAccountUsage returns current resource usage for an account with plan
   // limits and subscription info.
   rpc GetAccountUsage(GetAccountUsageRequest) returns (GetAccountUsageResponse);
@@ -48,24 +45,6 @@ service BillingService {
 
   // SwitchPlan initiates a plan switch using v2 billing intents.
   rpc SwitchPlan(SwitchPlanRequest) returns (SwitchPlanResponse);
-
-  // SetupBillingProfile creates a billing profile and cadence for an account.
-  rpc SetupBillingProfile(SetupBillingProfileRequest) returns (SetupBillingProfileResponse);
-
-  // SubscribeToPricingPlan creates a v2 pricing plan subscription for an account.
-  rpc SubscribeToPricingPlan(SubscribeToPricingPlanRequest) returns (SubscribeToPricingPlanResponse);
-
-  // CreateSetupIntent creates a Stripe Setup Intent for collecting a payment
-  // method during registration.
-  rpc CreateSetupIntent(CreateSetupIntentRequest) returns (CreateSetupIntentResponse);
-
-  // GetSetupIntentStatus returns the current status of a Stripe Setup Intent.
-  rpc GetSetupIntentStatus(GetSetupIntentStatusRequest) returns (GetSetupIntentStatusResponse);
-
-  // ValidateStripePricingPlan checks whether the Stripe pricing plan for a
-  // given plan code is accessible before account creation.
-  rpc ValidateStripePricingPlan(ValidateStripePricingPlanRequest) returns (ValidateStripePricingPlanResponse);
-
 }
 
 message PricingPlan {
@@ -122,17 +101,6 @@ message ProcessWebhookEventRequest {
 message ProcessWebhookEventResponse {
   bool success = 1;
   bool is_duplicate = 2;
-}
-
-message CreateCustomerRequest {
-  string email = 1;
-  string name = 2;
-  string idempotency_key = 3;
-  map<string, string> metadata = 4;
-}
-
-message CreateCustomerResponse {
-  string customer_id = 1;
 }
 
 // Intentionally empty; account is identified by the caller's identity metadata.
@@ -242,49 +210,4 @@ message SwitchPlanRequest {
 message SwitchPlanResponse {
   bool success = 1;
   optional string intent_id = 2;
-}
-
-message SetupBillingProfileRequest {
-  optional string account_id = 1;
-}
-
-message SetupBillingProfileResponse {
-  string billing_profile_id = 1;
-  string billing_cadence_id = 2;
-}
-
-message SubscribeToPricingPlanRequest {
-  string stripe_customer_id = 1;
-  string plan_code = 2;
-}
-
-// Intentionally empty; success is indicated by a nil error.
-message SubscribeToPricingPlanResponse {}
-
-message CreateSetupIntentRequest {
-  string customer_id = 1;
-  string idempotency_key = 2;
-}
-
-message CreateSetupIntentResponse {
-  string setup_intent_id = 1;
-  string client_secret = 2;
-  string publishable_key = 3;
-}
-
-message GetSetupIntentStatusRequest {
-  string setup_intent_id = 1;
-}
-
-message GetSetupIntentStatusResponse {
-  string status = 1;
-  optional string payment_method_id = 2;
-}
-
-message ValidateStripePricingPlanRequest {
-  string plan_code = 1;
-}
-
-message ValidateStripePricingPlanResponse {
-  bool valid = 1;
 }

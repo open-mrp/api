@@ -30,7 +30,6 @@ type AccountRepo interface {
 	GetByStripeCustomerID(ctx context.Context, stripeCustomerID string) (accountID string, planCode string, err *apierror.APIError)
 	GetSandboxLimit(ctx context.Context, accountID string) (*int32, *apierror.APIError)
 	GetSeatLimitByPlanCode(ctx context.Context, planCode string) (*int32, *apierror.APIError)
-	CountNonSandboxByPlanCode(ctx context.Context, planCode string) (int64, *apierror.APIError)
 	UpdateAgentSpendingCap(ctx context.Context, accountID string, capCents *int64) *apierror.APIError
 	GetAgentSpendingCap(ctx context.Context, accountID string) (*int64, *apierror.APIError)
 	HasActiveBillingPlan(ctx context.Context, accountID string) (bool, *apierror.APIError)
@@ -245,9 +244,6 @@ type RoleRepo interface {
 
 // RegistrationRepo handles the multi-step account creation during registration: account record, owner role with all permissions, account-user join, business address, and account portal.
 type RegistrationRepo interface {
-	// CreateAccountForRegistration creates a production account with Stripe billing fields populated.
-	CreateAccountForRegistration(ctx context.Context, params CreateAccountParams) *apierror.APIError
-
 	// CreateAccountUser creates an account-user join record linking the user to the account with the given role.
 	CreateAccountUser(ctx context.Context, accountID, userID, roleID string) *apierror.APIError
 

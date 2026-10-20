@@ -59,7 +59,7 @@ Some enums have additional domain-specific methods:
 
 - `String() string` — explicit string conversion
 - `Normalize() Type` — parse/normalize a raw string into the enum (e.g., `Protocol`)
-- `Ordinal() int` / `IsAfter(other) bool` — ordering (e.g., `RegistrationStep`)
+- `Ordinal() int` / `IsAfter(other) bool` — ordering (e.g., `PortalRegistrationStep`)
 - `IsX() bool` — convenience boolean checks (e.g., `PlatformMode.IsProduction()`)
 
 ## Comment Conventions
@@ -109,4 +109,4 @@ Pattern-adherence tests in `shared/constants/constants_adherence_test.go` automa
 
 ## Reference Files
 
-All enum files are in `shared/constants/`. Non-enum files in this package (e.g., `registration_limit.go`) contain helper structs and are excluded from adherence testing.
+All enum files are in `shared/constants/`. Non-enum files in this package contain helper structs and are excluded from adherence testing.

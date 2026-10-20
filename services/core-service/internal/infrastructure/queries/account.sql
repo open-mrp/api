@@ -66,28 +66,6 @@ AND (expires_at IS NULL OR expires_at > NOW(3))
 ORDER BY effective_at DESC, version DESC
 LIMIT 1;
 
--- name: CreateAccountBilling :exec
-INSERT INTO account_billing (
-    id,
-    account_plan_id,
-    internal_stripe_customer_id,
-    internal_stripe_subscription_id,
-    subscription_status,
-    created_at,
-    updated_at
-) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3));
-
--- name: CreateAccountForRegistration :exec
-INSERT INTO account (
-    id,
-    name,
-    account_type_code,
-    onboarding_status_code,
-    account_billing_id,
-    created_at,
-    updated_at
-) VALUES (?, ?, ?, ?, ?, NOW(3), NOW(3));
-
 -- name: GetAccountByStripeCustomerID :one
 SELECT a.id, a.name, ap.plan_type_code AS plan_code
 FROM account a
@@ -117,16 +95,6 @@ JOIN account_billing ab ON a.account_billing_id = ab.id
 JOIN account_plan_limit apl ON apl.account_plan_id = ab.account_plan_id
     AND apl.key = 'sandboxes_maximum'
 WHERE a.id = ?;
-
--- name: CountNonSandboxAccountsByPlanCode :one
-SELECT COUNT(*) AS cnt
-FROM account a
-JOIN account_billing ab ON a.account_billing_id = ab.id
-JOIN account_plan ap ON ab.account_plan_id = ap.type_id
-LEFT JOIN sandbox_account sa ON a.id = sa.account_id
-WHERE ap.plan_type_code = ?
-  AND sa.id IS NULL
-  AND a.onboarding_status_code = 'active';
 
 -- name: GetSeatLimitByPlanCode :one
 SELECT apl.value

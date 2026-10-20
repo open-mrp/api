@@ -38,7 +38,7 @@ queries actually read. They live in the payloads bucket instead, and the owning 
 
 | Prefix | Written by | Inline limit | Expiry |
 |---|---|---|---|
-| `request-logs/` | api-gateway, after the response | none (always stored) | 7 years |
+| `request-logs/` | api-gateway, after the response | none (always stored) | 90 days |
 | `jobs/` | core-service, before the job's transaction | 16 KiB | 30 days |
 | `idempotency/` | core-service and platform-service, after commit | 16 KiB | 35 days (rows expire at 30) |
 

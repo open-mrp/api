@@ -32,8 +32,7 @@ import (
 var augnoID = regexp.MustCompile(`^([a-z]{2,10})_([0-9a-z]{10,})$`)
 
 var skipNames = map[string]struct{}{
-	"SampleCheckoutSessionID": {},
-	"SampleStripeCustomerID":  {},
+	"SampleStripeCustomerID": {},
 }
 
 func main() {

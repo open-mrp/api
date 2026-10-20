@@ -10,7 +10,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
-	"github.com/open-mrp/api/shared/ptrutil"
 
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -735,52 +734,6 @@ func (h *gRPCHandler) GetAccountByStripeCustomerID(ctx context.Context, req *pb.
 	return &pb.GetAccountByStripeCustomerIDResponse{
 		AccountId: accountID,
 		PlanCode:  planCode,
-	}, nil
-}
-
-func (h *gRPCHandler) CompleteRegistration(ctx context.Context, req *pb.CompleteRegistrationRequest) (*pb.CompleteRegistrationResponse, error) {
-	if req == nil {
-		return nil, contracts.NewMissingGRPCRequestDataError()
-	}
-
-	input := domain.CompleteRegistrationInput{
-		UserID:           req.UserId,
-		PlanCode:         req.PlanCode,
-		StripeCustomerID: req.StripeCustomerId,
-		UserName:         req.UserName,
-		UserEmail:        req.UserEmail,
-	}
-
-	if req.StripeSubscriptionId != nil {
-		input.StripeSubscriptionID = *req.StripeSubscriptionId
-	}
-
-	if req.AccountData != nil {
-		input.AccountData = domain.RegistrationAccountData{
-			AccountName: req.AccountData.AccountName,
-		}
-
-		if req.AccountData.BusinessAddress != nil {
-			addr := req.AccountData.BusinessAddress
-			input.BusinessAddress = &domain.RegistrationAddress{
-				Line1:      ptrutil.Deref(addr.Line1),
-				Line2:      ptrutil.Deref(addr.Line2),
-				City:       ptrutil.Deref(addr.City),
-				State:      ptrutil.Deref(addr.State),
-				PostalCode: ptrutil.Deref(addr.PostalCode),
-				Country:    ptrutil.Deref(addr.Country),
-			}
-		}
-	}
-
-	result, apiErr := h.accountSvc.CompleteRegistration(ctx, input)
-	if apiErr != nil {
-		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
-	}
-
-	return &pb.CompleteRegistrationResponse{
-		AccountId: result.AccountID,
-		SandboxId: result.SandboxID,
 	}, nil
 }
 

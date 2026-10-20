@@ -106,7 +106,6 @@ var pathParamToSampleID = map[string]string{
 	"receiving_order_id": apiresource.SampleReceivingOrderID,
 	"shipment_id":        apiresource.SampleShipmentID,
 	"account_group_id":   apiresource.SampleAccountGroupID,
-	"session_id":         apiresource.SampleRegistrationSessionID,
 	"review_id":          apiresource.SampleHubspotCompanyReviewID,
 	"carrier_id":         apiresource.SampleCarrierID,
 	"pid":                apiresource.SampleConversationParticipantID,

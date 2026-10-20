@@ -13,10 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	requestDemoPath    = "/v1/core/actions/request-demo"
-	submitFeedbackPath = "/v1/core/actions/submit-feedback"
-)
+const submitFeedbackPath = "/v1/core/actions/submit-feedback"
 
 // queuedSendEmail is the one send-email command the outbox holds whose payload contains marker.
 func queuedSendEmail(t *testing.T, marker string) map[string]any {
@@ -66,29 +63,6 @@ func postAnonymously(t *testing.T, path string, body any) (int, []byte) {
 	respBody, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	return resp.StatusCode, respBody
-}
-
-// A demo request comes from the marketing site, before the requester has any account.
-func TestUtils_RequestDemoNeedsNoSignIn(t *testing.T) {
-	t.Parallel()
-	markOutbox(t)
-	company := uniqueName("e2e-demo-co")
-
-	status, body := postAnonymously(t, requestDemoPath, map[string]any{
-		"name":         "Demo Requester",
-		"email":        "demo@e2e-test.openmrp.ai",
-		"company":      company,
-		"phone_number": "555-0100",
-		"message":      "Show me scanning.",
-	})
-	requireStatus(t, 200, status, body)
-
-	email := queuedSendEmail(t, company)
-	assert.Equal(t, "demo_request", email["template_id"])
-	assert.Equal(t, "Demo Requester", emailParam(t, email, "Name"))
-	assert.Equal(t, "demo@e2e-test.openmrp.ai", emailParam(t, email, "Email"))
-	assert.Equal(t, "555-0100", emailParam(t, email, "PhoneNumber"))
-	assert.Equal(t, "Show me scanning.", emailParam(t, email, "Message"))
 }
 
 // Feedback names who sent it, with the address a reply goes to.

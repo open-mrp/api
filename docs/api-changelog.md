@@ -2,6 +2,16 @@
 
 Changes to the public API, by the `OpenMRP-Version` that introduces them. A client pinned to an older supported version keeps the shape described for that version; see [API versioning](patterns/api-versioning-patterns.md).
 
+## Every version
+
+### Removals
+
+Self-service sign-up is gone, so these routes are removed from every version, with no transformer for older ones. Requests to them return `404`.
+
+- `/v1/auth/registration-sessions` and every route under it.
+- `POST /v1/core/actions/request-demo`.
+- `pending_registration` on `Tenancy` (`GET` and `PUT /v1/identity/me/tenancy`).
+
 ## 1.0.forge-preview.9
 
 ### Breaking changes

@@ -171,9 +171,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleUserID:                              {},
 		apiresource.SampleVolumeDiscountID:                    {},
 		apiresource.SampleVolumeDiscountTierID:                {},
-		apiresource.SampleRegistrationSessionID:               {},
 		apiresource.SamplePortalRegistrationSessionID:         {},
-		apiresource.SampleCheckoutSessionID:                   {},
 		apiresource.SampleAddressID:                           {},
 	}
 	return m

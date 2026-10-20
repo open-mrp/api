@@ -1,8 +1,6 @@
 package apiresource
 
 import (
-	"time"
-
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
 	"github.com/open-mrp/api/shared/constants"
 )
@@ -27,8 +25,6 @@ type Tenancy struct {
 	//
 	// Only accounts that have finished onboarding appear here, and the current account's own sandboxes are listed under `sandboxes` instead of being duplicated into this list.
 	OtherAccounts *List[TenancyOtherAccount] `json:"other_accounts" validate:"required"`
-	// In-progress registration session, populated only partway through signup before the account exists.
-	PendingRegistration *TenancyPendingRegistration `json:"pending_registration"`
 }
 
 // Account the user is currently operating in.
@@ -98,22 +94,6 @@ type TenancyAccountPlan struct {
 	Features map[string]bool `json:"features"`
 }
 
-// An in-progress registration session, present only partway through signup before an account exists.
-type TenancyPendingRegistration struct {
-	// Resource type identifier.
-	Object constants.ObjectType `json:"object" validate:"required,enum=tenancy_pending_registration"`
-	// Registration session ID.
-	SessionID string `json:"session_id" validate:"required"`
-	// Plan code selected during registration.
-	PlanCode constants.PlanCode `json:"plan_code" validate:"required"`
-	// How far the signup has progressed, so the flow can be resumed where the user left off.
-	//
-	// Steps run `verification`, `user_details`, `account_details`, `review`, `payment`, then `completed`.
-	Step constants.RegistrationStep `json:"step" validate:"required"`
-	// Session creation timestamp.
-	CreatedAt time.Time `json:"created_at" validate:"required"`
-}
-
 // Sandbox account available to the user.
 type TenancySandboxAccount struct {
 	// Account ID.
@@ -149,7 +129,6 @@ type TenancyOtherAccount struct {
 	Type constants.AccountTypeCode `json:"type" validate:"required"`
 }
 
-// SampleTenancy describes a fully registered user operating in their owner account, so pending_registration is null — a pending registration only exists mid-signup, before the account does.
 var SampleTenancy = &Tenancy{
 	Object: constants.ObjectTypeTenancy,
 	CurrentAccount: &TenancyCurrentAccount{

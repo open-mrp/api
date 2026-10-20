@@ -534,12 +534,6 @@ message TenancyOtherAccountProto {
   string name = 2;
   string type = 3;
 }
-message TenancyPendingRegistrationProto {
-  string session_id = 1;
-  string plan_code = 2;
-  string step = 3;
-  google.protobuf.Timestamp created_at = 4;
-}
 message GetTenancyRequest {
   string user_id = 1;
   optional string target_account_id = 2;
@@ -554,7 +548,8 @@ message GetTenancyResponse {
   optional TenancyAccountSummaryProto owner_account = 3;
   repeated TenancyAccountSummaryProto sandboxes = 4;
   repeated TenancyOtherAccountProto other_accounts = 5;
-  optional TenancyPendingRegistrationProto pending_registration = 6;
+  reserved 6;
+  reserved "pending_registration";
 }
 message GetCurrentUserRequest {
   string user_id = 1;

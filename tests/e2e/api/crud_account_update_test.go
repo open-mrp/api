@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/open-mrp/api/shared/id"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,13 +21,8 @@ import (
 // registers for itself: the seeded account is read by most of the suite, and its slug is what portal and
 // registration tests look it up by.
 
-// freshAccountSlots bounds how many accounts the package holds open at once. Self-serve registration on
-// the free plan closes once 1000 active accounts are on it, and a test's account is only shut down at
-// cleanup, so an unbounded parallel run could lock out TestRegistration_FullJourney.
-var freshAccountSlots = make(chan struct{}, 3)
-
-// e2eAccount is an account registered for one test, with a session for the user who registered it,
-// which is the account's admin.
+// e2eAccount is an account created for one test, with a session for a user of its own who is the
+// account's admin.
 type e2eAccount struct {
 	id    string
 	owner *Client
@@ -34,49 +30,52 @@ type e2eAccount struct {
 
 func (a e2eAccount) path() string { return accountsPath + "/" + a.id }
 
-// registerE2EAccount runs self-serve registration to the end, giving a test an account of its own
-// with a portal, branding, and an admin session. It is shut down again at cleanup.
+// registerE2EAccount gives a test a company account of its own on the free plan, with a portal at a
+// slug made from its ID, empty branding, and a newly registered user as its admin. It is shut down
+// again at cleanup.
 func registerE2EAccount(t *testing.T) e2eAccount {
 	t.Helper()
-	freshAccountSlots <- struct{}{}
-	t.Cleanup(func() { <-freshAccountSlots })
 
-	email := strings.ToLower(uniqueName("e2e-acct")) + "@e2e-test.openmrp.ai"
-	status, body, err := apiClient.Post(registrationSessionsPath, map[string]any{
-		"email":     email,
-		"plan_code": "free",
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	sessionID := jsonField(parseJSON(body), "id")
-	sessionPath := registrationSessionsPath + "/" + sessionID
-
-	status, body, err = apiClient.Put(verifyTokenPath(registrationVerificationToken(t, sessionID)), nil)
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	resp, err := apiClient.PostFull(sessionPath+"/users", map[string]any{
-		"name":     "E2E Account Owner",
+	resp, err := apiClient.PostFull(covAuthUsersRegisterPath, map[string]any{
+		"email":    strings.ToLower(uniqueName("e2e-acct")) + "@e2e-test.openmrp.ai",
 		"password": "P@ssw0rd123!",
+		"name":     "E2E Account Owner",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
-	requireStatus(t, 201, resp.StatusCode, resp.Body)
+	requireStatus(t, 200, resp.StatusCode, resp.Body)
+	userID := jsonField(parseJSON(resp.Body), "id")
 	token := accessTokenFromSetCookie(t, resp.Header)
-	registrant := apiClient.WithBearerToken(token, "")
 
-	status, body, err = registrant.Patch(sessionPath, map[string]any{
-		"session_data": map[string]any{"account_name": uniqueName("E2E Account")},
-	}, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 200, status, body)
-
-	status, body, err = registrant.Post(sessionPath+"/accounts", nil, newIdempotencyKey())
-	require.NoError(t, err)
-	requireStatus(t, 201, status, body)
-	accountID := jsonField(parseJSON(body), "id")
-	require.NotEmpty(t, accountID, "registration returns the account: %s", body)
+	accountID := mustGenID(t, id.AccountIDPrefix)
+	billingID := mustGenID(t, id.AccountBillingIDPrefix)
+	db := authDB(t)
+	for _, stmt := range []struct {
+		query string
+		args  []any
+	}{
+		{"INSERT INTO account_billing (id, account_plan_id, subscription_status, created_at, updated_at) " +
+			"SELECT ?, type_id, 'active', NOW(3), NOW(3) FROM account_plan WHERE plan_type_code = 'free' " +
+			"AND effective_at <= NOW(3) AND (expires_at IS NULL OR expires_at > NOW(3)) ORDER BY effective_at DESC, version DESC LIMIT 1",
+			[]any{billingID}},
+		{"INSERT INTO account (id, name, account_type_code, onboarding_status_code, account_billing_id, created_at, updated_at) " +
+			"VALUES (?, ?, 'company', 'active', ?, NOW(3), NOW(3))",
+			[]any{accountID, uniqueName("E2E Account"), billingID}},
+		{"INSERT INTO account_user (id, account_id, user_id, role_id, status_code, created_at, updated_at) " +
+			"SELECT ?, ?, ?, id, 'active', NOW(3), NOW(3) FROM role WHERE role_type_code = 'admin' AND account_id IS NULL LIMIT 1",
+			[]any{mustGenID(t, id.AccountUserIDPrefix), accountID, userID}},
+		{"INSERT INTO account_portal (id, owner_account_id, slug, created_at, updated_at) VALUES (?, ?, ?, NOW(3), NOW(3))",
+			[]any{mustGenID(t, id.AccountPortalIDPrefix), accountID, strings.ReplaceAll(accountID, "_", "-")}},
+		{"INSERT INTO account_branding (id, owner_account_id, created_at, updated_at) VALUES (?, ?, NOW(3), NOW(3))",
+			[]any{mustGenID(t, id.AccountBrandingIDPrefix), accountID}},
+	} {
+		res, err := db.Exec(stmt.query, stmt.args...)
+		require.NoError(t, err, stmt.query)
+		n, err := res.RowsAffected()
+		require.NoError(t, err)
+		require.EqualValues(t, 1, n, stmt.query)
+	}
 	t.Cleanup(func() {
-		_, _ = authDB(t).Exec("UPDATE account SET onboarding_status_code = 'deactivated' WHERE id = ?", accountID)
+		_, _ = db.Exec("UPDATE account SET onboarding_status_code = 'deactivated' WHERE id = ?", accountID)
 	})
 
 	return e2eAccount{id: accountID, owner: apiClient.WithBearerToken(token, accountID)}

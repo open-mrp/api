@@ -69,38 +69,6 @@ func outboxFloor(t *testing.T) int64 {
 	return floor.(int64)
 }
 
-// registrationVerificationToken reads the verification token for a registration
-// session straight from the database, standing in for the link the user would
-// receive by email. The token is never returned by the API.
-func registrationVerificationToken(t *testing.T, sessionID string) string {
-	t.Helper()
-	var token string
-	err := authDB(t).QueryRow(
-		"SELECT verification_token FROM registration_session WHERE type_id = ?",
-		sessionID,
-	).Scan(&token)
-	require.NoError(t, err, "querying verification_token for session %s", sessionID)
-	require.NotEmpty(t, token, "verification_token should be populated for session %s", sessionID)
-	return token
-}
-
-// sandboxForOwnerAccount returns the id and name of the sandbox account owned by
-// ownerAccountID, asserting exactly one exists. Completing registration
-// provisions a sandbox alongside the production account; ownership lives in the
-// sandbox_account link table rather than a column on account.
-func sandboxForOwnerAccount(t *testing.T, ownerAccountID string) (id, name string) {
-	t.Helper()
-	err := authDB(t).QueryRow(
-		`SELECT a.id, a.name
-		   FROM account a
-		   JOIN sandbox_account sa ON sa.account_id = a.id
-		  WHERE sa.owner_account_id = ? AND a.account_type_code = 'sandbox'`,
-		ownerAccountID,
-	).Scan(&id, &name)
-	require.NoError(t, err, "querying sandbox for owner account %s", ownerAccountID)
-	return id, name
-}
-
 // backdateIssuedAt moves an order's issue date back, so a test can exercise the difference
 // between the day an order was issued and the day somebody edits it. There is no API for it:
 // issued_at is stamped by the issue action and never settable, which is exactly why an order

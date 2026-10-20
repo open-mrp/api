@@ -121,33 +121,6 @@ message AccountAffiliation {
   string role_type_code = 5;
   optional google.protobuf.Timestamp last_used_at = 6;
 }
-message CompleteRegistrationRequest {
-  string user_id = 1;
-  string plan_code = 2;
-  string stripe_customer_id = 3;
-  // Absent for free-tier plans that don't create a subscription.
-  optional string stripe_subscription_id = 4;
-  RegistrationAccountData account_data = 5;
-  // Registering user's name and email, surfaced in the internal new-registration alert.
-  string user_name = 6;
-  string user_email = 7;
-}
-message RegistrationAccountData {
-  string account_name = 1;
-  optional RegistrationAddress business_address = 2;
-}
-message RegistrationAddress {
-  optional string line1 = 1;
-  optional string line2 = 2;
-  optional string city = 3;
-  optional string state = 4;
-  optional string postal_code = 5;
-  optional string country = 6;
-}
-message CompleteRegistrationResponse {
-  string account_id = 1;
-  string sandbox_id = 2;
-}
 message GetSandboxAccountByOwnerRequest {
   string owner_account_id = 1;
 }

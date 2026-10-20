@@ -248,7 +248,6 @@ func (spec *openAPISpec) collectFields(schema *openAPISchema, fields map[string]
 // auth, etc.). These endpoints will not appear in test output at all.
 var excludedPaths = []string{
 	"/v1/operations/purchase-orders",                   // no table in schema
-	"/v1/auth/registration-sessions",                   // requires Stripe + cookie auth
 	"/v1/identity/me/tenancy/customer-accounts",        // requires customer actor auth
 	"/v1/sales/customers/{id}/notification-recipients", // derived from the customer's account-user notification prefs; the API-key harness seeds none. Covered by the dedicated notification-recipients test.
 }

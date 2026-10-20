@@ -5,22 +5,6 @@ import (
 	"encoding/json"
 )
 
-// Context helpers for Stripe customer ID propagation.
-type ctxKey string
-
-const stripeCustomerIDKey ctxKey = "stripe_customer_id"
-
-func WithStripeCustomerID(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, stripeCustomerIDKey, id)
-}
-
-func StripeCustomerIDFromContext(ctx context.Context) string {
-	if v, ok := ctx.Value(stripeCustomerIDKey).(string); ok {
-		return v
-	}
-	return ""
-}
-
 // LLMProvider abstracts multi-turn LLM interactions with tool use.
 type LLMProvider interface {
 	CompleteWithTools(ctx context.Context, req *ToolRequest) (*ToolResponse, error)

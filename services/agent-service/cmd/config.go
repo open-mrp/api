@@ -21,11 +21,10 @@ const (
 	envRabbitMQURI            = "RABBITMQ_URI"
 	envCoreServiceURL         = "CORE_SERVICE_URL"
 	envNotificationServiceURL = "NOTIFICATION_SERVICE_URL"
-	envCursorHMACKey          = "CURSOR_HMAC_KEY"   // #nosec G101 - Env var name, not a credential
-	envStripeAPIKey           = "STRIPE_SECRET_KEY" // #nosec G101 - Env var name, not a credential
+	envCursorHMACKey          = "CURSOR_HMAC_KEY"    // #nosec G101 - Env var name, not a credential
+	envOpenRouterAPIKey       = "OPENROUTER_API_KEY" // #nosec G101 - Env var name, not a credential
 	envAgentArtifactsBucket   = "AGENT_ARTIFACTS_BUCKET"
 	envAgentInboundMailBucket = "AGENT_INBOUND_EMAIL_BUCKET"
-	envBillingServiceURL      = "BILLING_SERVICE_URL"
 	envPlatformMode           = "PLATFORM"
 	envGatewayInternalURL     = "API_GATEWAY_INTERNAL_URL"
 	envInternalSvcToken       = "INTERNAL_SERVICE_TOKEN" // #nosec G101 - Env var name, not a credential
@@ -55,18 +54,15 @@ type config struct {
 	// CursorHMACKey (required) is the HMAC key used to sign and verify pagination cursors.
 	CursorHMACKey []byte
 
-	// StripeSecretKey (required) is the API key for the Stripe AI Gateway.
+	// OpenRouterAPIKey (required) is the API key for OpenRouter, which serves every LLM call.
 	// Not enforced when PlatformMode is "test".
-	StripeSecretKey string
+	OpenRouterAPIKey string
 
 	// AgentArtifactsBucket (optional; default: "") is the S3 bucket for storing agent artifacts.
 	AgentArtifactsBucket string
 
 	// AgentInboundMailBucket (optional; default: "") is the S3 bucket for inbound agent emails.
 	AgentInboundMailBucket string
-
-	// BillingServiceURL (required) is the billing service address for gRPC.
-	BillingServiceURL string
 
 	// GatewayInternalURL (optional; default: "") is the api-gateway internal listener base URL used by generated endpoint-tools. When empty (together with InternalServiceToken), endpoint-tools are not wired.
 	GatewayInternalURL string
@@ -98,10 +94,9 @@ func (c *config) withDefaults(getenv func(string) string) *config {
 		CoreServiceURL:         env.GetEnv(envCoreServiceURL, getenv),
 		NotificationServiceURL: env.GetEnv(envNotificationServiceURL, getenv),
 		CursorHMACKey:          []byte(env.GetEnv(envCursorHMACKey, getenv)),
-		StripeSecretKey:        env.GetEnv(envStripeAPIKey, getenv),
+		OpenRouterAPIKey:       env.GetEnv(envOpenRouterAPIKey, getenv),
 		AgentArtifactsBucket:   env.GetEnv(envAgentArtifactsBucket, getenv),
 		AgentInboundMailBucket: env.GetEnv(envAgentInboundMailBucket, getenv),
-		BillingServiceURL:      env.GetEnv(envBillingServiceURL, getenv),
 		GatewayInternalURL:     env.GetEnv(envGatewayInternalURL, getenv),
 		InternalServiceToken:   env.GetEnv(envInternalSvcToken, getenv),
 	}
@@ -123,11 +118,8 @@ func (c *config) validate() error {
 	if !c.PlatformMode.IsValid() {
 		return fmt.Errorf("agent-service: the provided platform mode is invalid: %s", c.PlatformMode)
 	}
-	if !c.PlatformMode.IsTest() && c.StripeSecretKey == "" {
-		return fmt.Errorf("agent-service: STRIPE_SECRET_KEY is required")
-	}
-	if c.BillingServiceURL == "" {
-		return fmt.Errorf("agent-service: BILLING_SERVICE_URL is required")
+	if !c.PlatformMode.IsTest() && c.OpenRouterAPIKey == "" {
+		return fmt.Errorf("agent-service: OPENROUTER_API_KEY is required")
 	}
 	return nil
 }

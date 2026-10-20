@@ -320,7 +320,6 @@ services:
       RABBITMQ_URI: amqp://guest:guest@rabbitmq:5672/
       CURSOR_HMAC_KEY: b073b04358fbd77eaf3ce224de1ba3c7d8f91fa5bdea440dc5a37c9e1627197d
       CORE_SERVICE_URL: core-service:9092
-      BILLING_SERVICE_URL: billing-service:9092
     depends_on:
       postgres-e2e:
         condition: service_healthy

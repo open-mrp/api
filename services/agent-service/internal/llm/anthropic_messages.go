@@ -12,34 +12,32 @@ import (
 	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
-// AnthropicMessagesProvider calls Anthropic's native Messages API through the Stripe AI Gateway passthrough (https://llm.stripe.com/v1/messages). Going native — rather than the OpenAI-compatible /chat/completions path used by GatewayProvider — gives us real thinking blocks: a distinct reasoning channel that streams token-by-token and carries signatures, so reasoning can be replayed across tool-loop turns. Stripe still meters usage per customer via the X-Stripe-Customer-ID header, so billing is unchanged.
+// defaultAnthropicBaseURL is OpenRouter's Anthropic-compatible API root; the SDK appends /v1/messages.
+const defaultAnthropicBaseURL = "https://openrouter.ai/api"
+
+// AnthropicMessagesProvider calls Claude through OpenRouter's Anthropic-compatible Messages API. Going native — rather than the OpenAI-compatible /chat/completions path used by GatewayProvider — gives us real thinking blocks: a distinct reasoning channel that streams token-by-token and carries signatures, so reasoning can be replayed across tool-loop turns.
 type AnthropicMessagesProvider struct {
-	stripeAPIKey string
-	baseURL      string
+	apiKey  string
+	baseURL string
 }
 
-func NewAnthropicMessagesProvider(stripeAPIKey string) *AnthropicMessagesProvider {
-	return &AnthropicMessagesProvider{stripeAPIKey: stripeAPIKey, baseURL: defaultGatewayBaseURL}
+func NewAnthropicMessagesProvider(apiKey string) *AnthropicMessagesProvider {
+	return &AnthropicMessagesProvider{apiKey: apiKey, baseURL: defaultAnthropicBaseURL}
 }
 
-func (p *AnthropicMessagesProvider) Name() string { return "stripe_gateway_anthropic" }
+func (p *AnthropicMessagesProvider) Name() string { return "openrouter_anthropic" }
 
-// client builds an SDK client pinned at the Stripe gateway. The gateway authenticates on the Authorization bearer header and ignores the SDK's x-api-key, so the api key is a placeholder.
-func (p *AnthropicMessagesProvider) client(customerID string) anthropic.Client {
+// client builds an SDK client pinned at OpenRouter. OpenRouter authenticates on the Authorization bearer header; the SDK's x-api-key is left as a placeholder.
+func (p *AnthropicMessagesProvider) client() anthropic.Client {
 	return anthropic.NewClient(
 		option.WithBaseURL(p.baseURL),
 		option.WithAPIKey("unused"),
-		option.WithHeader("Authorization", "Bearer "+p.stripeAPIKey),
-		option.WithHeader("X-Stripe-Customer-ID", customerID),
+		option.WithHeader("Authorization", "Bearer "+p.apiKey),
 	)
 }
 
 func (p *AnthropicMessagesProvider) CompleteWithTools(ctx context.Context, req *ToolRequest) (*ToolResponse, error) {
-	customerID := StripeCustomerIDFromContext(ctx)
-	if customerID == "" {
-		return nil, fmt.Errorf("stripe customer ID not set in context")
-	}
-	client := p.client(customerID)
+	client := p.client()
 	msg, err := client.Messages.New(ctx, p.buildParams(req))
 	if err != nil {
 		return nil, mapAnthropicError(err)
@@ -48,11 +46,7 @@ func (p *AnthropicMessagesProvider) CompleteWithTools(ctx context.Context, req *
 }
 
 func (p *AnthropicMessagesProvider) StreamCompleteWithTools(ctx context.Context, req *ToolRequest, callback func(StreamEvent)) (*ToolResponse, error) {
-	customerID := StripeCustomerIDFromContext(ctx)
-	if customerID == "" {
-		return nil, fmt.Errorf("stripe customer ID not set in context")
-	}
-	client := p.client(customerID)
+	client := p.client()
 
 	stream := client.Messages.NewStreaming(ctx, p.buildParams(req))
 	msg := anthropic.Message{}
@@ -140,7 +134,7 @@ func applyCacheBreakpoints(params *anthropic.MessageNewParams) {
 	}
 }
 
-// thinkingConfigFor selects the thinking API by model generation. The Stripe gateway serves Claude via Vertex, where 4.6+ models take adaptive thinking (and reject budget_tokens) while 4.0–4.5 models take the legacy enabled+budget_tokens form. Both stream thinking blocks with signatures, so reasoning and cross-turn replay work either way.
+// thinkingConfigFor selects the thinking API by model generation. 4.6+ models take adaptive thinking (and reject budget_tokens) while 4.0–4.5 models take the legacy enabled+budget_tokens form. Both stream thinking blocks with signatures, so reasoning and cross-turn replay work either way.
 func thinkingConfigFor(model string, maxTokens int) anthropic.ThinkingConfigParamUnion {
 	if supportsAdaptiveThinking(model) {
 		return anthropic.ThinkingConfigParamUnion{OfAdaptive: &anthropic.ThinkingConfigAdaptiveParam{

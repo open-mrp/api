@@ -35,8 +35,8 @@ func TestStreamCompleteWithTools_ReasoningDeltas(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	provider := &GatewayProvider{httpClient: srv.Client(), stripeAPIKey: "sk_test_fake", baseURL: srv.URL}
-	ctx := WithStripeCustomerID(context.Background(), "cus_test_reason")
+	provider := &GatewayProvider{httpClient: srv.Client(), apiKey: "sk-or-test-fake", baseURL: srv.URL}
+	ctx := context.Background()
 
 	var reasoning, content strings.Builder
 	resp, err := provider.StreamCompleteWithTools(ctx, &ToolRequest{
@@ -84,8 +84,8 @@ func TestGatewayRequest_ReasoningEffort(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	provider := &GatewayProvider{httpClient: srv.Client(), stripeAPIKey: "sk_test_fake", baseURL: srv.URL}
-	ctx := WithStripeCustomerID(context.Background(), "cus_test_effort")
+	provider := &GatewayProvider{httpClient: srv.Client(), apiKey: "sk-or-test-fake", baseURL: srv.URL}
+	ctx := context.Background()
 
 	_, err := provider.StreamCompleteWithTools(ctx, &ToolRequest{
 		Model:           "gpt-5",

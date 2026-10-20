@@ -11,7 +11,7 @@ import (
 // ToolChoiceNone disables tool calls but keeps the definitions the history's tool_use blocks need.
 func TestBuildParams_ToolChoiceNone(t *testing.T) {
 	t.Parallel()
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	req := &ToolRequest{
 		Model:      "claude-sonnet-4.6",
 		Messages:   []Message{{Role: "user", Content: "Hi"}},
@@ -47,7 +47,7 @@ func TestGatewayToolChoice(t *testing.T) {
 // The tools, system prompt, and newest message each carry a cache breakpoint, within the API's limit of 4.
 func TestBuildParams_CacheBreakpoints(t *testing.T) {
 	t.Parallel()
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	params := p.buildParams(&ToolRequest{
 		Model:  "claude-sonnet-4.6",
 		System: "You are helpful.",

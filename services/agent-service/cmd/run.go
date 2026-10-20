@@ -106,22 +106,11 @@ func Run(
 		return err
 	}
 
-	// Billing-service gRPC client (required for Stripe customer ID resolution)
-	billingClient, err := agentgrpc.NewAgentBillingClient(cfg.BillingServiceURL)
-	if err != nil {
-		return err
-	}
-	defer billingClient.Close()
-
-	if err := billingClient.WaitForReady(ctx); err != nil {
-		return err
-	}
-
 	// --- Phase 2: LLM + Run Engine ---
 
 	// LLM providers (stubbed in test mode)
 	var providers map[string]llm.LLMProvider
-	// Every provider routes through the single Stripe AI Gateway; the keys just mirror inferProvider.
+	// Every provider routes through OpenRouter; the keys just mirror inferProvider.
 	if cfg.PlatformMode.IsTest() {
 		stubProvider := &stub.LLMProvider{}
 		providers = map[string]llm.LLMProvider{
@@ -132,10 +121,9 @@ func Run(
 		}
 	} else {
 		// Anthropic models use the native Messages API (real thinking blocks + signatures for
-		// reasoning streaming); the rest use the OpenAI-compatible /chat/completions surface. Both
-		// route through the Stripe AI Gateway, so usage is metered per customer either way.
-		gateway := llm.NewGatewayProvider(cfg.StripeSecretKey)
-		anthropicNative := llm.NewAnthropicMessagesProvider(cfg.StripeSecretKey)
+		// reasoning streaming); the rest use the OpenAI-compatible /chat/completions surface.
+		gateway := llm.NewGatewayProvider(cfg.OpenRouterAPIKey)
+		anthropicNative := llm.NewAnthropicMessagesProvider(cfg.OpenRouterAPIKey)
 		providers = map[string]llm.LLMProvider{
 			"anthropic": anthropicNative,
 			"openai":    gateway,
@@ -178,7 +166,6 @@ func Run(
 		GatewayClient:      gatewayClient,
 		NotificationClient: notificationClient,
 		Broker:             rabbitmq,
-		BillingClient:      billingClient,
 	})
 
 	// Run consumer

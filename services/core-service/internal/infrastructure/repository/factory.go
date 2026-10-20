@@ -391,10 +391,6 @@ func (r *repoFactoryImpl) NewSysPropertyRepo() domain.SysPropertyRepo {
 	return NewSysPropertyRepo(r.queries)
 }
 
-func (r *repoFactoryImpl) NewStripeEventLogRepo() domain.StripeEventLogRepo {
-	return NewStripeEventLogRepo(r.queries)
-}
-
 func (r *repoFactoryImpl) NewOrderPaymentIntentRepo() domain.OrderPaymentIntentRepo {
 	return NewOrderPaymentIntentRepo(r.queries)
 }

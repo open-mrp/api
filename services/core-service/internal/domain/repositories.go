@@ -1917,11 +1917,6 @@ type LocationRepo interface {
 	CountChildren(ctx context.Context, accountID, parentID string) (int64, *apierror.APIError)
 }
 
-type StripeEventLogRepo interface {
-	Exists(ctx context.Context, eventID, objectID string) (bool, *apierror.APIError)
-	Create(ctx context.Context, id, eventID, objectID, eventType string) *apierror.APIError
-}
-
 type SupplierRepo interface {
 	List(ctx context.Context, params ListSuppliersParams) (*ListSuppliersResult, *apierror.APIError)
 	Get(ctx context.Context, params GetSupplierParams) (*Supplier, *apierror.APIError)

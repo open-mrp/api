@@ -6,14 +6,6 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 )
 
-// StripeEventLog represents a deduplicated record of a processed Stripe event.
-type StripeEventLog struct {
-	ID        string
-	EventID   string
-	ObjectID  string
-	EventType string
-}
-
 // OrderPaymentIntent links a Stripe payment intent to a sales order.
 type OrderPaymentIntent struct {
 	ID              string

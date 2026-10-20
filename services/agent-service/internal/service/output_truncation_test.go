@@ -26,7 +26,7 @@ func runTruncationLoop(t *testing.T, stopReason string) (string, []capturedEvent
 	run := &sqlc.AgentRun{ID: "agr_test", StatusCode: domain.RunStatusRunning}
 	result, err := runner.runAgentLoop(context.Background(), run, "acc_test", nil,
 		"sys", []string{"claude-test"}, nil, 0,
-		[]llm.Message{{Role: "user", Content: "go"}}, &seq, newGuardRunCtx(nil, nil), nil, 0, nil)
+		[]llm.Message{{Role: "user", Content: "go"}}, &seq, newGuardRunCtx(nil, nil))
 	if err != nil {
 		t.Fatalf("runAgentLoop: %v", err)
 	}

@@ -54,7 +54,7 @@ func runLoopWithBudget(t *testing.T, provider *loopingLLM, toolErr error, maxSte
 	run := &sqlc.AgentRun{ID: "agr_test", StatusCode: domain.RunStatusRunning}
 	result, err := runner.runAgentLoop(context.Background(), run, "acc_test", nil,
 		"sys", []string{"claude-test"}, toolDefsFor(provider.tool), 0,
-		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx, nil, 0, nil)
+		[]llm.Message{{Role: "user", Content: "go"}}, &seq, runCtx)
 	if err != nil {
 		t.Fatalf("runAgentLoop: %v", err)
 	}

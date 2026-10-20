@@ -15,21 +15,22 @@ import (
 	"time"
 )
 
-const defaultGatewayBaseURL = "https://llm.stripe.com"
+// defaultGatewayBaseURL is OpenRouter's OpenAI-compatible API root.
+const defaultGatewayBaseURL = "https://openrouter.ai/api/v1"
 
 // streamIdleTimeout is the maximum gap tolerated between chunks of a streaming gateway response before the read is treated as a dead connection and aborted. A live stream emits reasoning/content/tool deltas continuously, so a full minute of silence reliably means the connection was silently severed (commonly by an egress NAT/firewall dropping a long-lived flow without a FIN/RST) rather than a legitimately slow model.
 const streamIdleTimeout = 60 * time.Second
 
-// GatewayProvider routes all LLM calls through the Stripe AI Gateway, which uses the OpenAI-compatible /chat/completions endpoint for all providers.
+// GatewayProvider routes LLM calls through OpenRouter's OpenAI-compatible /chat/completions endpoint, which serves every provider.
 type GatewayProvider struct {
-	httpClient   *http.Client
-	stripeAPIKey string
-	baseURL      string
+	httpClient *http.Client
+	apiKey     string
+	baseURL    string
 	// streamIdleTimeout overrides the package default for the streaming idle watchdog; zero means use streamIdleTimeout. Exists so tests can shrink it.
 	idleTimeout time.Duration
 }
 
-func NewGatewayProvider(stripeAPIKey string) *GatewayProvider {
+func NewGatewayProvider(apiKey string) *GatewayProvider {
 	return &GatewayProvider{
 		// No client-level Timeout: a hard deadline would cap legitimately long streams. Liveness is enforced per-read by the idle watchdog in StreamCompleteWithTools and by the caller's per-attempt deadline. ResponseHeaderTimeout bounds only the wait for response headers (before the body streams), catching a gateway that accepts the connection but never replies. TCP keepalives let the OS surface a dead peer on otherwise-idle connections.
 		httpClient: &http.Client{
@@ -47,19 +48,14 @@ func NewGatewayProvider(stripeAPIKey string) *GatewayProvider {
 				ResponseHeaderTimeout: 30 * time.Second,
 			},
 		},
-		stripeAPIKey: stripeAPIKey,
-		baseURL:      defaultGatewayBaseURL,
+		apiKey:  apiKey,
+		baseURL: defaultGatewayBaseURL,
 	}
 }
 
-func (p *GatewayProvider) Name() string { return "stripe_gateway" }
+func (p *GatewayProvider) Name() string { return "openrouter" }
 
 func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolRequest) (*ToolResponse, error) {
-	customerID := StripeCustomerIDFromContext(ctx)
-	if customerID == "" {
-		return nil, fmt.Errorf("stripe customer ID not set in context")
-	}
-
 	gatewayModel := GatewayModelName(req.Model)
 
 	// Build request body
@@ -89,9 +85,8 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 		return nil, fmt.Errorf("failed to create gateway request: %w", err)
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+p.stripeAPIKey)
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Stripe-Customer-ID", customerID)
 
 	httpResp, err := p.httpClient.Do(httpReq) // #nosec G704 -- URL from server-configured LLM gateway endpoint
 	if err != nil {
@@ -116,12 +111,20 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 	return convertGatewayResponse(&completion), nil
 }
 
-// GatewayModelName prefixes a model name with its provider for the Stripe AI Gateway. Model names already match Stripe's naming convention (e.g. "claude-sonnet-4", "gpt-4o").
+// openRouterModelSlugs holds the catalog models whose OpenRouter slug isn't simply "<provider>/<id>".
+var openRouterModelSlugs = map[string]string{
+	"gemini-3-flash": "google/gemini-3-flash-preview",
+}
+
+// GatewayModelName returns the OpenRouter slug for a catalog model id: the id prefixed with its provider (e.g. "anthropic/claude-sonnet-4.6"), unless OpenRouter names it differently.
 func GatewayModelName(model string) string {
+	if slug, ok := openRouterModelSlugs[model]; ok {
+		return slug
+	}
 	return modelProvider(model) + "/" + model
 }
 
-// modelProvider maps a model id to its Stripe AI Gateway provider slug.
+// modelProvider maps a model id to its OpenRouter provider slug.
 func modelProvider(model string) string {
 	switch {
 	case strings.HasPrefix(model, "claude-"):
@@ -129,7 +132,7 @@ func modelProvider(model string) string {
 	case strings.HasPrefix(model, "gemini-"):
 		return "google"
 	case strings.HasPrefix(model, "grok-"):
-		return "xai"
+		return "x-ai"
 	case strings.HasPrefix(model, "gpt-"),
 		strings.HasPrefix(model, "codex-"),
 		strings.HasPrefix(model, "o1"),
@@ -253,11 +256,6 @@ type gatewayFunctionCallDelta struct {
 // --- Streaming method ---
 
 func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *ToolRequest, callback func(StreamEvent)) (*ToolResponse, error) {
-	customerID := StripeCustomerIDFromContext(ctx)
-	if customerID == "" {
-		return nil, fmt.Errorf("stripe customer ID not set in context")
-	}
-
 	gatewayModel := GatewayModelName(req.Model)
 
 	body := gatewayRequest{
@@ -292,9 +290,8 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		return nil, fmt.Errorf("failed to create gateway request: %w", err)
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+p.stripeAPIKey)
+	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-Stripe-Customer-ID", customerID)
 
 	httpResp, err := p.httpClient.Do(httpReq) // #nosec G704 -- URL from server-configured LLM gateway endpoint
 	if err != nil {

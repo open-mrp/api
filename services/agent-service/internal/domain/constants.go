@@ -46,7 +46,7 @@ const (
 
 // ModelInfo describes an LLM model agents can be configured to use.
 type ModelInfo struct {
-	// Code is the stable identifier used to select the model (matches the Stripe AI Gateway naming convention, no date suffixes).
+	// Code is the stable identifier used to select the model (no date suffixes; GatewayModelName adds the OpenRouter provider prefix).
 	Code constants.Model
 	// Name is the human-readable display name.
 	Name string

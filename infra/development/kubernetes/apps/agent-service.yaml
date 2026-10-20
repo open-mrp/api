@@ -71,16 +71,11 @@ spec:
                 secretKeyRef:
                   name: cursor-hmac-key
                   key: key
-            - name: STRIPE_SECRET_KEY
+            - name: OPENROUTER_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: stripe-credentials
-                  key: secret-key
-            - name: BILLING_SERVICE_URL
-              valueFrom:
-                configMapKeyRef:
-                  key: BILLING_SERVICE_URL
-                  name: app-config
+                  name: openrouter-credentials
+                  key: api-key
             - name: API_GATEWAY_INTERNAL_URL
               valueFrom:
                 configMapKeyRef:

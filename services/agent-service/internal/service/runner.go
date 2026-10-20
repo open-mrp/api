@@ -74,9 +74,6 @@ type RunnerConfig struct {
 
 	// Broker (optional; default: nil) is the message broker used to stream run step events. When nil, step events are not published.
 	Broker messaging.MessageBroker
-
-	// BillingClient (required) resolves billing customers for spend tracking.
-	BillingClient domain.BillingCustomerResolver
 }
 
 func (c *RunnerConfig) WithDefaults() *RunnerConfig {
@@ -102,9 +99,6 @@ func (c *RunnerConfig) validate() error {
 	if c.CoreClient == nil {
 		return fmt.Errorf("runner service: core client is required")
 	}
-	if c.BillingClient == nil {
-		return fmt.Errorf("runner service: billing client is required")
-	}
 	return nil
 }
 
@@ -117,7 +111,6 @@ type runnerSvc struct {
 	gatewayClient      domain.GatewayClient
 	notificationClient domain.NotificationClient
 	broker             messaging.MessageBroker
-	billingClient      domain.BillingCustomerResolver
 }
 
 func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
@@ -135,80 +128,19 @@ func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
 		gatewayClient:      config.GatewayClient,
 		notificationClient: config.NotificationClient,
 		broker:             config.Broker,
-		billingClient:      config.BillingClient,
 	}
 }
 
-// billingContext holds resolved billing state for an agent run.
-type billingContext struct {
-	billingAccountID  string
-	stripeCustomerID  string
-	spendingCapCents  *int64 // nil = no cap
-	currentSpendCents int64  // estimated spend so far this month
-	model             string // for cost estimation during loop
-	// tokenRates are the plan's marked-up per-token rates (nil when no cap or no rate card), used to price this run's usage against the cap with the same rates Stripe bills.
-	tokenRates map[llm.TokenRateKey]float64
-}
-
-// buildTokenRateMap indexes the plan's marked-up rates by (gateway model, token type) for O(1) per-turn lookup.
-func buildTokenRateMap(rates []domain.AgentTokenRate) map[llm.TokenRateKey]float64 {
-	if len(rates) == 0 {
-		return nil
-	}
-	m := make(map[llm.TokenRateKey]float64, len(rates))
-	for _, r := range rates {
-		m[llm.TokenRateKey{Model: r.Model, TokenType: r.TokenType}] = r.UnitAmountCents
-	}
-	return m
-}
-
-func (s *runnerSvc) resolveBillingContext(ctx context.Context, accountID, model string) (*billingContext, error) {
+// billingAccountID returns the account an agent run's token usage is recorded against: a sandbox's usage belongs to the account that owns it.
+func (s *runnerSvc) billingAccountID(ctx context.Context, accountID string) (string, error) {
 	acctCtx, err := s.coreClient.GetAccountContext(ctx, accountID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get account context: %w", err)
+		return "", fmt.Errorf("failed to get account context: %w", err)
 	}
-
-	billingAccountID := accountID
 	if acctCtx.IsSandbox && acctCtx.OwnerAccountID != "" {
-		billingAccountID = acctCtx.OwnerAccountID
+		return acctCtx.OwnerAccountID, nil
 	}
-
-	if acctCtx.PlanCode == string(constants.PlanCodeFree) {
-		return nil, fmt.Errorf("agent usage is not available on the free plan")
-	}
-
-	customerID, err := s.billingClient.GetStripeCustomerID(ctx, billingAccountID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve Stripe customer: %w", err)
-	}
-	if customerID == "" {
-		return nil, fmt.Errorf("no Stripe customer ID available for billing — agent runs require an active billing customer")
-	}
-
-	bc := &billingContext{
-		billingAccountID: billingAccountID,
-		stripeCustomerID: customerID,
-		spendingCapCents: acctCtx.AgentMonthlySpendingCapCents,
-		model:            model,
-	}
-
-	// If a cap is set, read the current period spend as Stripe will bill it — the same marked-up figure the dashboard shows — so the cap and the displayed number agree. The in-loop gate adds this run's per-turn estimate on top of this baseline to avoid a Stripe round trip per turn.
-	if bc.spendingCapCents != nil {
-		spendCents, rates, spendErr := s.billingClient.GetAgentSpend(ctx, billingAccountID)
-		if spendErr != nil {
-			return nil, fmt.Errorf("failed to resolve current agent spend: %w", spendErr)
-		}
-
-		bc.currentSpendCents = spendCents
-		bc.tokenRates = buildTokenRateMap(rates)
-
-		if bc.currentSpendCents >= *bc.spendingCapCents {
-			capDollars := float64(*bc.spendingCapCents) / 100.0
-			return nil, apierror.NewAgentSpendingCapReachedError(fmt.Sprintf("Monthly agent spending cap of $%.2f has been reached. Raise your spending limit to run agents.", capDollars))
-		}
-	}
-
-	return bc, nil
+	return accountID, nil
 }
 
 // chatTurnOriginKey marks whether the current run turn was triggered from its conversation. Only conversation-originated turns post their reply/failure back into the conversation; a free-text continuation typed in the agent-run console is a private fork of the run and stays on the run (it must not leak into the thread, nor into the context of subsequent conversation messages).
@@ -372,12 +304,11 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	// Store identity in context so outgoing gRPC calls propagate it
 	ctx = appctx.WithIdentity(ctx, agentIdentity)
 
-	// Resolve billing context and inject Stripe customer ID. This must run after the identity is in context: the billing service resolves the Stripe customer from the caller's identity, so resolving billing earlier would send the gRPC call without identity metadata and fail.
-	bc, billingErr := s.resolveBillingContext(ctx, accountID, modelChain[0])
+	// Resolved after the identity is in context so the core-service call carries identity metadata.
+	billingAccountID, billingErr := s.billingAccountID(ctx, accountID)
 	if billingErr != nil {
 		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
 	}
-	ctx = llm.WithStripeCustomerID(ctx, bc.stripeCustomerID)
 
 	// Load linked tools from DB
 	toolRepo := s.repos.NewAgentDefinitionToolRepo()
@@ -398,7 +329,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 
 	// Execute the agent
 	maxSteps := resolveMaxSteps(agentCfg.MaxSteps, triggerType)
-	result, err := s.executeAgent(ctx, run, config, def, accountID, agentIdentity, agentCfg.SystemPrompt, modelChain, toolDefs, temperature, requireReviewBySlug, allowedEndpointTools, maxSteps, bc)
+	result, err := s.executeAgent(ctx, run, config, def, accountID, agentIdentity, agentCfg.SystemPrompt, modelChain, toolDefs, temperature, requireReviewBySlug, allowedEndpointTools, maxSteps)
 	if err != nil {
 		// Transient, side-effect-free failures are re-enqueued with backoff instead of surfaced as a terminal failure.
 		if s.maybeAutoRetry(ctx, runRepo, run, err) {
@@ -408,7 +339,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Persist outputs
-	if err := s.persistOutputs(ctx, runID, accountID, bc.billingAccountID, result); err != nil {
+	if err := s.persistOutputs(ctx, runID, accountID, billingAccountID, result); err != nil {
 		return s.failRun(ctx, runRepo, runID, startTime, fmt.Sprintf("failed to persist outputs: %s", err.Error()))
 	}
 
@@ -447,7 +378,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Write outbox message for run completion
-	s.writeRunCompletedEvent(ctx, runID, accountID, bc.billingAccountID, result)
+	s.writeRunCompletedEvent(ctx, runID, accountID, billingAccountID, result)
 
 	// Notify the triggering user that their run finished (only for fully completed runs).
 	if statusCode == domain.RunStatusCompleted {
@@ -723,7 +654,6 @@ func (s *runnerSvc) executeAgent(
 	requireReviewBySlug map[string]bool,
 	allowedEndpointTools map[string]bool,
 	maxSteps int,
-	bc *billingContext,
 ) (*domain.RunResult, error) {
 	seq := 0
 
@@ -817,7 +747,7 @@ func (s *runnerSvc) executeAgent(
 		MaxSteps:                 maxSteps,
 	}
 
-	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, bc.spendingCapCents, bc.currentSpendCents, bc.tokenRates)
+	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx)
 
 }
 
@@ -1044,9 +974,6 @@ func (s *runnerSvc) runAgentLoop(
 	messages []llm.Message,
 	seq *int,
 	runCtx *domain.HandlerRunContext,
-	spendingCapCents *int64,
-	currentMonthSpendCents int64,
-	tokenRates map[llm.TokenRateKey]float64,
 ) (*domain.RunResult, error) {
 	if len(modelChain) == 0 {
 		return nil, fmt.Errorf("no model chain provided")
@@ -1057,7 +984,6 @@ func (s *runnerSvc) runAgentLoop(
 	providerName := inferProvider(modelName)
 
 	var totalInputTokens, totalOutputTokens, totalCacheReadTokens, totalCacheWriteTokens int
-	var runSpendCents int64
 	startTime := time.Now()
 	doomDetector := &doomLoopDetector{}
 
@@ -1148,10 +1074,10 @@ func (s *runnerSvc) runAgentLoop(
 			}
 			var ge *llm.GatewayError
 			isGatewayErr := errors.As(llmErr, &ge)
-			// A billing/spend-limit rejection is account-wide (every model bills the same Stripe customer), so stop the run cleanly with the cap message instead of failing over across the whole chain.
+			// A billing/spend-limit rejection is account-wide (every model draws on the same OpenRouter credits), so stop the run cleanly with the cap message instead of failing over across the whole chain.
 			if isGatewayErr && ge.IsBillingLimitError() {
 				return s.capStoppedResult(ctx, run, accountID, seq, runCtx,
-					"Spending limit reached: the account's usage limit has been hit. Raise or remove the cap to continue.",
+					"Spending limit reached: the LLM provider's credit limit has been hit. Raise the limit to continue.",
 					totalInputTokens, totalOutputTokens, providerName, modelName), nil
 			}
 			// Fail over only on a provider-down/overloaded error that survived retries; a request-level error (bad input, context length) would fail identically on every model.
@@ -1177,19 +1103,6 @@ func (s *runnerSvc) runAgentLoop(
 		totalOutputTokens += resp.OutputTokens
 		totalCacheReadTokens += resp.CacheReadInputTokens
 		totalCacheWriteTokens += resp.CacheCreationInputTokens
-
-		// Accumulate estimated cost for this iteration and check spending cap. Price at the plan's marked-up rate-card rates (what Stripe bills) so the cap matches the customer's real bill; fall back to base pricing only when a rate for this model is unavailable.
-		iterCostCents, ok := llm.MarkedUpTokenCostCents(resp.InputTokens, resp.OutputTokens, llm.GatewayModelName(modelName), tokenRates)
-		if !ok {
-			iterCostCents = llm.EstimateTokenCostCents(resp.InputTokens, resp.OutputTokens, modelName)
-		}
-		runSpendCents += iterCostCents
-		if spendingCapCents != nil && (currentMonthSpendCents+runSpendCents) >= *spendingCapCents {
-			capDollars := float64(*spendingCapCents) / 100.0
-			capMsg := fmt.Sprintf("Monthly agent spending cap of $%.2f reached during run", capDollars)
-			return s.capStoppedResult(ctx, run, accountID, seq, runCtx, capMsg,
-				totalInputTokens, totalOutputTokens, providerName, modelName), nil
-		}
 
 		if resp.StopReason != "tool_use" || len(resp.ToolCalls) == 0 {
 			// Record the final turn's reasoning before the answer (it already streamed live), so the timeline reads reasoning → answer.
@@ -1605,9 +1518,9 @@ func (s *runnerSvc) loopNudge(ctx context.Context, runID, accountID string, seq 
 }
 
 // runResumedLoop finishes a resumed turn: it first executes any approved-but-blocked tool calls directly (so an approval actually performs its write instead of depending on the model to re-issue the call — see resumeApprovedBlockedCalls) and then runs the agent loop over the reconstructed transcript. ContinueRun's resume tail is exactly this call; keeping the two steps together in one method means the "execute on approval, then continue" contract is exercised end to end in tests rather than only wired inline.
-func (s *runnerSvc) runResumedLoop(ctx context.Context, run *sqlc.AgentRun, accountID string, identity *types.Identity, systemPrompt string, modelChain []string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, seq *int, runCtx *domain.HandlerRunContext, events []sqlc.AgentRunEvent, spendingCapCents *int64, currentMonthSpendCents int64, tokenRates map[llm.TokenRateKey]float64) (*domain.RunResult, error) {
+func (s *runnerSvc) runResumedLoop(ctx context.Context, run *sqlc.AgentRun, accountID string, identity *types.Identity, systemPrompt string, modelChain []string, toolDefs []llm.ToolDefinition, temperature float64, messages []llm.Message, seq *int, runCtx *domain.HandlerRunContext, events []sqlc.AgentRunEvent) (*domain.RunResult, error) {
 	s.resumeApprovedBlockedCalls(ctx, run, accountID, seq, runCtx, messages, events)
-	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, seq, runCtx, spendingCapCents, currentMonthSpendCents, tokenRates)
+	return s.runAgentLoop(ctx, run, accountID, identity, systemPrompt, modelChain, toolDefs, temperature, messages, seq, runCtx)
 }
 
 // approvesReviewedTool reports whether a ContinueRun resume approves a given pending review-gated tool — the single authority for what a resume lets through. A per-tool approval names the slugs (and only those pass; approveAllPending is ignored when slugs are present); an "Approve all" sets approveAllPending with no slugs; everything else — most importantly a typed-message continuation or a retry, which both arrive with no slugs and approveAllPending=false — approves NOTHING, so the tool stays blocked and re-prompts.
@@ -1893,12 +1806,11 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 	ctx = appctx.WithIdentity(ctx, agentIdentity)
 
-	// Resolve billing context and inject Stripe customer ID. This must run after the identity is in context: the billing service resolves the Stripe customer from the caller's identity, so resolving billing earlier would send the gRPC call without identity metadata and fail.
-	bc, billingErr := s.resolveBillingContext(ctx, accountID, modelChain[0])
+	// Resolved after the identity is in context so the core-service call carries identity metadata.
+	billingAccountID, billingErr := s.billingAccountID(ctx, accountID)
 	if billingErr != nil {
 		return s.failRunFromErr(ctx, runRepo, runID, startTime, billingErr)
 	}
-	ctx = llm.WithStripeCustomerID(ctx, bc.stripeCustomerID)
 
 	// Load linked tools
 	toolRepo := s.repos.NewAgentDefinitionToolRepo()
@@ -2036,7 +1948,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Finish the resumed turn: execute any tool calls this resume approved (rather than trusting the model to re-issue them — this is what makes an approval actually perform the write), then run the agent loop.
-	result, err := s.runResumedLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, events, bc.spendingCapCents, bc.currentSpendCents, bc.tokenRates)
+	result, err := s.runResumedLoop(ctx, run, accountID, agentIdentity, systemPrompt, modelChain, toolDefs, temperature, messages, &seq, runCtx, events)
 	if err != nil {
 		// Transient, side-effect-free failures are re-enqueued with backoff instead of surfaced as a terminal failure.
 		if s.maybeAutoRetry(ctx, runRepo, run, err) {
@@ -2046,7 +1958,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Persist outputs
-	if err := s.persistOutputs(ctx, runID, accountID, bc.billingAccountID, result); err != nil {
+	if err := s.persistOutputs(ctx, runID, accountID, billingAccountID, result); err != nil {
 		return s.failRun(ctx, runRepo, runID, startTime, fmt.Sprintf("failed to persist outputs: %s", err.Error()))
 	}
 
@@ -2086,7 +1998,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Write outbox message for run completion
-	s.writeRunCompletedEvent(ctx, runID, accountID, bc.billingAccountID, result)
+	s.writeRunCompletedEvent(ctx, runID, accountID, billingAccountID, result)
 
 	// Finalize this turn's streaming reply (no-op for non-chat runs, which have no conversation_id). It threads under the message that triggered this turn (the user's reply) so the chat thread keeps growing as one. A re-pause on a later turn finalizes with the approval-request body so the chat UI can surface the new pending tools.
 	s.writeChatComplete(ctx, run, runID, accountID, result, replyToMessageID)
@@ -2882,7 +2794,7 @@ func (s *runnerSvc) failRun(ctx context.Context, runRepo domain.AgentRunRepo, ru
 	return s.failRunWithCode(ctx, runRepo, runID, startTime, errMsg, "")
 }
 
-// failRunFromErr fails a run, propagating a machine-readable error code when err is a typed APIError (e.g. the spending-cap error) so the client can react programmatically — surfacing the code on the terminal failure event and returning the same typed error.
+// failRunFromErr fails a run, propagating a machine-readable error code when err is a typed APIError so the client can react programmatically — surfacing the code on the terminal failure event and returning the same typed error.
 func (s *runnerSvc) failRunFromErr(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, err error) *apierror.APIError {
 	var apiErr *apierror.APIError
 	if errors.As(err, &apiErr) {
@@ -2909,9 +2821,6 @@ func (s *runnerSvc) failRunWithCode(ctx context.Context, runRepo domain.AgentRun
 		s.writeChatFailureReply(ctx, run, runID, run.AccountID, errMsg, errorCode)
 	}
 
-	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) {
-		return apierror.NewAgentSpendingCapReachedError(errMsg)
-	}
 	return apierror.NewInternalError(errors.New(errMsg), "agent run failed: "+errMsg)
 }
 
@@ -2925,7 +2834,7 @@ func (s *runnerSvc) emitFailureEvent(ctx context.Context, run *sqlc.AgentRun, er
 	seq := int(maxSeq) + 1
 	content := "The run failed before it could finish."
 	metaMap := map[string]any{"error": errMsg}
-	// error_code lets the client react programmatically (e.g. prompt to raise the spending cap on agent_spending_cap_reached) rather than parsing the message.
+	// error_code lets the client react programmatically rather than parsing the message.
 	if errorCode != "" {
 		metaMap["error_code"] = errorCode
 	}
@@ -2941,11 +2850,8 @@ func (s *runnerSvc) writeChatFailureReply(ctx context.Context, run *sqlc.AgentRu
 	if tid := agentdb.StringFromPgText(run.TriggerMessageID); tid != nil {
 		replyTo = *tid
 	}
-	// The spending-cap message is a user-safe public message, so surface it verbatim (with a raise-limit prompt keyed off the code); other errors may carry internal detail, so chat sees only a generic notice.
+	// Errors may carry internal detail, so chat sees only a generic notice.
 	msg := "Sorry — I ran into an error and couldn't finish that request. Please try again."
-	if errorCode == string(apierror.ErrorCodeAgentSpendingCapReached) && errMsg != "" {
-		msg = errMsg
-	}
 	s.finalizeChatReply(ctx, run, runID, accountID, msg, replyTo, true, errorCode)
 }
 

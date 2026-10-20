@@ -12,7 +12,7 @@ import (
 func TestBuildParams_ThinkingToolsAndReplay(t *testing.T) {
 	t.Parallel()
 
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	req := &ToolRequest{
 		Model:           "claude-sonnet-4.6", // 4.6+ → adaptive thinking
 		System:          "You are helpful.",
@@ -68,7 +68,7 @@ func TestBuildParams_ThinkingToolsAndReplay(t *testing.T) {
 // 4.0–4.5 models must use the legacy enabled+budget_tokens thinking form (adaptive is rejected there).
 func TestBuildParams_LegacyThinkingForOlderModels(t *testing.T) {
 	t.Parallel()
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	body, err := json.Marshal(p.buildParams(&ToolRequest{
 		Model:           "claude-sonnet-4",
 		MaxTokens:       4096,
@@ -108,7 +108,7 @@ func TestSupportsAdaptiveThinking(t *testing.T) {
 // a Go-zero ToolInputSchemaParam, which previously produced "tools.N.custom.input_schema: Field required".
 func TestBuildParams_ToolWithoutPropertiesStillEmitsInputSchema(t *testing.T) {
 	t.Parallel()
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	cases := map[string]json.RawMessage{
 		"type-only schema": json.RawMessage(`{"type":"object"}`),
 		"empty object":     json.RawMessage(`{}`),
@@ -135,7 +135,7 @@ func TestBuildParams_ToolWithoutPropertiesStillEmitsInputSchema(t *testing.T) {
 // additionalProperties / $defs (carried via ExtraFields).
 func TestBuildParams_PreservesFullToolSchema(t *testing.T) {
 	t.Parallel()
-	p := NewAnthropicMessagesProvider("sk_test_fake")
+	p := NewAnthropicMessagesProvider("sk-or-test-fake")
 	body, err := json.Marshal(p.buildParams(&ToolRequest{
 		Model:    "claude-sonnet-4.6",
 		Messages: []Message{{Role: "user", Content: "hi"}},

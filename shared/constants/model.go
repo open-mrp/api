@@ -42,7 +42,7 @@ type ModelSpec struct {
 	Provider string
 }
 
-// ModelCatalog is the full set of LLM models agents may use — the single source of truth for validation and the model enum. IDs mirror the models available in the Stripe AI Gateway dashboard.
+// ModelCatalog is the full set of LLM models agents may use — the single source of truth for validation and the model enum. Each ID maps to an OpenRouter model slug (see GatewayModelName in agent-service).
 var ModelCatalog = []ModelSpec{
 	// Anthropic
 	{ModelClaudeOpus48, "Claude Opus 4.8", "Anthropic"},

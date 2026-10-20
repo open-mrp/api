@@ -37,12 +37,12 @@ func TestStreamCompleteWithTools_ContentOnly(t *testing.T) {
 	defer srv.Close()
 
 	provider := &GatewayProvider{
-		httpClient:   srv.Client(),
-		stripeAPIKey: "sk_test_fake",
-		baseURL:      srv.URL,
+		httpClient: srv.Client(),
+		apiKey:     "sk-or-test-fake",
+		baseURL:    srv.URL,
 	}
 
-	ctx := WithStripeCustomerID(context.Background(), "cus_test123")
+	ctx := context.Background()
 
 	var contentDeltas []string
 	var doneEvent *StreamEvent
@@ -133,12 +133,12 @@ func TestStreamCompleteWithTools_ToolCalls(t *testing.T) {
 	defer srv.Close()
 
 	provider := &GatewayProvider{
-		httpClient:   srv.Client(),
-		stripeAPIKey: "sk_test_fake",
-		baseURL:      srv.URL,
+		httpClient: srv.Client(),
+		apiKey:     "sk-or-test-fake",
+		baseURL:    srv.URL,
 	}
 
-	ctx := WithStripeCustomerID(context.Background(), "cus_test456")
+	ctx := context.Background()
 
 	var toolCallDeltas []StreamEvent
 
@@ -215,12 +215,12 @@ func TestStreamCompleteWithTools_UsageFromFinalChunk(t *testing.T) {
 	defer srv.Close()
 
 	provider := &GatewayProvider{
-		httpClient:   srv.Client(),
-		stripeAPIKey: "sk_test_fake",
-		baseURL:      srv.URL,
+		httpClient: srv.Client(),
+		apiKey:     "sk-or-test-fake",
+		baseURL:    srv.URL,
 	}
 
-	ctx := WithStripeCustomerID(context.Background(), "cus_test789")
+	ctx := context.Background()
 
 	var doneEvent *StreamEvent
 
@@ -281,13 +281,13 @@ func TestStreamCompleteWithTools_IdleStallAborts(t *testing.T) {
 	defer srv.Close()
 
 	provider := &GatewayProvider{
-		httpClient:   srv.Client(),
-		stripeAPIKey: "sk_test_fake",
-		baseURL:      srv.URL,
-		idleTimeout:  50 * time.Millisecond,
+		httpClient:  srv.Client(),
+		apiKey:      "sk-or-test-fake",
+		baseURL:     srv.URL,
+		idleTimeout: 50 * time.Millisecond,
 	}
 
-	ctx := WithStripeCustomerID(context.Background(), "cus_stall")
+	ctx := context.Background()
 
 	start := time.Now()
 	_, err := provider.StreamCompleteWithTools(ctx, &ToolRequest{

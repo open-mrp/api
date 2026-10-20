@@ -53,7 +53,7 @@ func (e *GatewayError) IsContextLengthError() bool {
 		strings.Contains(lower, "token limit")
 }
 
-// IsBillingLimitError reports whether the gateway rejected the call because the customer's billing/spend limit was reached (a 402 Payment Required, or a 4xx whose body indicates a billing/quota/budget problem). These are account-wide: every model and provider routes through the same Stripe customer, so retrying or failing over to another model won't help — the run must stop.
+// IsBillingLimitError reports whether the gateway rejected the call because the customer's billing/spend limit was reached (a 402 Payment Required, or a 4xx whose body indicates a billing/quota/budget problem). These are account-wide: every model and provider draws on the same OpenRouter credit balance, so retrying or failing over to another model won't help — the run must stop.
 func (e *GatewayError) IsBillingLimitError() bool {
 	if e.StatusCode == http.StatusPaymentRequired { // 402
 		return true

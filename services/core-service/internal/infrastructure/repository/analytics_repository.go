@@ -670,7 +670,7 @@ func quarterlyOrdersQuery(orderIndex, accountID string, issuedFrom time.Time, bu
     QUARTER(so.issued_at) AS order_quarter,
     ` + obDecimal("SUM("+obTotalOrdered+")") + ` AS total
 FROM sales_order so FORCE INDEX (` + orderIndex + `)
-` + orderedLineValues(copies) + `
+` + orderedLineValues(copies, false) + `
 WHERE ` + strings.Join(preds, " AND ") + `
 GROUP BY order_year, order_quarter
 ORDER BY order_year ASC, order_quarter ASC`

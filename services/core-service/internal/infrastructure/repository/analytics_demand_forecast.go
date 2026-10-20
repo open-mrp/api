@@ -54,7 +54,7 @@ func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams, copi
     ` + obDecimal("SUM("+obQtyOrdered+")") + `,
     ` + obDecimal("SUM("+obTotalOrdered+")") + `
 FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx)
-` + orderedLineValues(copies) + `
+` + orderedLineValues(copies, true) + `
 WHERE ` + strings.Join(preds, " AND ") + `
 GROUP BY pb.id, pb.sku, pb.description, fg.product_line_id, bu_unit.abbreviation, u_price_num.abbreviation, demand_year, demand_month
 ORDER BY pb.id, demand_year, demand_month`
@@ -64,34 +64,34 @@ ORDER BY pb.id, demand_year, demand_month`
 	return query, args
 }
 
-// orderedLineValues joins an order's lines (sol), their product (fg) and item's base unit (bu_unit), and the
-// quantity (u_ord) and price (u_price_num, u_price_den) units obTotalOrdered prices them with. A line without
-// its quantity row is left out; one without its price row is not. With copies, the lines are read from
-// sales_order_line_order_copies_idx and their values from the copies, so the expressions read through
-// fromCopies.
-func orderedLineValues(copies bool) string {
-	if copies {
-		return `JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = so.id
-JOIN product fg ON fg.id = sol.product_id
-JOIN item pb ON pb.id = fg.item_id
-JOIN item_category ic ON ic.id = pb.item_category_id
-JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-JOIN unit u_ord ON u_ord.id = sol.quantity_unit_id
-LEFT JOIN unit u_price_num ON u_price_num.id = sol.unit_price_numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = sol.unit_price_denominator_unit_id`
-	}
-	return `JOIN sales_order_line sol ON sol.sales_order_id = so.id
-JOIN product fg ON fg.id = sol.product_id
-JOIN item pb ON pb.id = fg.item_id
-JOIN item_category ic ON ic.id = pb.item_category_id
-JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-JOIN quantity q_ord ON q_ord.id = sol.quantity_id
+// orderedLineValues joins an order's lines (sol) and their product (fg), with withBaseUnit the item's base unit
+// (bu_unit), and the quantity (u_ord) and price (u_price_num, u_price_den) units obTotalOrdered prices them with.
+// A line without its quantity row is left out; one without its price row is not.
+//
+// With copies, the lines are read from sales_order_line_order_copies_idx and their values from the copies, so
+// the expressions read through fromCopies. The copied unit ids are ASCII and unit.id is not, so left to choose,
+// the planner scans the unit table once per line for each unit joined; the lookups are forced instead.
+func orderedLineValues(copies, withBaseUnit bool) string {
+	lines, values := `JOIN sales_order_line sol ON sol.sales_order_id = so.id`, `JOIN quantity q_ord ON q_ord.id = sol.quantity_id
 JOIN unit u_ord ON u_ord.id = q_ord.unit_id
 LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
 LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
 LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id`
+	if copies {
+		lines = `JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = so.id`
+		values = `JOIN unit u_ord FORCE INDEX (PRIMARY) ON u_ord.id = sol.quantity_unit_id
+LEFT JOIN unit u_price_num FORCE INDEX (PRIMARY) ON u_price_num.id = sol.unit_price_numerator_unit_id
+LEFT JOIN unit u_price_den FORCE INDEX (PRIMARY) ON u_price_den.id = sol.unit_price_denominator_unit_id`
+	}
+	product := `JOIN product fg ON fg.id = sol.product_id`
+	if withBaseUnit {
+		product += `
+JOIN item pb ON pb.id = fg.item_id
+JOIN item_category ic ON ic.id = pb.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu_unit FORCE INDEX (PRIMARY) ON bu_unit.id = ug.base_unit_id`
+	}
+	return lines + "\n" + product + "\n" + values
 }
 
 // GetDemandForecastMonthlyDemand returns order-based monthly demand and revenue rows per item within the given window.
@@ -173,10 +173,10 @@ JOIN product fg ON fg.id = sol.product_id
 JOIN item pb ON pb.id = fg.item_id
 JOIN item_category ic ON ic.id = pb.item_category_id
 JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
-JOIN unit u_in ON u_in.id = il.quantity_unit_id
-LEFT JOIN unit u_price_num ON u_price_num.id = sol.unit_price_numerator_unit_id
-LEFT JOIN unit u_price_den ON u_price_den.id = sol.unit_price_denominator_unit_id`
+JOIN unit bu_unit FORCE INDEX (PRIMARY) ON bu_unit.id = ug.base_unit_id
+JOIN unit u_in FORCE INDEX (PRIMARY) ON u_in.id = il.quantity_unit_id
+LEFT JOIN unit u_price_num FORCE INDEX (PRIMARY) ON u_price_num.id = sol.unit_price_numerator_unit_id
+LEFT JOIN unit u_price_den FORCE INDEX (PRIMARY) ON u_price_den.id = sol.unit_price_denominator_unit_id`
 	}
 	query := `SELECT STRAIGHT_JOIN
     pb.id,

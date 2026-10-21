@@ -1122,7 +1122,7 @@ type ProductionScheduleRepo interface {
 	MarkLineReleased(ctx context.Context, accountID, lineID, productionRunID string) *apierror.APIError
 	// ListRunItemBatchIDsOnMachine returns the released batches of one campaign: its run, item and machine.
 	ListRunItemBatchIDsOnMachine(ctx context.Context, accountID, productionRunID, itemID, machineID string) ([]string, *apierror.APIError)
-	// ListCarryForwardBatches returns an item's unworked tickets from weeks that have already begun, oldest first, so a release can move them rather than print their replacements.
+	// ListCarryForwardBatches returns an item's unworked tickets already on a machine, oldest first, so a release can move them rather than print their replacements.
 	ListCarryForwardBatches(ctx context.Context, params ListCarryForwardBatchesParams) ([]*CarryForwardBatch, *apierror.APIError)
 
 	// Generation cadence.

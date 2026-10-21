@@ -339,8 +339,9 @@ func (r *productionScheduleInputRepoImpl) GetProductionFlowChildrenByItem(
 	var out []domain.ProductionFlowChildRow
 	for _, row := range rows {
 		out = append(out, domain.ProductionFlowChildRow{
-			ParentItemID: row.ParentItemID,
-			ChildItemID:  row.ChildItemID,
+			ParentItemID:     row.ParentItemID,
+			ChildItemID:      row.ChildItemID,
+			ProductionStepID: row.ProductionStepID.String,
 		})
 	}
 	return out, nil

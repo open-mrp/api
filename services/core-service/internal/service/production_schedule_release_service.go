@@ -47,7 +47,7 @@ type releaseLinePlan struct {
 	unitID      string
 	// lots are the batches this release would create, after whatever an earlier week already issued has been counted against the campaign.
 	lots []float64
-	// carried are tickets an earlier week issued for this item and the floor never worked. They are moved into the new run rather than reprinted.
+	// carried are open tickets for this item already on a machine. They are moved into the new run rather than reprinted.
 	carried []domain.CarryForwardBatch
 }
 
@@ -191,7 +191,7 @@ func (s *productionScheduleSvcImpl) buildReleasePlan(
 			continue
 		}
 
-		// Tickets an earlier week issued and nobody worked cover part of this campaign already. They are counted against it before it is split, so the release creates batches only for what is genuinely not yet on the floor.
+		// Open tickets already on a machine cover part of this campaign already. They are counted against it before it is split, so the release creates batches only for what is genuinely not yet on the floor.
 		carried, apiErr := s.claimCarryForwardBatches(ctx, accountID, line, plan.weekStartDate, skipCarryForward, candidatesByItem, claimed)
 		if apiErr != nil {
 			return nil, apiErr

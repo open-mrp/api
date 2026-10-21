@@ -222,6 +222,7 @@ func Solve(in SolverInput) SolverOutput {
 
 	policies := make([]ItemPolicy, 0, len(measurements))
 	levelingItems := make([]LevelingItem, 0, len(measurements))
+	finishedReported := map[string]bool{}
 
 	for _, m := range measurements {
 		if in.ExcludedItemIDs[m.ItemID] {
@@ -271,8 +272,14 @@ func Solve(in SolverInput) SolverOutput {
 		}, in.Settings)
 
 		// The pooled buffer decomposed back into per-SKU finished targets. Without these the echelon total can say whether to knit but not whether any given finished SKU is short.
-		out.FinishedPolicies = append(out.FinishedPolicies,
-			ComputeFinishedPolicies(policy, d.FinishedGoods, in.Settings)...)
+		// A finished good assembled from several constraint items is still one SKU finished once, so only the first family reports it.
+		for _, finished := range ComputeFinishedPolicies(policy, d.FinishedGoods, in.Settings) {
+			if finishedReported[finished.ItemID] {
+				continue
+			}
+			finishedReported[finished.ItemID] = true
+			out.FinishedPolicies = append(out.FinishedPolicies, finished)
+		}
 
 		// The resolved lot carries its unit as well as its size: a doff of sock greige is 60 pairs and a doff of armsleeve greige 60 eaches, and the plan has to say which.
 		lotUnits := in.Settings.DefaultLotUnits
@@ -445,9 +452,18 @@ func firmDemandByFinishedItem(in SolverInput) map[string][]float64 {
 		return out
 	}
 
+	// An order for an assembled finished good is listed once per constraint item but owed once here.
+	counted := map[string]bool{}
 	for _, line := range in.OpenOrders {
 		if line.FinishedItemID == "" || line.Units <= 0 {
 			continue
+		}
+		if line.SalesOrderLineID != "" {
+			key := line.SalesOrderLineID + "|" + line.FinishedItemID
+			if counted[key] {
+				continue
+			}
+			counted[key] = true
 		}
 		week := 0
 		if line.ShipByDate != nil {

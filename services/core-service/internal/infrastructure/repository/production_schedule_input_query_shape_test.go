@@ -30,3 +30,57 @@ func TestGetProductionFlowChildrenByItem_WalksTheRoutingGraphNotGenealogy(t *tes
 			"production have no account column, so without it the walk crosses tenant boundaries")
 	}
 }
+
+// The routing edge carries the step that makes it, because the step is the only thing that tells an
+// assembly (one step joining a left and a right leg) from two alternative ways to make the same stage.
+// Without it the walk can only guess, and its guess handed a whole pair-of-legs family to one leg.
+func TestGetProductionFlowChildrenByItem_ReturnsTheStep(t *testing.T) {
+	t.Parallel()
+
+	body := queryBody(t, "production_schedule_input.sql", "GetProductionFlowChildrenByItem")
+
+	if !strings.Contains(body, "c.production_step_id") {
+		t.Error("GetProductionFlowChildrenByItem must return the consuming step, or the walk cannot see " +
+			"that one step assembles several constraint items into the same stage")
+	}
+}
+
+// An allocation is counted in its own unit, not the receipt's. A receipt of pairs drawn on in eaches
+// otherwise loses a whole pair for every each, and a stage holding thousands of pairs reads as almost
+// empty: the plan then knits greige to replace stock already on the shelf.
+func TestGetEchelonOnHand_NormalizesEachAllocationThroughItsOwnUnit(t *testing.T) {
+	t.Parallel()
+
+	body := queryBody(t, "production_schedule_input.sql", "GetEchelonOnHand")
+
+	if !strings.Contains(body, "JOIN unit au ON au.id = aq.unit_id") {
+		t.Error("GetEchelonOnHand must join each allocation's own unit")
+	}
+	if !strings.Contains(body, "aq.value * (au.ratio_numerator / au.ratio_denominator)") {
+		t.Error("GetEchelonOnHand must scale each allocation by its own unit's ratio, not the receipt's")
+	}
+}
+
+// Carry-forward looks for any open ticket on a machine for the item, not only those an earlier schedule
+// release printed: work already on a machine is outstanding either way, and a second ticket for it is
+// the failure carry-forward exists to prevent. Runs released for this week or later stay untouched.
+func TestListCarryForwardBatchesForItem_TakesAnyOpenBatchOnAMachine(t *testing.T) {
+	t.Parallel()
+
+	body := queryBody(t, "production_schedule_lifecycle.sql", "ListCarryForwardBatchesForItem")
+
+	if strings.Contains(body, "production_run_id IN (") {
+		t.Error("ListCarryForwardBatchesForItem must not limit candidates to runs an earlier schedule week released")
+	}
+	if !strings.Contains(body, "_batches_machines") {
+		t.Error("ListCarryForwardBatchesForItem must only take batches already on a machine")
+	}
+	if !strings.Contains(body, "production_run_id NOT IN (") || !strings.Contains(body, "l.week_start_date >= sqlc.arg('week_start_date')") {
+		t.Error("ListCarryForwardBatchesForItem must leave runs released for this week or a later one alone")
+	}
+	for _, guard := range []string{"b.scanned_at IS NULL", "b.closed_at IS NULL"} {
+		if !strings.Contains(body, guard) {
+			t.Errorf("ListCarryForwardBatchesForItem must keep %q: only unworked tickets can be moved", guard)
+		}
+	}
+}

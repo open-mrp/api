@@ -249,7 +249,7 @@ func TestDemandForecastQueries_PushFiltersDown(t *testing.T) {
 			query, args = build(w, copies)
 			requireBindsMatch(t, query, args)
 			assert.Contains(t, query, "fg.product_line_id IN (?)")
-			assert.Contains(t, query, "pb.id IN (?,?)")
+			assert.Contains(t, query, "fg.item_id IN (?,?)")
 			assert.Equal(t, []any{"ac_1", start, end, "pl_1", "it_1", "it_2"}, args)
 		}
 	}

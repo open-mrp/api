@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -53,16 +54,27 @@ func (s *analyticsSvcImpl) buildDemandForecast(ctx context.Context, params domai
 		ItemIDs:        params.ItemIDs,
 	}
 
-	// Fetch monthly demand data (order-based).
-	demandRows, apiErr := repo.GetDemandForecastMonthlyDemand(ctx, window)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
-	}
-
-	// Fetch monthly sales data (invoice-based).
-	salesRows, apiErr := repo.GetDemandForecastMonthlyRevenue(ctx, window)
-	if apiErr != nil {
-		return nil, tracing.Trace(span, apiErr)
+	// The order-based demand and invoice-based sales reads share no inputs, so they run side by side: the forecast waits on the slower of the two rather than their sum.
+	var (
+		demandRows []domain.DemandForecastMonthlyDemandRow
+		salesRows  []domain.DemandForecastMonthlyRevenueRow
+		errs       [2]*apierror.APIError
+		wg         sync.WaitGroup
+	)
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		demandRows, errs[0] = repo.GetDemandForecastMonthlyDemand(ctx, window)
+	}()
+	go func() {
+		defer wg.Done()
+		salesRows, errs[1] = repo.GetDemandForecastMonthlyRevenue(ctx, window)
+	}()
+	wg.Wait()
+	for _, apiErr := range errs {
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
 	}
 
 	// Build sales lookup: itemID -> [{year, month, revenue}].

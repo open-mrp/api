@@ -11,7 +11,7 @@ import (
 	"github.com/open-mrp/api/shared/tracing"
 )
 
-// demandForecastFilters are the product-line and item filters both forecast reads take, on fg (product) and pb (item).
+// demandForecastFilters are the product-line and item filters both forecast reads take, on fg (product).
 func demandForecastFilters(params domain.GetDemandForecastWindowParams) ([]string, []any) {
 	var preds []string
 	var args []any
@@ -20,7 +20,7 @@ func demandForecastFilters(params domain.GetDemandForecastWindowParams) ([]strin
 		args = append(args, stringsToAny(params.ProductLineIDs)...)
 	}
 	if len(params.ItemIDs) > 0 {
-		preds = append(preds, "pb.id IN ("+placeholders(len(params.ItemIDs))+")")
+		preds = append(preds, "fg.item_id IN ("+placeholders(len(params.ItemIDs))+")")
 		args = append(args, stringsToAny(params.ItemIDs)...)
 	}
 	return preds, args
@@ -29,6 +29,8 @@ func demandForecastFilters(params domain.GetDemandForecastWindowParams) ([]strin
 // demandForecastDemandQuery totals each item's ordered quantity (in its base unit) and value per month of order creation. Every sales order counts, estimates included, as the dashboard counted them. The orders drive, ranged by creation date: left to choose, the planner starts from the lines and reads each order once per line.
 //
 // With copies, each order's lines are one range of a key holding their quantity and price, so no line, quantity or rate row is visited: from those rows, two years of a large account's orders took 3 s warm and 28 s cold.
+//
+// The lines are totalled per item and month before the item and its base unit are joined, so those are read once per row returned rather than once per line, and the grouping keys stay narrow. An item has one base unit, so converting the month's total equals totalling each line's conversion.
 func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams, copies bool) (string, []any) {
 	preds := []string{
 		"so.owner_account_id = ?",
@@ -42,22 +44,38 @@ func demandForecastDemandQuery(params domain.GetDemandForecastWindowParams, copi
 	preds = append(preds, filters...)
 	args = append(args, filterArgs...)
 
+	const qtyInBase = "((d.qty_norm - d.qty_lines * " + obBaseOffset + ") / " + obBaseRatio + ")"
 	query := `SELECT STRAIGHT_JOIN
     pb.id,
     pb.sku,
     pb.description,
-    fg.product_line_id,
+    d.product_line_id,
     bu_unit.abbreviation,
-    COALESCE(u_price_num.abbreviation, '$'),
+    COALESCE(d.currency, '$'),
+    d.demand_year,
+    d.demand_month,
+    ` + obDecimal(qtyInBase) + `,
+    ` + obDecimal("d.total") + `
+FROM (
+SELECT STRAIGHT_JOIN
+    fg.item_id,
+    fg.product_line_id,
+    u_price_num.abbreviation AS currency,
     YEAR(so.created_at) AS demand_year,
     MONTH(so.created_at) AS demand_month,
-    ` + obDecimal("SUM("+obQtyOrdered+")") + `,
-    ` + obDecimal("SUM("+obTotalOrdered+")") + `
+    SUM(` + obQtyOrderedNorm + `) AS qty_norm,
+    COUNT(` + obQtyOrderedNorm + `) AS qty_lines,
+    SUM(` + obTotalOrdered + `) AS total
 FROM sales_order so FORCE INDEX (sales_order_owner_type_created_idx)
-` + orderedLineValues(copies, true) + `
+` + orderedLineValues(copies, false) + `
 WHERE ` + strings.Join(preds, " AND ") + `
-GROUP BY pb.id, pb.sku, pb.description, fg.product_line_id, bu_unit.abbreviation, u_price_num.abbreviation, demand_year, demand_month
-ORDER BY pb.id, demand_year, demand_month`
+GROUP BY fg.item_id, fg.product_line_id, u_price_num.abbreviation, demand_year, demand_month
+) d
+JOIN item pb FORCE INDEX (PRIMARY) ON pb.id = d.item_id
+JOIN item_category ic ON ic.id = pb.item_category_id
+JOIN unit_group ug ON ug.id = ic.unit_group_id
+JOIN unit bu_unit FORCE INDEX (PRIMARY) ON bu_unit.id = ug.base_unit_id
+ORDER BY pb.id, d.demand_year, d.demand_month`
 	if copies {
 		query = fromCopies.Replace(query)
 	}
@@ -131,11 +149,9 @@ func (r *analyticsRepoImpl) GetDemandForecastMonthlyDemand(ctx context.Context, 
 	return out, nil
 }
 
-// demandForecastRevenueQuery totals each item's invoiced value per month of invoice. It reads the account's invoices in the window first: left to choose, the planner starts from a product-line or item filter's every invoiced line.
+// demandForecastRevenueQuery totals each item's invoiced value per month of invoice. It reads the account's invoices in the window first: left to choose, the planner starts from a product-line or item filter's every invoiced line. The base unit plays no part in a value, so the item itself is not joined.
 //
-// With copies, an invoice's lines are one range of invoice_line_invoice_copies_idx and the lines of the order
-// they invoice one range of sales_order_line_order_copies_idx, so no line, quantity or rate row is visited.
-// The order line is found within the invoice's order: an invoice only invoices its own order's lines.
+// With copies, an invoice's order's lines are one range of sales_order_line_order_copies_idx and the invoice's line for each one a single key of invoice_line_invoice_copies_idx, so no line, quantity or rate row is visited. An invoice only invoices its own order's lines, and the order and product are checked before the invoice line is looked up, so a product-line or item filter skips the lines it leaves out.
 func demandForecastRevenueQuery(params domain.GetDemandForecastWindowParams, copies bool) (string, []any) {
 	preds := []string{
 		"inv.account_id = ?",
@@ -155,10 +171,6 @@ JOIN invoice_line il ON il.invoice_id = inv.id
 JOIN sales_order_line sol ON sol.id = il.sales_order_line_id
 JOIN sales_order so ON so.id = sol.sales_order_id
 JOIN product fg ON fg.id = sol.product_id
-JOIN item pb ON pb.id = fg.item_id
-JOIN item_category ic ON ic.id = pb.item_category_id
-JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu_unit ON bu_unit.id = ug.base_unit_id
 JOIN quantity q_in ON q_in.id = il.quantity_id
 JOIN unit u_in ON u_in.id = q_in.unit_id
 LEFT JOIN rate r_price ON r_price.id = sol.unit_price_id
@@ -166,27 +178,23 @@ LEFT JOIN unit u_price_num ON u_price_num.id = r_price.numerator_unit_id
 LEFT JOIN unit u_price_den ON u_price_den.id = r_price.denominator_unit_id`
 	if copies {
 		from = `FROM invoice inv FORCE INDEX (invoice_account_created_idx)
-JOIN invoice_line il FORCE INDEX (invoice_line_invoice_copies_idx) ON il.invoice_id = inv.id
-JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = inv.sales_order_id AND sol.id = il.sales_order_line_id
-JOIN sales_order so ON so.id = sol.sales_order_id
+JOIN sales_order so ON so.id = inv.sales_order_id
+JOIN sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx) ON sol.sales_order_id = inv.sales_order_id
 JOIN product fg ON fg.id = sol.product_id
-JOIN item pb ON pb.id = fg.item_id
-JOIN item_category ic ON ic.id = pb.item_category_id
-JOIN unit_group ug ON ug.id = ic.unit_group_id
-JOIN unit bu_unit FORCE INDEX (PRIMARY) ON bu_unit.id = ug.base_unit_id
+JOIN invoice_line il FORCE INDEX (invoice_line_invoice_copies_idx) ON il.invoice_id = inv.id AND il.sales_order_line_id = sol.id
 JOIN unit u_in FORCE INDEX (PRIMARY) ON u_in.id = il.quantity_unit_id
 LEFT JOIN unit u_price_num FORCE INDEX (PRIMARY) ON u_price_num.id = sol.unit_price_numerator_unit_id
 LEFT JOIN unit u_price_den FORCE INDEX (PRIMARY) ON u_price_den.id = sol.unit_price_denominator_unit_id`
 	}
 	query := `SELECT STRAIGHT_JOIN
-    pb.id,
+    fg.item_id,
     YEAR(inv.created_at) AS revenue_year,
     MONTH(inv.created_at) AS revenue_month,
     ` + obDecimal("SUM("+invoicedNorm+" * "+obPricePerBase+")") + `
 ` + from + `
 WHERE ` + strings.Join(preds, " AND ") + `
-GROUP BY pb.id, revenue_year, revenue_month
-ORDER BY pb.id, revenue_year, revenue_month`
+GROUP BY fg.item_id, revenue_year, revenue_month
+ORDER BY fg.item_id, revenue_year, revenue_month`
 	if copies {
 		query = fromCopies.Replace(query)
 	}

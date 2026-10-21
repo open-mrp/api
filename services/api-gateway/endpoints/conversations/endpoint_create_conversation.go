@@ -43,6 +43,8 @@ type CreateConversationRequest struct {
 	// The type of business record to anchor this conversation to.
 	//
 	// An anchored conversation is returned when conversations are listed for that record, which is how a discussion shows up on an order or invoice.
+	//
+	// Anchor a group to another `conversation` to start a new topic with the same people, or to an `agent_definition` to start a new chat with that agent.
 	TopicResourceType field.Optional[constants.ObjectType] `json:"topic_resource_type,omitzero"`
 	// The id of the business record to anchor this conversation to.
 	TopicResourceID field.Optional[string] `json:"topic_resource_id,omitzero"`

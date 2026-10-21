@@ -1274,6 +1274,21 @@ func (mr *MockConversationRepoMockRecorder) ListInbox(ctx, filter any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInbox", reflect.TypeOf((*MockConversationRepo)(nil).ListInbox), ctx, filter)
 }
 
+// ListParticipantByTopic mocks base method.
+func (m *MockConversationRepo) ListParticipantByTopic(ctx context.Context, accountID, accountUserID, resourceType, resourceID string, limit int32) ([]*domain.Conversation, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListParticipantByTopic", ctx, accountID, accountUserID, resourceType, resourceID, limit)
+	ret0, _ := ret[0].([]*domain.Conversation)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListParticipantByTopic indicates an expected call of ListParticipantByTopic.
+func (mr *MockConversationRepoMockRecorder) ListParticipantByTopic(ctx, accountID, accountUserID, resourceType, resourceID, limit any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListParticipantByTopic", reflect.TypeOf((*MockConversationRepo)(nil).ListParticipantByTopic), ctx, accountID, accountUserID, resourceType, resourceID, limit)
+}
+
 // LockSequence mocks base method.
 func (m *MockConversationRepo) LockSequence(ctx context.Context, id, accountID string) (int64, *apierror.APIError) {
 	m.ctrl.T.Helper()

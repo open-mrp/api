@@ -175,6 +175,7 @@ type ConversationRepo interface {
 	ListInbox(ctx context.Context, filter SupportInboxFilter) ([]*Conversation, *apierror.APIError)
 	// ListByResource lists conversations linked to a business record (via topic anchor or a link row).
 	ListByResource(ctx context.Context, accountID, resourceType, resourceID string, limit int32) ([]*Conversation, *apierror.APIError)
+	ListParticipantByTopic(ctx context.Context, accountID, accountUserID, resourceType, resourceID string, limit int32) ([]*Conversation, *apierror.APIError)
 }
 
 // ConversationLinkRepo persists secondary business-record links on conversations.

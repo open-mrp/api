@@ -28,6 +28,8 @@ type ListConversationsRequest struct {
 	// Restrict to conversations attached to a business record of this type, together with `topic_resource_id`.
 	//
 	// Matches both conversations anchored to the record and conversations that merely link it, which is what powers the "discussions on this record" view.
+	//
+	// A `conversation` or `agent_definition` anchor is personal: only conversations you take part in are returned, which lists the topics started from a conversation or your own chats with an agent.
 	TopicResourceType *constants.ObjectType `query:"topic_resource_type"`
 	// The id of the business record, together with `topic_resource_type`.
 	TopicResourceID *string `query:"topic_resource_id"`

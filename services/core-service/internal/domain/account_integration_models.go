@@ -14,8 +14,16 @@ type AccountIntegration struct {
 	IntegrationCode constants.IntegrationCode `audit:"integration_code"`
 	Name            string                    `audit:"name"`
 	IsActive        bool                      `audit:"is_active"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// MonthlySpendLimit is nil when the integration has no cap; only OpenRouter integrations take one.
+	MonthlySpendLimit *Money `audit:"monthly_spend_limit"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+// Money is a decimal amount in a lowercase ISO 4217 currency.
+type Money struct {
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
 }
 
 type ListAccountIntegrationsParams struct {
@@ -35,6 +43,8 @@ type CreateAccountIntegrationParams struct {
 	IntegrationCode constants.IntegrationCode
 	Name            string
 	Credentials     string // raw JSON credentials before encryption
+	// MonthlySpendLimit, when set, replaces the integration's cap; nil leaves an existing cap as it is.
+	MonthlySpendLimit *Money
 }
 
 type UpdateAccountIntegrationParams struct {
@@ -42,6 +52,9 @@ type UpdateAccountIntegrationParams struct {
 	ID        string
 	Name      *string
 	IsActive  *bool
+	// SetMonthlySpendLimit replaces the cap with MonthlySpendLimit, which nil clears.
+	SetMonthlySpendLimit bool
+	MonthlySpendLimit    *Money
 }
 
 type DeleteAccountIntegrationParams struct {
@@ -106,4 +119,45 @@ func firstNonEmpty(values ...string) string {
 // HubspotCredentials holds the parsed HubSpot credential fields used for validation.
 type HubspotCredentials struct {
 	AccessToken string `json:"access_token"` // #nosec G117 -- field carries encrypted credentials, not a hardcoded secret
+}
+
+// StoredIntegrationCredentials is an integration's encrypted credentials with the settings read alongside them.
+type StoredIntegrationCredentials struct {
+	Encrypted         string
+	IsActive          bool
+	MonthlySpendLimit *Money
+}
+
+// OpenRouterCredentials holds the parsed OpenRouter credential fields.
+type OpenRouterCredentials struct {
+	APIKey string `json:"api_key"` // #nosec G117 -- field carries encrypted credentials, not a hardcoded secret
+}
+
+// OpenRouterKeyUsage is what OpenRouter reports an API key has spent, in US dollars. KeyLimit and KeyLimitRemaining are nil when the key itself has no credit limit.
+type OpenRouterKeyUsage struct {
+	SpentToday        string
+	SpentThisWeek     string
+	SpentThisMonth    string
+	SpentTotal        string
+	KeyLimit          *string
+	KeyLimitRemaining *string
+}
+
+// OpenRouterUsage is an account's OpenRouter spend alongside its own monthly cap. MonthlySpendRemaining is nil when there is no cap.
+type OpenRouterUsage struct {
+	Key                   OpenRouterKeyUsage
+	MonthlySpendLimit     *Money
+	MonthlySpendRemaining *Money
+}
+
+// OpenRouterAccess is what an agent run needs to call OpenRouter for an account.
+type OpenRouterAccess struct {
+	// Configured is false when the account has no OpenRouter integration, leaving the deployment's own key, if any, to serve it.
+	Configured bool
+	IsActive   bool
+	APIKey     string
+	// MonthlySpendLimit and SpentThisMonth are set together, and only when the integration has a cap.
+	MonthlySpendLimit *Money
+	SpentThisMonth    *string
+	LimitReached      bool
 }

@@ -6,9 +6,11 @@ import (
 
 	apiendpoint "github.com/open-mrp/api/services/api-gateway/pkg/endpoint"
 	apiexample "github.com/open-mrp/api/services/api-gateway/pkg/example"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 )
 
 // Request to create or upsert an account integration.
@@ -20,6 +22,7 @@ type CreateAccountIntegrationRequest struct {
 	// - `stripe`: Stripe payment processing.
 	// - `shippo`: Shippo shipping and label generation.
 	// - `hubspot`: HubSpot CRM.
+	// - `openrouter`: OpenRouter, the LLM gateway that serves agent runs.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// JSON string containing the provider's credentials.
 	//
@@ -28,9 +31,14 @@ type CreateAccountIntegrationRequest struct {
 	// - `stripe`: `private_key` (`sk_...`), `publishable_key` (`pk_...`), and `webhook_secret` (`whsec_...`).
 	// - `shippo`: `api_key` (`shippo_live_...` or `shippo_test_...`).
 	// - `hubspot`: `access_token` (`pat-...`).
+	// - `openrouter`: `api_key` (`sk-or-...`).
 	//
-	// For Stripe and Shippo, sandbox accounts must supply test keys and production accounts must supply live keys; credentials that do not match are rejected. HubSpot tokens make no such distinction.
+	// For Stripe and Shippo, sandbox accounts must supply test keys and production accounts must supply live keys; credentials that do not match are rejected. HubSpot and OpenRouter keys make no such distinction.
 	Credentials string `json:"credentials" validate:"required" sensitive:"true"`
+	// Most the provider may spend for the account in a UTC calendar month. Only `openrouter` takes a limit, in `usd`.
+	//
+	// Omit it to leave an existing integration's limit as it is; a new integration then has no limit.
+	MonthlySpendLimit field.Optional[apirequest.MoneyInput] `json:"monthly_spend_limit,omitzero"`
 }
 
 var sampleCreateAccountIntegrationRequest = &CreateAccountIntegrationRequest{

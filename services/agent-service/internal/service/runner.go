@@ -132,6 +132,30 @@ func NewRunnerSvc(config *RunnerConfig) domain.RunnerSvc {
 	}
 }
 
+// withOpenRouterAccess bills the run's LLM calls to the account's OpenRouter integration. refusal, when set, is why the run must not start: the integration is inactive or its monthly spend limit is spent. An account with no integration keeps the deployment's key.
+func (s *runnerSvc) withOpenRouterAccess(ctx context.Context) (_ context.Context, refusal string, _ error) {
+	access, err := s.coreClient.GetOpenRouterAccess(ctx)
+	if err != nil {
+		return ctx, "", fmt.Errorf("failed to resolve the OpenRouter integration: %w", err)
+	}
+	switch {
+	case !access.Configured:
+		return ctx, "", nil
+	case !access.IsActive:
+		return ctx, "The OpenRouter integration is inactive. Activate it in Settings > Integrations to run agents.", nil
+	case access.LimitReached:
+		return ctx, fmt.Sprintf("Spending limit reached: this month's OpenRouter spend ($%s) has hit the $%s monthly limit. Raise the limit in Settings > Integrations to continue.", derefOr(access.SpentThisMonth, "?"), derefOr(access.MonthlySpendLimit, "?")), nil
+	}
+	return llm.WithAPIKey(ctx, access.APIKey), "", nil
+}
+
+func derefOr(s *string, fallback string) string {
+	if s == nil {
+		return fallback
+	}
+	return *s
+}
+
 // usageAccountID returns the account an agent run's token usage is recorded against: a sandbox's usage belongs to the account that owns it.
 func (s *runnerSvc) usageAccountID(ctx context.Context, accountID string) (string, error) {
 	acctCtx, err := s.coreClient.GetAccountContext(ctx, accountID)
@@ -309,6 +333,14 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	usageAccountID, usageErr := s.usageAccountID(ctx, accountID)
 	if usageErr != nil {
 		return s.failRunFromErr(ctx, runRepo, runID, startTime, usageErr)
+	}
+
+	ctx, refusal, accessErr := s.withOpenRouterAccess(ctx)
+	if accessErr != nil {
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, accessErr)
+	}
+	if refusal != "" {
+		return s.failRun(ctx, runRepo, runID, startTime, refusal)
 	}
 
 	// Load linked tools from DB
@@ -1811,6 +1843,14 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	usageAccountID, usageErr := s.usageAccountID(ctx, accountID)
 	if usageErr != nil {
 		return s.failRunFromErr(ctx, runRepo, runID, startTime, usageErr)
+	}
+
+	ctx, refusal, accessErr := s.withOpenRouterAccess(ctx)
+	if accessErr != nil {
+		return s.failRunFromErr(ctx, runRepo, runID, startTime, accessErr)
+	}
+	if refusal != "" {
+		return s.failRun(ctx, runRepo, runID, startTime, refusal)
 	}
 
 	// Load linked tools

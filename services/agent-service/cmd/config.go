@@ -54,8 +54,7 @@ type config struct {
 	// CursorHMACKey (required) is the HMAC key used to sign and verify pagination cursors.
 	CursorHMACKey []byte
 
-	// OpenRouterAPIKey (required) is the API key for OpenRouter, which serves every LLM call.
-	// Not enforced when PlatformMode is "test".
+	// OpenRouterAPIKey (optional; default: "") is the deployment's OpenRouter key, used only by accounts with no OpenRouter integration. When empty, those accounts cannot run agents.
 	OpenRouterAPIKey string
 
 	// AgentArtifactsBucket (optional; default: "") is the S3 bucket for storing agent artifacts.
@@ -117,9 +116,6 @@ func (c *config) validate() error {
 	}
 	if !c.PlatformMode.IsValid() {
 		return fmt.Errorf("agent-service: the provided platform mode is invalid: %s", c.PlatformMode)
-	}
-	if !c.PlatformMode.IsTest() && c.OpenRouterAPIKey == "" {
-		return fmt.Errorf("agent-service: OPENROUTER_API_KEY is required")
 	}
 	return nil
 }

@@ -4382,6 +4382,21 @@ func (mr *MockAccountIntegrationRepoMockRecorder) GetEncryptedCredentials(ctx, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEncryptedCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).GetEncryptedCredentials), ctx, accountID, code)
 }
 
+// GetStoredCredentials mocks base method.
+func (m *MockAccountIntegrationRepo) GetStoredCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (*domain.StoredIntegrationCredentials, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStoredCredentials", ctx, accountID, code)
+	ret0, _ := ret[0].(*domain.StoredIntegrationCredentials)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetStoredCredentials indicates an expected call of GetStoredCredentials.
+func (mr *MockAccountIntegrationRepoMockRecorder) GetStoredCredentials(ctx, accountID, code any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStoredCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).GetStoredCredentials), ctx, accountID, code)
+}
+
 // HasIntegration mocks base method.
 func (m *MockAccountIntegrationRepo) HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError) {
 	m.ctrl.T.Helper()
@@ -4428,18 +4443,18 @@ func (mr *MockAccountIntegrationRepoMockRecorder) Update(ctx, params any) *gomoc
 }
 
 // UpdateCredentials mocks base method.
-func (m *MockAccountIntegrationRepo) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*domain.AccountIntegration, *apierror.APIError) {
+func (m *MockAccountIntegrationRepo) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, monthlySpendLimit *domain.Money) (*domain.AccountIntegration, *apierror.APIError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCredentials", ctx, accountID, id, name, encryptedCredentials)
+	ret := m.ctrl.Call(m, "UpdateCredentials", ctx, accountID, id, name, encryptedCredentials, monthlySpendLimit)
 	ret0, _ := ret[0].(*domain.AccountIntegration)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
 
 // UpdateCredentials indicates an expected call of UpdateCredentials.
-func (mr *MockAccountIntegrationRepoMockRecorder) UpdateCredentials(ctx, accountID, id, name, encryptedCredentials any) *gomock.Call {
+func (mr *MockAccountIntegrationRepoMockRecorder) UpdateCredentials(ctx, accountID, id, name, encryptedCredentials, monthlySpendLimit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).UpdateCredentials), ctx, accountID, id, name, encryptedCredentials)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockAccountIntegrationRepo)(nil).UpdateCredentials), ctx, accountID, id, name, encryptedCredentials, monthlySpendLimit)
 }
 
 // MockHubspotSyncRepo is a mock of HubspotSyncRepo interface.

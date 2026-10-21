@@ -46,6 +46,7 @@ func (*AccountIntegrationsEndpointGroup) Materialize(config *AccountIntegrations
 	deleteEndpoint := apiendpoint.From(&accountintegrationep.DeleteAccountIntegrationEndpoint{}).WithService(inner, accountIntegrationSvc)
 	getStripePublishableKeyEndpoint := apiendpoint.From(&accountintegrationep.GetStripePublishableKeyEndpoint{}).WithService(inner, accountIntegrationSvc)
 	getStripeStatusEndpoint := apiendpoint.From(&accountintegrationep.GetStripeStatusEndpoint{}).WithService(inner, accountIntegrationSvc)
+	getOpenRouterUsageEndpoint := apiendpoint.From(&accountintegrationep.GetOpenRouterUsageEndpoint{}).WithService(inner, accountIntegrationSvc)
 
 	inner.Endpoints = []apiendpoint.APIEndpointer{
 		listEndpoint,
@@ -54,6 +55,7 @@ func (*AccountIntegrationsEndpointGroup) Materialize(config *AccountIntegrations
 		deleteEndpoint,
 		getStripePublishableKeyEndpoint,
 		getStripeStatusEndpoint,
+		getOpenRouterUsageEndpoint,
 	}
 
 	return &AccountIntegrationsEndpointGroup{inner}

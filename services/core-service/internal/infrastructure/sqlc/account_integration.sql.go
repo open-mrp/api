@@ -52,6 +52,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -65,13 +67,15 @@ type FindAccountIntegrationByCodeParams struct {
 }
 
 type FindAccountIntegrationByCodeRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 func (q *Queries) FindAccountIntegrationByCode(ctx context.Context, arg FindAccountIntegrationByCodeParams) (FindAccountIntegrationByCodeRow, error) {
@@ -83,6 +87,8 @@ func (q *Queries) FindAccountIntegrationByCode(ctx context.Context, arg FindAcco
 		&i.IntegrationCode,
 		&i.Name,
 		&i.IsActive,
+		&i.MonthlySpendLimitAmount,
+		&i.MonthlySpendLimitCurrency,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -96,6 +102,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -109,13 +117,15 @@ type GetAccountIntegrationParams struct {
 }
 
 type GetAccountIntegrationRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountIntegrationParams) (GetAccountIntegrationRow, error) {
@@ -127,6 +137,8 @@ func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountInteg
 		&i.IntegrationCode,
 		&i.Name,
 		&i.IsActive,
+		&i.MonthlySpendLimitAmount,
+		&i.MonthlySpendLimitCurrency,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -136,7 +148,9 @@ func (q *Queries) GetAccountIntegration(ctx context.Context, arg GetAccountInteg
 const getAccountIntegrationCredentials = `-- name: GetAccountIntegrationCredentials :one
 SELECT
     account_integration.credentials_v2,
-    account_integration.is_active
+    account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency
 FROM account_integration
 WHERE account_integration.account_id = ?
 AND account_integration.integration_code = ?
@@ -148,14 +162,21 @@ type GetAccountIntegrationCredentialsParams struct {
 }
 
 type GetAccountIntegrationCredentialsRow struct {
-	CredentialsV2 string
-	IsActive      bool
+	CredentialsV2             string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
 }
 
 func (q *Queries) GetAccountIntegrationCredentials(ctx context.Context, arg GetAccountIntegrationCredentialsParams) (GetAccountIntegrationCredentialsRow, error) {
 	row := q.db.QueryRowContext(ctx, getAccountIntegrationCredentials, arg.AccountID, arg.IntegrationCode)
 	var i GetAccountIntegrationCredentialsRow
-	err := row.Scan(&i.CredentialsV2, &i.IsActive)
+	err := row.Scan(
+		&i.CredentialsV2,
+		&i.IsActive,
+		&i.MonthlySpendLimitAmount,
+		&i.MonthlySpendLimitCurrency,
+	)
 	return i, err
 }
 
@@ -166,6 +187,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -179,13 +202,15 @@ type GetAccountIntegrationsByIDsParams struct {
 }
 
 type GetAccountIntegrationsByIDsRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 // Returns account integrations matching the given IDs that belong to the
@@ -216,6 +241,8 @@ func (q *Queries) GetAccountIntegrationsByIDs(ctx context.Context, arg GetAccoun
 			&i.IntegrationCode,
 			&i.Name,
 			&i.IsActive,
+			&i.MonthlySpendLimitAmount,
+			&i.MonthlySpendLimitCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -240,6 +267,8 @@ INSERT INTO account_integration (
     name,
     credentials_v2,
     is_active,
+    monthly_spend_limit_amount,
+    monthly_spend_limit_currency,
     created_at,
     updated_at
 ) VALUES (
@@ -249,17 +278,21 @@ INSERT INTO account_integration (
     ?,
     ?,
     1,
+    ?,
+    ?,
     NOW(3),
     NOW(3)
 )
 `
 
 type InsertAccountIntegrationParams struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	CredentialsV2   string
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	CredentialsV2             string
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
 }
 
 func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccountIntegrationParams) error {
@@ -269,6 +302,8 @@ func (q *Queries) InsertAccountIntegration(ctx context.Context, arg InsertAccoun
 		arg.IntegrationCode,
 		arg.Name,
 		arg.CredentialsV2,
+		arg.MonthlySpendLimitAmount,
+		arg.MonthlySpendLimitCurrency,
 	)
 	return err
 }
@@ -280,6 +315,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -305,13 +342,15 @@ type ListAccountIntegrationsBackwardParams struct {
 }
 
 type ListAccountIntegrationsBackwardRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 func (q *Queries) ListAccountIntegrationsBackward(ctx context.Context, arg ListAccountIntegrationsBackwardParams) ([]ListAccountIntegrationsBackwardRow, error) {
@@ -337,6 +376,8 @@ func (q *Queries) ListAccountIntegrationsBackward(ctx context.Context, arg ListA
 			&i.IntegrationCode,
 			&i.Name,
 			&i.IsActive,
+			&i.MonthlySpendLimitAmount,
+			&i.MonthlySpendLimitCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -360,6 +401,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -386,13 +429,15 @@ type ListAccountIntegrationsForwardParams struct {
 }
 
 type ListAccountIntegrationsForwardRow struct {
-	ID              string
-	AccountID       string
-	IntegrationCode string
-	Name            string
-	IsActive        bool
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                        string
+	AccountID                 string
+	IntegrationCode           string
+	Name                      string
+	IsActive                  bool
+	MonthlySpendLimitAmount   sql.NullString
+	MonthlySpendLimitCurrency sql.NullString
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 func (q *Queries) ListAccountIntegrationsForward(ctx context.Context, arg ListAccountIntegrationsForwardParams) ([]ListAccountIntegrationsForwardRow, error) {
@@ -419,6 +464,8 @@ func (q *Queries) ListAccountIntegrationsForward(ctx context.Context, arg ListAc
 			&i.IntegrationCode,
 			&i.Name,
 			&i.IsActive,
+			&i.MonthlySpendLimitAmount,
+			&i.MonthlySpendLimitCurrency,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -439,22 +486,31 @@ const updateAccountIntegration = `-- name: UpdateAccountIntegration :execresult
 UPDATE account_integration SET
     name = COALESCE(?, name),
     is_active = COALESCE(?, is_active),
+    monthly_spend_limit_amount = IF(?, ?, monthly_spend_limit_amount),
+    monthly_spend_limit_currency = IF(?, ?, monthly_spend_limit_currency),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateAccountIntegrationParams struct {
-	Name      sql.NullString
-	IsActive  sql.NullBool
-	ID        string
-	AccountID string
+	Name                      sql.NullString
+	IsActive                  sql.NullBool
+	SetMonthlySpendLimit      interface{}
+	MonthlySpendLimitAmount   interface{}
+	MonthlySpendLimitCurrency interface{}
+	ID                        string
+	AccountID                 string
 }
 
 func (q *Queries) UpdateAccountIntegration(ctx context.Context, arg UpdateAccountIntegrationParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountIntegration,
 		arg.Name,
 		arg.IsActive,
+		arg.SetMonthlySpendLimit,
+		arg.MonthlySpendLimitAmount,
+		arg.SetMonthlySpendLimit,
+		arg.MonthlySpendLimitCurrency,
 		arg.ID,
 		arg.AccountID,
 	)
@@ -464,22 +520,31 @@ const updateAccountIntegrationCredentials = `-- name: UpdateAccountIntegrationCr
 UPDATE account_integration SET
     name = ?,
     credentials_v2 = ?,
+    monthly_spend_limit_amount = IF(?, ?, monthly_spend_limit_amount),
+    monthly_spend_limit_currency = IF(?, ?, monthly_spend_limit_currency),
     updated_at = NOW(3)
 WHERE id = ?
 AND account_id = ?
 `
 
 type UpdateAccountIntegrationCredentialsParams struct {
-	Name          string
-	CredentialsV2 string
-	ID            string
-	AccountID     string
+	Name                      string
+	CredentialsV2             string
+	SetMonthlySpendLimit      interface{}
+	MonthlySpendLimitAmount   interface{}
+	MonthlySpendLimitCurrency interface{}
+	ID                        string
+	AccountID                 string
 }
 
 func (q *Queries) UpdateAccountIntegrationCredentials(ctx context.Context, arg UpdateAccountIntegrationCredentialsParams) (sql.Result, error) {
 	return q.db.ExecContext(ctx, updateAccountIntegrationCredentials,
 		arg.Name,
 		arg.CredentialsV2,
+		arg.SetMonthlySpendLimit,
+		arg.MonthlySpendLimitAmount,
+		arg.SetMonthlySpendLimit,
+		arg.MonthlySpendLimitCurrency,
 		arg.ID,
 		arg.AccountID,
 	)

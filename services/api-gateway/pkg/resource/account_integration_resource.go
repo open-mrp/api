@@ -26,11 +26,16 @@ type AccountIntegration struct {
 	// - `stripe`: Stripe payment processing.
 	// - `shippo`: Shippo shipping and label generation.
 	// - `hubspot`: HubSpot CRM.
+	// - `openrouter`: OpenRouter, the LLM gateway that serves agent runs.
 	IntegrationCode constants.IntegrationCode `json:"provider" validate:"required"`
 	// Lifecycle status of the integration.
 	//
 	// Integrations are created `active`. Setting an integration to `inactive` keeps its stored credentials but stops it from being used (for example, the Stripe publishable key cannot be retrieved while the Stripe integration is inactive).
 	Status constants.AccountIntegrationStatus `json:"status" validate:"required"`
+	// Most the provider may spend for the account in a UTC calendar month, or `null` for no limit.
+	//
+	// Only `openrouter` integrations take a limit. Agent runs stop starting once OpenRouter reports this much spent this month; a run already underway finishes its current turn.
+	MonthlySpendLimit *Money `json:"monthly_spend_limit"`
 	// Creation timestamp.
 	CreatedAt time.Time `json:"created_at" validate:"required"`
 	// Last updated timestamp.
@@ -85,4 +90,44 @@ var SampleStripeStatus = &StripeStatus{
 
 func (*StripeStatus) SchemaExample() any {
 	return apiexample.ValidateAndMarshalToMap(SampleStripeStatus)
+}
+
+// What an account has spent through its OpenRouter integration.
+//
+// Spend comes from OpenRouter and covers every request made with the integration's API key, including any made outside OpenMRP. Days, weeks and months are UTC calendar periods.
+type OpenRouterUsage struct {
+	// Resource type identifier.
+	Object constants.ObjectType `json:"object" validate:"required,enum=openrouter_usage"`
+	// Spent today.
+	SpentToday Money `json:"spent_today" validate:"required"`
+	// Spent this week.
+	SpentThisWeek Money `json:"spent_this_week" validate:"required"`
+	// Spent this month, which is what `monthly_spend_limit` is measured against.
+	SpentThisMonth Money `json:"spent_this_month" validate:"required"`
+	// Spent since the API key was created.
+	SpentTotal Money `json:"spent_total" validate:"required"`
+	// The integration's monthly spend limit, or `null` for no limit.
+	MonthlySpendLimit *Money `json:"monthly_spend_limit"`
+	// What is left of `monthly_spend_limit` this month, never below zero, or `null` when there is no limit.
+	MonthlySpendRemaining *Money `json:"monthly_spend_remaining"`
+	// The credit limit set on the API key in OpenRouter itself, or `null` when the key has none.
+	KeyLimit *Money `json:"key_limit"`
+	// What is left of `key_limit`, or `null` when the key has no limit.
+	KeyLimitRemaining *Money `json:"key_limit_remaining"`
+}
+
+var SampleOpenRouterUsage = &OpenRouterUsage{
+	Object:                constants.ObjectTypeOpenRouterUsage,
+	SpentToday:            Money{Amount: "1.25", Currency: "usd"},
+	SpentThisWeek:         Money{Amount: "8.4", Currency: "usd"},
+	SpentThisMonth:        Money{Amount: "31.9", Currency: "usd"},
+	SpentTotal:            Money{Amount: "212.6", Currency: "usd"},
+	MonthlySpendLimit:     &Money{Amount: "100", Currency: "usd"},
+	MonthlySpendRemaining: &Money{Amount: "68.1", Currency: "usd"},
+	KeyLimit:              nil,
+	KeyLimitRemaining:     nil,
+}
+
+func (*OpenRouterUsage) SchemaExample() any {
+	return apiexample.ValidateAndMarshalToMap(SampleOpenRouterUsage)
 }

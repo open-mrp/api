@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
@@ -16,8 +17,12 @@ import (
 	"github.com/open-mrp/api/shared/idempotency"
 	"github.com/open-mrp/api/shared/tracing"
 
+	"github.com/shopspring/decimal"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// maxMonthlySpendLimit bounds a spend cap to what the column's decimal(19,4) can hold with room to spare.
+var maxMonthlySpendLimit = decimal.NewFromInt(1_000_000_000)
 
 var accountIntegrationSvcTracer = tracing.GetTracer("core-service.account_integration_service")
 
@@ -28,6 +33,7 @@ type accountIntegrationSvcImpl struct {
 	encryptionKey   []byte
 	encryptionKeyID string
 	platformMode    constants.PlatformMode
+	openRouter      domain.OpenRouterClient
 }
 
 type AccountIntegrationSvcConfig struct {
@@ -48,6 +54,9 @@ type AccountIntegrationSvcConfig struct {
 
 	// PlatformMode is the deployment mode. In development it relaxes the live-key requirement for Stripe credentials so local, production-type accounts can integrate against Stripe's test environment; outside production it requires Shippo test keys, so no other deployment can buy real labels.
 	PlatformMode constants.PlatformMode
+
+	// OpenRouter (required) reads an OpenRouter integration's spend for the usage endpoint and agent-run spend checks.
+	OpenRouter domain.OpenRouterClient
 }
 
 func (c *AccountIntegrationSvcConfig) validate() error {
@@ -66,6 +75,9 @@ func (c *AccountIntegrationSvcConfig) validate() error {
 	if c.EncryptionKeyID == "" {
 		return fmt.Errorf("account integration service: encryption key ID is required")
 	}
+	if c.OpenRouter == nil {
+		return fmt.Errorf("account integration service: openrouter client is required")
+	}
 	return nil
 }
 
@@ -81,6 +93,7 @@ func NewAccountIntegrationSvc(config *AccountIntegrationSvcConfig) domain.Accoun
 		encryptionKey:   config.EncryptionKey,
 		encryptionKeyID: config.EncryptionKeyID,
 		platformMode:    config.PlatformMode,
+		openRouter:      config.OpenRouter,
 	}
 }
 
@@ -101,6 +114,7 @@ func (s *accountIntegrationSvcImpl) withTx(ctx context.Context, fn func(context.
 			encryptionKey:   s.encryptionKey,
 			encryptionKeyID: s.encryptionKeyID,
 			platformMode:    s.platformMode,
+			openRouter:      s.openRouter,
 		}
 		return fn(txCtx, txSvc)
 	})
@@ -181,6 +195,13 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 	if apiErr := s.validateCredentials(ctx, span, params); apiErr != nil {
 		return nil, apiErr
 	}
+	if params.MonthlySpendLimit != nil {
+		limit, apiErr := normalizeMonthlySpendLimit(params.IntegrationCode, params.MonthlySpendLimit)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		params.MonthlySpendLimit = limit
+	}
 
 	// Encrypt credentials
 	encryptedCredentials, err := crypto.EncryptAESGCM([]byte(params.Credentials), s.encryptionKey, []byte(params.AccountID), s.encryptionKeyID)
@@ -242,7 +263,7 @@ func (s *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 			}
 
 			// Existing found — upsert: update credentials and name
-			updated, updateErr := txRepo.UpdateCredentials(txCtx, params.AccountID, existing.ID, params.Name, encryptedCredentials)
+			updated, updateErr := txRepo.UpdateCredentials(txCtx, params.AccountID, existing.ID, params.Name, encryptedCredentials, params.MonthlySpendLimit)
 			if updateErr != nil {
 				return updateErr
 			}
@@ -288,6 +309,8 @@ func (s *accountIntegrationSvcImpl) validateCredentials(ctx context.Context, spa
 		return s.validateShippoCredentials(span, params.Credentials, accountCtx.IsSandbox)
 	case constants.IntegrationCodeHubspot:
 		return s.validateHubspotCredentials(span, params.Credentials)
+	case constants.IntegrationCodeOpenRouter:
+		return s.validateOpenRouterCredentials(span, params.Credentials)
 	default:
 		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Unsupported integration code.", "integration_code"))
 	}
@@ -376,6 +399,38 @@ func (s *accountIntegrationSvcImpl) validateHubspotCredentials(span trace.Span, 
 	return nil
 }
 
+// validateOpenRouterCredentials checks an OpenRouter API key's format. OpenRouter keys carry no sandbox/production distinction.
+func (s *accountIntegrationSvcImpl) validateOpenRouterCredentials(span trace.Span, credentialsJSON string) *apierror.APIError {
+	var creds domain.OpenRouterCredentials
+	if err := json.Unmarshal([]byte(credentialsJSON), &creds); err != nil {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("Invalid credentials JSON format.", "credentials"))
+	}
+
+	if !strings.HasPrefix(creds.APIKey, "sk-or-") {
+		return tracing.Trace(span, apierror.NewValidationErrorWithParam("OpenRouter API key must start with 'sk-or-'.", "credentials"))
+	}
+
+	return nil
+}
+
+// normalizeMonthlySpendLimit validates a spend cap and returns it with its amount in canonical decimal form.
+func normalizeMonthlySpendLimit(code constants.IntegrationCode, limit *domain.Money) (*domain.Money, *apierror.APIError) {
+	if code != constants.IntegrationCodeOpenRouter {
+		return nil, apierror.NewValidationErrorWithParam("Only OpenRouter integrations take a monthly spend limit.", "monthly_spend_limit")
+	}
+	if limit.Currency != "usd" {
+		return nil, apierror.NewValidationErrorWithParam("OpenRouter bills in US dollars, so the monthly spend limit's currency must be 'usd'.", "monthly_spend_limit.currency")
+	}
+	amount, err := decimal.NewFromString(limit.Amount)
+	if err != nil {
+		return nil, apierror.NewValidationErrorWithParam("Monthly spend limit amount must be a decimal number.", "monthly_spend_limit.amount")
+	}
+	if !amount.IsPositive() || amount.GreaterThan(maxMonthlySpendLimit) || amount.Exponent() < -4 {
+		return nil, apierror.NewValidationErrorWithParam("Monthly spend limit amount must be greater than 0, at most 1000000000, and have at most 4 decimal places.", "monthly_spend_limit.amount")
+	}
+	return &domain.Money{Amount: amount.String(), Currency: limit.Currency}, nil
+}
+
 func (s *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context, params domain.UpdateAccountIntegrationParams) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.update")
 	defer span.End()
@@ -417,6 +472,14 @@ func (s *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context
 			old, apiErr := txRepo.Get(txCtx, params.AccountID, params.ID)
 			if apiErr != nil {
 				return apiErr
+			}
+
+			if params.SetMonthlySpendLimit && params.MonthlySpendLimit != nil {
+				limit, apiErr := normalizeMonthlySpendLimit(old.IntegrationCode, params.MonthlySpendLimit)
+				if apiErr != nil {
+					return apiErr
+				}
+				params.MonthlySpendLimit = limit
 			}
 
 			updated, apiErr := txRepo.Update(txCtx, params)
@@ -595,4 +658,135 @@ func (s *accountIntegrationSvcImpl) HasStripeIntegration(ctx context.Context) (b
 	}
 
 	return s.repos.NewAccountIntegrationRepo().HasIntegration(ctx, identity.Target.AccountID, constants.IntegrationCodeStripe)
+}
+
+// GetOpenRouterUsage returns what the caller's account has spent through its OpenRouter integration, alongside its monthly cap.
+func (s *accountIntegrationSvcImpl) GetOpenRouterUsage(ctx context.Context) (*domain.OpenRouterUsage, *apierror.APIError) {
+	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.get_openrouter_usage")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsInternalActor(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if apiErr := identity.CheckIsAdmin(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	stored, apiKey, apiErr := s.openRouterCredentials(ctx, identity.Target.AccountID)
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return nil, tracing.Trace(span, apierror.NewResourceNotFoundError("This account has no OpenRouter integration."))
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	usage, apiErr := s.openRouter.GetKeyUsage(ctx, apiKey)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	result := &domain.OpenRouterUsage{Key: *usage, MonthlySpendLimit: stored.MonthlySpendLimit}
+	if limit := stored.MonthlySpendLimit; limit != nil {
+		result.MonthlySpendRemaining = monthlySpendRemaining(limit, usage.SpentThisMonth)
+	}
+	return result, nil
+}
+
+// GetOpenRouterAccess returns the OpenRouter key an agent run in the caller's target account bills to, and whether its monthly cap is spent. A sandbox bills to the account that owns it.
+func (s *accountIntegrationSvcImpl) GetOpenRouterAccess(ctx context.Context) (*domain.OpenRouterAccess, *apierror.APIError) {
+	ctx, span := accountIntegrationSvcTracer.Start(ctx, "service.account_integration.get_openrouter_access")
+	defer span.End()
+
+	identity, ok := appctx.GetIdentityFromContext(ctx)
+	if !ok || identity == nil {
+		return nil, tracing.Trace(span, apierror.NewInvariantViolationError("Identity not found in context."))
+	}
+	if apiErr := identity.CheckIsAgent(); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if !identity.IsTargetAccountSet() {
+		return nil, tracing.Trace(span, apierror.NewAuthenticationError("The OpenMRP-Account-ID header is required."))
+	}
+
+	accountID := identity.Target.AccountID
+	accountCtx, apiErr := s.repos.NewAccountRepo().GetAccountContext(ctx, accountID)
+	if apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if accountCtx.IsSandbox && accountCtx.OwnerAccountID != nil {
+		accountID = *accountCtx.OwnerAccountID
+	}
+
+	stored, apiKey, apiErr := s.openRouterCredentials(ctx, accountID)
+	if apiErr != nil {
+		if apierror.IsNotFound(apiErr) {
+			return &domain.OpenRouterAccess{}, nil
+		}
+		return nil, tracing.Trace(span, apiErr)
+	}
+
+	access := &domain.OpenRouterAccess{Configured: true, IsActive: stored.IsActive, APIKey: apiKey}
+	if !stored.IsActive || stored.MonthlySpendLimit == nil {
+		return access, nil
+	}
+
+	// The cap is a guard on top of OpenRouter's own key limit, so an unreadable spend lets the run go ahead rather than stopping every agent while OpenRouter's key endpoint is down.
+	usage, apiErr := s.openRouter.GetKeyUsage(ctx, apiKey)
+	if apiErr != nil {
+		slog.WarnContext(ctx, "openrouter spend check skipped", "account_id", accountID, "error", apiErr.Error())
+		return access, nil
+	}
+	access.MonthlySpendLimit = stored.MonthlySpendLimit
+	access.SpentThisMonth = &usage.SpentThisMonth
+	access.LimitReached = monthlySpendReached(usage.SpentThisMonth, stored.MonthlySpendLimit.Amount)
+	return access, nil
+}
+
+// monthlySpendRemaining is what is left of limit after spent, floored at zero; an unparseable figure leaves it unknown.
+func monthlySpendRemaining(limit *domain.Money, spent string) *domain.Money {
+	limitAmount, err := decimal.NewFromString(limit.Amount)
+	if err != nil {
+		return nil
+	}
+	spentAmount, err := decimal.NewFromString(spent)
+	if err != nil {
+		return nil
+	}
+	left := decimal.Max(limitAmount.Sub(spentAmount), decimal.Zero)
+	return &domain.Money{Amount: left.String(), Currency: limit.Currency}
+}
+
+func monthlySpendReached(spent, limit string) bool {
+	spentAmount, err := decimal.NewFromString(spent)
+	if err != nil {
+		return false
+	}
+	limitAmount, err := decimal.NewFromString(limit)
+	if err != nil {
+		return false
+	}
+	return spentAmount.GreaterThanOrEqual(limitAmount)
+}
+
+func (s *accountIntegrationSvcImpl) openRouterCredentials(ctx context.Context, accountID string) (*domain.StoredIntegrationCredentials, string, *apierror.APIError) {
+	stored, apiErr := s.repos.NewAccountIntegrationRepo().GetStoredCredentials(ctx, accountID, constants.IntegrationCodeOpenRouter)
+	if apiErr != nil {
+		return nil, "", apiErr
+	}
+
+	plaintext, err := crypto.DecryptAESGCM(stored.Encrypted, s.encryptionKey, []byte(accountID))
+	if err != nil {
+		return nil, "", apierror.NewInternalError(err, "Failed to decrypt credentials.")
+	}
+
+	var creds domain.OpenRouterCredentials
+	if err := json.Unmarshal(plaintext, &creds); err != nil {
+		return nil, "", apierror.NewInternalError(err, "Failed to parse credentials.")
+	}
+
+	return stored, creds.APIKey, nil
 }

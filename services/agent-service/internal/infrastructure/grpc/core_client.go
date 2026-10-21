@@ -124,3 +124,26 @@ func (c *AgentCoreClient) GetUserAccess(ctx context.Context, userID, accountID s
 		Permissions: resp.Access.Permissions,
 	}, nil
 }
+
+func (c *AgentCoreClient) GetOpenRouterAccess(ctx context.Context) (*domain.OpenRouterAccess, error) {
+	ctx = prepareCtx(ctx)
+	resp, apiErr := rpc.CallRPC(ctx, coreClientTracer, "core_client.get_openrouter_access", coreServiceName,
+		func(ctx context.Context, opts ...grpclib.CallOption) (*pb.GetOpenRouterAccessResponse, error) {
+			return c.client.GetOpenRouterAccess(ctx, &pb.GetOpenRouterAccessRequest{}, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	access := &domain.OpenRouterAccess{
+		Configured:     resp.Configured,
+		IsActive:       resp.IsActive,
+		APIKey:         resp.ApiKey,
+		SpentThisMonth: resp.SpentThisMonth,
+		LimitReached:   resp.LimitReached,
+	}
+	if resp.MonthlySpendLimit != nil {
+		access.MonthlySpendLimit = &resp.MonthlySpendLimit.Amount
+	}
+	return access, nil
+}

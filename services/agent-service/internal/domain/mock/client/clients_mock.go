@@ -149,6 +149,21 @@ func (mr *MockCoreClientMockRecorder) GetAccountContext(ctx, accountID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAccountContext", reflect.TypeOf((*MockCoreClient)(nil).GetAccountContext), ctx, accountID)
 }
 
+// GetOpenRouterAccess mocks base method.
+func (m *MockCoreClient) GetOpenRouterAccess(ctx context.Context) (*domain.OpenRouterAccess, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenRouterAccess", ctx)
+	ret0, _ := ret[0].(*domain.OpenRouterAccess)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOpenRouterAccess indicates an expected call of GetOpenRouterAccess.
+func (mr *MockCoreClientMockRecorder) GetOpenRouterAccess(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenRouterAccess", reflect.TypeOf((*MockCoreClient)(nil).GetOpenRouterAccess), ctx)
+}
+
 // GetRoleInfo mocks base method.
 func (m *MockCoreClient) GetRoleInfo(ctx context.Context, roleID string) (*domain.RoleInfo, error) {
 	m.ctrl.T.Helper()

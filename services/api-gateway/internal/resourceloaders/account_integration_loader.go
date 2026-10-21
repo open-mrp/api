@@ -37,12 +37,21 @@ func LoadAccountIntegrations(ctx context.Context, ids []string) (map[string]any,
 // AccountIntegrationFromProto maps the gRPC AccountIntegrationInfo to the apiresource shape. Exported so endpoint service methods that already hold a proto response (e.g. Delete, which can't fan back through LoadXs) can reuse it directly.
 func AccountIntegrationFromProto(ai *pb.AccountIntegrationInfo) *apiresource.AccountIntegration {
 	return &apiresource.AccountIntegration{
-		ID:              ai.Id,
-		Object:          constants.ObjectTypeAccountIntegration,
-		Name:            ai.Name,
-		IntegrationCode: constants.IntegrationCode(ai.IntegrationCode),
-		Status:          constants.AccountIntegrationStatusFromActive(ai.IsActive),
-		CreatedAt:       grpcutil.TimestampToTime(ai.CreatedAt),
-		UpdatedAt:       grpcutil.TimestampToTime(ai.UpdatedAt),
+		ID:                ai.Id,
+		Object:            constants.ObjectTypeAccountIntegration,
+		Name:              ai.Name,
+		IntegrationCode:   constants.IntegrationCode(ai.IntegrationCode),
+		Status:            constants.AccountIntegrationStatusFromActive(ai.IsActive),
+		MonthlySpendLimit: MoneyFromProto(ai.MonthlySpendLimit),
+		CreatedAt:         grpcutil.TimestampToTime(ai.CreatedAt),
+		UpdatedAt:         grpcutil.TimestampToTime(ai.UpdatedAt),
 	}
+}
+
+// MoneyFromProto maps a MoneyInfo to its resource shape, keeping nil as nil.
+func MoneyFromProto(m *pb.MoneyInfo) *apiresource.Money {
+	if m == nil {
+		return nil
+	}
+	return &apiresource.Money{Amount: m.Amount, Currency: m.Currency}
 }

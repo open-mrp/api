@@ -112,6 +112,11 @@ type HubspotClientFactory interface {
 	Build(accessToken string) HubspotClient
 }
 
+// OpenRouterClient reads what OpenRouter has charged an API key.
+type OpenRouterClient interface {
+	GetKeyUsage(ctx context.Context, apiKey string) (*OpenRouterKeyUsage, *apierror.APIError)
+}
+
 // StripeCheckoutSession represents the result of creating a Stripe checkout session.
 type StripeCheckoutSession struct {
 	URL string

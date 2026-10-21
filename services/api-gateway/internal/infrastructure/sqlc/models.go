@@ -325,6 +325,161 @@ type AdjustmentType struct {
 	UpdatedAt time.Time
 }
 
+type AgentAccountStatus struct {
+	ID                string
+	AccountID         string
+	AgentDefinitionID string
+	StatusCode        string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type AgentAction struct {
+	ID                  string
+	AccountID           string
+	AgentRunID          string
+	ToolSlug            string
+	StatusCode          string
+	Label               sql.NullString
+	Description         sql.NullString
+	Input               json.RawMessage
+	Output              json.RawMessage
+	ErrorMessage        sql.NullString
+	EntityType          sql.NullString
+	EntityID            sql.NullString
+	RequiresReview      bool
+	ReviewedAt          sql.NullTime
+	ReviewedBy          sql.NullString
+	ReviewedByActorType sql.NullString
+	ReviewedByActorName sql.NullString
+	ExecutedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type AgentArtifact struct {
+	ID            string
+	AccountID     string
+	AgentActionID string
+	ArtifactType  string
+	Name          string
+	Content       sql.NullString
+	Metadata      json.RawMessage
+	S3Key         sql.NullString
+	MimeType      sql.NullString
+	SizeBytes     sql.NullInt64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type AgentConfig struct {
+	ID                string
+	AccountID         string
+	AgentDefinitionID string
+	IsEnabled         bool
+	Config            json.RawMessage
+	Schedule          sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type AgentDefinition struct {
+	ID             string
+	AccountID      sql.NullString
+	Name           string
+	Slug           string
+	Description    sql.NullString
+	DefinitionType string
+	CategoryCode   string
+	TriggerType    string
+	IsActive       bool
+	Config         json.RawMessage
+	RoleID         sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type AgentDefinitionTool struct {
+	ID                string
+	AgentDefinitionID string
+	ToolSlug          string
+	Config            json.RawMessage
+	SortOrder         int32
+	RequireReview     bool
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type AgentMemory struct {
+	ID         string
+	AccountID  string
+	Category   string
+	Content    string
+	Metadata   json.RawMessage
+	EntityType sql.NullString
+	EntityID   sql.NullString
+	Importance float64
+	ExpiresAt  sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type AgentRun struct {
+	ID                       string
+	AccountID                string
+	AgentDefinitionID        string
+	AgentConfigID            sql.NullString
+	StatusCode               string
+	TriggerType              string
+	Input                    json.RawMessage
+	Output                   json.RawMessage
+	ErrorMessage             sql.NullString
+	StartedAt                sql.NullTime
+	CompletedAt              sql.NullTime
+	DurationMs               sql.NullInt32
+	TotalInputTokens         int64
+	TotalOutputTokens        int64
+	TriggeredByActorID       sql.NullString
+	TriggeredByIdentityType  sql.NullString
+	TriggeredByActorName     sql.NullString
+	AllowedToolSlugs         json.RawMessage
+	ConversationID           sql.NullString
+	TriggerMessageID         sql.NullString
+	DivergedFromConversation bool
+	RetryCount               int32
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+}
+
+type AgentRunEvent struct {
+	ID            string
+	AgentRunID    string
+	AccountID     string
+	StepType      string
+	Title         string
+	Content       sql.NullString
+	Sequence      int32
+	DurationMs    sql.NullInt32
+	AgentActionID sql.NullString
+	Metadata      json.RawMessage
+	ActorID       sql.NullString
+	ActorType     sql.NullString
+	ActorName     sql.NullString
+	CreatedAt     time.Time
+}
+
+type AgentTokenUsage struct {
+	ID           string
+	AccountID    string
+	Date         time.Time
+	InputTokens  int64
+	OutputTokens int64
+	TotalCost    float64
+	RunCount     int32
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
 type Announcement struct {
 	ID               string
 	Scope            string
@@ -1014,20 +1169,21 @@ type InvoiceLine struct {
 }
 
 type Item struct {
-	ID             string
-	Sku            string
-	Description    sql.NullString
-	Notes          sql.NullString
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DeletedAt      sql.NullTime
-	UnitValueID    string
-	BurnRateID     string
-	AccountID      string
-	UnitCostID     string
-	ItemCategoryID string
-	IsDirty        bool
-	ItemTypeCode   string
+	ID                 string
+	Sku                string
+	Description        sql.NullString
+	Notes              sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          sql.NullTime
+	UnitValueID        string
+	BurnRateID         string
+	AccountID          string
+	UnitCostID         string
+	ItemCategoryID     string
+	IsDirty            bool
+	ItemTypeCode       string
+	BurnRateComputedAt sql.NullTime
 }
 
 type ItemAttribute struct {

@@ -482,6 +482,45 @@ func (mr *MockHubspotClientFactoryMockRecorder) Build(accessToken any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Build", reflect.TypeOf((*MockHubspotClientFactory)(nil).Build), accessToken)
 }
 
+// MockOpenRouterClient is a mock of OpenRouterClient interface.
+type MockOpenRouterClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockOpenRouterClientMockRecorder
+	isgomock struct{}
+}
+
+// MockOpenRouterClientMockRecorder is the mock recorder for MockOpenRouterClient.
+type MockOpenRouterClientMockRecorder struct {
+	mock *MockOpenRouterClient
+}
+
+// NewMockOpenRouterClient creates a new mock instance.
+func NewMockOpenRouterClient(ctrl *gomock.Controller) *MockOpenRouterClient {
+	mock := &MockOpenRouterClient{ctrl: ctrl}
+	mock.recorder = &MockOpenRouterClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOpenRouterClient) EXPECT() *MockOpenRouterClientMockRecorder {
+	return m.recorder
+}
+
+// GetKeyUsage mocks base method.
+func (m *MockOpenRouterClient) GetKeyUsage(ctx context.Context, apiKey string) (*domain.OpenRouterKeyUsage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetKeyUsage", ctx, apiKey)
+	ret0, _ := ret[0].(*domain.OpenRouterKeyUsage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetKeyUsage indicates an expected call of GetKeyUsage.
+func (mr *MockOpenRouterClientMockRecorder) GetKeyUsage(ctx, apiKey any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKeyUsage", reflect.TypeOf((*MockOpenRouterClient)(nil).GetKeyUsage), ctx, apiKey)
+}
+
 // MockStripeCheckoutClient is a mock of StripeCheckoutClient interface.
 type MockStripeCheckoutClient struct {
 	ctrl     *gomock.Controller

@@ -16,6 +16,7 @@ import (
 	"github.com/open-mrp/api/services/core-service/internal/hubspotsync"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/grpc"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/hubspot"
+	"github.com/open-mrp/api/services/core-service/internal/infrastructure/openrouter"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/repository"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/shippo"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
@@ -301,10 +302,12 @@ func Run(
 	var shippoFactory domain.ShippoClientFactory
 	var stripeCheckoutFactory domain.StripeCheckoutClientFactory
 	var hubspotFactory domain.HubspotClientFactory
+	var openRouterClient domain.OpenRouterClient
 	if cfg.PlatformMode.IsTest() {
 		shippoFactory = &stub.ShippoClientFactory{}
 		stripeCheckoutFactory = &stub.StripeCheckoutClientFactory{}
 		hubspotFactory = &stub.HubspotClientFactory{}
+		openRouterClient = &stub.OpenRouterClient{}
 	} else {
 		realShippo, err := shippo.NewClientFactory(&shippo.ClientFactoryConfig{Store: cacheStore, PlatformMode: cfg.PlatformMode})
 		if err != nil {
@@ -313,6 +316,10 @@ func Run(
 		shippoFactory = realShippo
 		stripeCheckoutFactory = stripeinfra.NewCheckoutClientFactory()
 		hubspotFactory = hubspot.NewClientFactory()
+		openRouterClient, err = openrouter.NewClient(nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	// The stub also backs non-production runs without Vercel credentials so make dev works out of the box; config validation guarantees the credentials in production.
@@ -344,6 +351,7 @@ func Run(
 		EncryptionKey:   integrationEncryptionKey,
 		EncryptionKeyID: cfg.IntegrationEncryptionKeyID,
 		PlatformMode:    cfg.PlatformMode,
+		OpenRouter:      openRouterClient,
 	})
 
 	hubspotSync := hubspotsync.NewService(repoFactory, hubspotFactory, integrationEncryptionKey, hubspotsync.Config{})

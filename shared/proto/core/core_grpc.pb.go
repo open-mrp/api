@@ -120,6 +120,8 @@ const (
 	CoreService_BatchGetAccountIntegrationsByIDs_FullMethodName           = "/core.CoreService/BatchGetAccountIntegrationsByIDs"
 	CoreService_GetStripePublishableKey_FullMethodName                    = "/core.CoreService/GetStripePublishableKey"
 	CoreService_GetStripeStatus_FullMethodName                            = "/core.CoreService/GetStripeStatus"
+	CoreService_GetOpenRouterUsage_FullMethodName                         = "/core.CoreService/GetOpenRouterUsage"
+	CoreService_GetOpenRouterAccess_FullMethodName                        = "/core.CoreService/GetOpenRouterAccess"
 	CoreService_ListAdjustmentTypes_FullMethodName                        = "/core.CoreService/ListAdjustmentTypes"
 	CoreService_BatchGetAdjustmentTypesByIDs_FullMethodName               = "/core.CoreService/BatchGetAdjustmentTypesByIDs"
 	CoreService_GetAccount_FullMethodName                                 = "/core.CoreService/GetAccount"
@@ -616,7 +618,7 @@ type CoreServiceClient interface {
 	ListAccountIntegrations(ctx context.Context, in *ListAccountIntegrationsRequest, opts ...grpc.CallOption) (*ListAccountIntegrationsResponse, error)
 	// Creates or upserts an integration; updates existing if same code exists.
 	CreateAccountIntegration(ctx context.Context, in *CreateAccountIntegrationRequest, opts ...grpc.CallOption) (*CreateAccountIntegrationResponse, error)
-	// Updates name and/or is_active on an integration; credentials cannot be changed.
+	// Updates name, is_active and/or the monthly spend cap on an integration; credentials cannot be changed.
 	UpdateAccountIntegration(ctx context.Context, in *UpdateAccountIntegrationRequest, opts ...grpc.CallOption) (*UpdateAccountIntegrationResponse, error)
 	// Deletes an account integration and returns the deleted resource.
 	DeleteAccountIntegration(ctx context.Context, in *DeleteAccountIntegrationRequest, opts ...grpc.CallOption) (*DeleteAccountIntegrationResponse, error)
@@ -626,6 +628,10 @@ type CoreServiceClient interface {
 	GetStripePublishableKey(ctx context.Context, in *GetStripePublishableKeyRequest, opts ...grpc.CallOption) (*GetStripePublishableKeyResponse, error)
 	// Returns whether the caller's account has a Stripe integration configured.
 	GetStripeStatus(ctx context.Context, in *GetStripeStatusRequest, opts ...grpc.CallOption) (*GetStripeStatusResponse, error)
+	// Returns the caller's account's OpenRouter spend and monthly spend cap.
+	GetOpenRouterUsage(ctx context.Context, in *GetOpenRouterUsageRequest, opts ...grpc.CallOption) (*GetOpenRouterUsageResponse, error)
+	// Returns the OpenRouter key an agent run bills to and whether its monthly cap is spent. Agent-service only.
+	GetOpenRouterAccess(ctx context.Context, in *GetOpenRouterAccessRequest, opts ...grpc.CallOption) (*GetOpenRouterAccessResponse, error)
 	// Returns a paginated list of adjustment types.
 	ListAdjustmentTypes(ctx context.Context, in *ListAdjustmentTypesRequest, opts ...grpc.CallOption) (*ListAdjustmentTypesResponse, error)
 	// Returns adjustment types matching the given IDs.
@@ -2028,6 +2034,26 @@ func (c *coreServiceClient) GetStripeStatus(ctx context.Context, in *GetStripeSt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetStripeStatusResponse)
 	err := c.cc.Invoke(ctx, CoreService_GetStripeStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetOpenRouterUsage(ctx context.Context, in *GetOpenRouterUsageRequest, opts ...grpc.CallOption) (*GetOpenRouterUsageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOpenRouterUsageResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetOpenRouterUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) GetOpenRouterAccess(ctx context.Context, in *GetOpenRouterAccessRequest, opts ...grpc.CallOption) (*GetOpenRouterAccessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOpenRouterAccessResponse)
+	err := c.cc.Invoke(ctx, CoreService_GetOpenRouterAccess_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -5327,7 +5353,7 @@ type CoreServiceServer interface {
 	ListAccountIntegrations(context.Context, *ListAccountIntegrationsRequest) (*ListAccountIntegrationsResponse, error)
 	// Creates or upserts an integration; updates existing if same code exists.
 	CreateAccountIntegration(context.Context, *CreateAccountIntegrationRequest) (*CreateAccountIntegrationResponse, error)
-	// Updates name and/or is_active on an integration; credentials cannot be changed.
+	// Updates name, is_active and/or the monthly spend cap on an integration; credentials cannot be changed.
 	UpdateAccountIntegration(context.Context, *UpdateAccountIntegrationRequest) (*UpdateAccountIntegrationResponse, error)
 	// Deletes an account integration and returns the deleted resource.
 	DeleteAccountIntegration(context.Context, *DeleteAccountIntegrationRequest) (*DeleteAccountIntegrationResponse, error)
@@ -5337,6 +5363,10 @@ type CoreServiceServer interface {
 	GetStripePublishableKey(context.Context, *GetStripePublishableKeyRequest) (*GetStripePublishableKeyResponse, error)
 	// Returns whether the caller's account has a Stripe integration configured.
 	GetStripeStatus(context.Context, *GetStripeStatusRequest) (*GetStripeStatusResponse, error)
+	// Returns the caller's account's OpenRouter spend and monthly spend cap.
+	GetOpenRouterUsage(context.Context, *GetOpenRouterUsageRequest) (*GetOpenRouterUsageResponse, error)
+	// Returns the OpenRouter key an agent run bills to and whether its monthly cap is spent. Agent-service only.
+	GetOpenRouterAccess(context.Context, *GetOpenRouterAccessRequest) (*GetOpenRouterAccessResponse, error)
 	// Returns a paginated list of adjustment types.
 	ListAdjustmentTypes(context.Context, *ListAdjustmentTypesRequest) (*ListAdjustmentTypesResponse, error)
 	// Returns adjustment types matching the given IDs.
@@ -6093,6 +6123,12 @@ func (UnimplementedCoreServiceServer) GetStripePublishableKey(context.Context, *
 }
 func (UnimplementedCoreServiceServer) GetStripeStatus(context.Context, *GetStripeStatusRequest) (*GetStripeStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetStripeStatus not implemented")
+}
+func (UnimplementedCoreServiceServer) GetOpenRouterUsage(context.Context, *GetOpenRouterUsageRequest) (*GetOpenRouterUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOpenRouterUsage not implemented")
+}
+func (UnimplementedCoreServiceServer) GetOpenRouterAccess(context.Context, *GetOpenRouterAccessRequest) (*GetOpenRouterAccessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetOpenRouterAccess not implemented")
 }
 func (UnimplementedCoreServiceServer) ListAdjustmentTypes(context.Context, *ListAdjustmentTypesRequest) (*ListAdjustmentTypesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAdjustmentTypes not implemented")
@@ -8718,6 +8754,42 @@ func _CoreService_GetStripeStatus_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CoreServiceServer).GetStripeStatus(ctx, req.(*GetStripeStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetOpenRouterUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOpenRouterUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetOpenRouterUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetOpenRouterUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetOpenRouterUsage(ctx, req.(*GetOpenRouterUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_GetOpenRouterAccess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOpenRouterAccessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).GetOpenRouterAccess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_GetOpenRouterAccess_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).GetOpenRouterAccess(ctx, req.(*GetOpenRouterAccessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -14698,6 +14770,14 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStripeStatus",
 			Handler:    _CoreService_GetStripeStatus_Handler,
+		},
+		{
+			MethodName: "GetOpenRouterUsage",
+			Handler:    _CoreService_GetOpenRouterUsage_Handler,
+		},
+		{
+			MethodName: "GetOpenRouterAccess",
+			Handler:    _CoreService_GetOpenRouterAccess_Handler,
 		},
 		{
 			MethodName: "ListAdjustmentTypes",

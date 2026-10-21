@@ -28,16 +28,23 @@ func NewAnthropicMessagesProvider(apiKey string) *AnthropicMessagesProvider {
 func (p *AnthropicMessagesProvider) Name() string { return "openrouter_anthropic" }
 
 // client builds an SDK client pinned at OpenRouter. OpenRouter authenticates on the Authorization bearer header; the SDK's x-api-key is left as a placeholder.
-func (p *AnthropicMessagesProvider) client() anthropic.Client {
+func (p *AnthropicMessagesProvider) client(ctx context.Context) (anthropic.Client, error) {
+	apiKey, err := resolveAPIKey(ctx, p.apiKey)
+	if err != nil {
+		return anthropic.Client{}, err
+	}
 	return anthropic.NewClient(
 		option.WithBaseURL(p.baseURL),
 		option.WithAPIKey("unused"),
-		option.WithHeader("Authorization", "Bearer "+p.apiKey),
-	)
+		option.WithHeader("Authorization", "Bearer "+apiKey),
+	), nil
 }
 
 func (p *AnthropicMessagesProvider) CompleteWithTools(ctx context.Context, req *ToolRequest) (*ToolResponse, error) {
-	client := p.client()
+	client, err := p.client(ctx)
+	if err != nil {
+		return nil, err
+	}
 	msg, err := client.Messages.New(ctx, p.buildParams(req))
 	if err != nil {
 		return nil, mapAnthropicError(err)
@@ -46,7 +53,10 @@ func (p *AnthropicMessagesProvider) CompleteWithTools(ctx context.Context, req *
 }
 
 func (p *AnthropicMessagesProvider) StreamCompleteWithTools(ctx context.Context, req *ToolRequest, callback func(StreamEvent)) (*ToolResponse, error) {
-	client := p.client()
+	client, err := p.client(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	stream := client.Messages.NewStreaming(ctx, p.buildParams(req))
 	msg := anthropic.Message{}

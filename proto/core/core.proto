@@ -290,7 +290,7 @@ service CoreService {
   // Creates or upserts an integration; updates existing if same code exists.
   rpc CreateAccountIntegration(CreateAccountIntegrationRequest) returns (CreateAccountIntegrationResponse);
 
-  // Updates name and/or is_active on an integration; credentials cannot be changed.
+  // Updates name, is_active and/or the monthly spend cap on an integration; credentials cannot be changed.
   rpc UpdateAccountIntegration(UpdateAccountIntegrationRequest) returns (UpdateAccountIntegrationResponse);
 
   // Deletes an account integration and returns the deleted resource.
@@ -304,6 +304,12 @@ service CoreService {
 
   // Returns whether the caller's account has a Stripe integration configured.
   rpc GetStripeStatus(GetStripeStatusRequest) returns (GetStripeStatusResponse);
+
+  // Returns the caller's account's OpenRouter spend and monthly spend cap.
+  rpc GetOpenRouterUsage(GetOpenRouterUsageRequest) returns (GetOpenRouterUsageResponse);
+
+  // Returns the OpenRouter key an agent run bills to and whether its monthly cap is spent. Agent-service only.
+  rpc GetOpenRouterAccess(GetOpenRouterAccessRequest) returns (GetOpenRouterAccessResponse);
 
   // Returns a paginated list of adjustment types.
   rpc ListAdjustmentTypes(ListAdjustmentTypesRequest) returns (ListAdjustmentTypesResponse);

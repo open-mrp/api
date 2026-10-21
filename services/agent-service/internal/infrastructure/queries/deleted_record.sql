@@ -15,4 +15,4 @@ SELECT COUNT(*)
 FROM deleted_record
 WHERE resource_type = sqlc.arg('resource_type')
 AND resource_id = sqlc.arg('resource_id')
-AND data->>'account_id' = sqlc.arg('account_id')::text;
+AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.account_id')) = CAST(sqlc.arg('account_id') AS CHAR);

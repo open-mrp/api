@@ -882,8 +882,8 @@ func covAiRunsAgent(t *testing.T, roleID string) string {
 func covAiRunsInsertRun(t *testing.T, agentID, status string) string {
 	t.Helper()
 	id := "agrn_e2edrive" + strings.ReplaceAll(uuid.New().String(), "-", "")[:12]
-	_, err := agentDB(t).Exec(`INSERT INTO agent_run (id, account_id, agent_definition_id, status_code, trigger_type, input, output)
-		VALUES ($1, $2, $3, $4, 'manual', '{}', '{}')`, id, SeedAccountID, agentID, status)
+	_, err := authDB(t).Exec(`INSERT INTO agent_run (id, account_id, agent_definition_id, status_code, trigger_type, input, output)
+		VALUES (?, ?, ?, ?, 'manual', '{}', '{}')`, id, SeedAccountID, agentID, status)
 	require.NoError(t, err)
 	return id
 }

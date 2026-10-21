@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
+	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -30,10 +30,25 @@ func (r *agentTokenUsageRepoImpl) Upsert(ctx context.Context, params sqlc.Upsert
 	return nil
 }
 
-func (r *agentTokenUsageRepoImpl) ListByAccount(ctx context.Context, params sqlc.ListAgentTokenUsageByAccountParams) ([]sqlc.AgentTokenUsage, *apierror.APIError) {
+func (r *agentTokenUsageRepoImpl) ListByAccount(ctx context.Context, params domain.AgentTokenUsagePageQuery) ([]sqlc.AgentTokenUsage, *apierror.APIError) {
 	ctx, span := tracing.StartSpan(ctx, tokenRepoTracer, "repository.agent_token_usage.list_by_account")
 	defer span.End()
-	rows, err := r.queries.ListAgentTokenUsageByAccount(ctx, params)
+	var rows []sqlc.AgentTokenUsage
+	var err error
+	if params.CursorID == "" {
+		rows, err = r.queries.ListAgentTokenUsageByAccount(ctx, sqlc.ListAgentTokenUsageByAccountParams{
+			AccountID: params.AccountID,
+			SinceDate: params.SinceDate,
+			Limit:     params.Limit,
+		})
+	} else {
+		rows, err = r.queries.ListAgentTokenUsageByAccountAfter(ctx, sqlc.ListAgentTokenUsageByAccountAfterParams{
+			CursorID:  params.CursorID,
+			AccountID: params.AccountID,
+			SinceDate: params.SinceDate,
+			Limit:     params.Limit,
+		})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -45,7 +60,7 @@ func (r *agentTokenUsageRepoImpl) GetMonthlyUsage(ctx context.Context, accountID
 	defer span.End()
 	row, err := r.queries.GetMonthlyTokenUsageByAccount(ctx, sqlc.GetMonthlyTokenUsageByAccountParams{
 		AccountID: accountID,
-		Date:      agentdb.PgDate(sinceDate),
+		Date:      sinceDate,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return 0, 0, tracing.Trace(span, apiErr)
@@ -58,7 +73,7 @@ func (r *agentTokenUsageRepoImpl) GetByAccountAndDate(ctx context.Context, accou
 	defer span.End()
 	row, err := r.queries.GetAgentTokenUsageByAccountAndDate(ctx, sqlc.GetAgentTokenUsageByAccountAndDateParams{
 		AccountID: accountID,
-		Date:      agentdb.PgDate(date),
+		Date:      date,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

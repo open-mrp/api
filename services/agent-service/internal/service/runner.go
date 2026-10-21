@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,13 +14,13 @@ import (
 
 	"github.com/open-mrp/api/services/agent-service/internal/agents"
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
 	types "github.com/open-mrp/api/services/auth-service/pkg/types"
 	"github.com/open-mrp/api/shared/appctx"
 	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
+	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/id"
 	"github.com/open-mrp/api/shared/messaging"
@@ -244,7 +245,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 
 	// Post the reply message now, empty and in a streaming state, so the thread renders one bubble that fills in token-by-token (via message.updated patches below) and is finalized at run end — rather than a transient live bubble swapped for the persisted reply. A fresh chat run threads its reply under the message that summoned it. No-op for non-conversation turns. The returned context carries the stream handle so the LLM loop and the terminal reply/failure paths address the same record.
 	var chatReplyTo string
-	if tid := agentdb.StringFromPgText(run.TriggerMessageID); tid != nil {
+	if tid := db.StringFromNullString(run.TriggerMessageID); tid != nil {
 		chatReplyTo = *tid
 	}
 	ctx = s.beginChatStream(ctx, run, runID, accountID, chatReplyTo, def.Name)
@@ -273,7 +274,7 @@ func (s *runnerSvc) ExecuteRun(ctx context.Context, runID, configID, accountID, 
 	}
 
 	// Fail-closed: agent must have a role_id
-	roleID := agentdb.StringFromPgText(def.RoleID)
+	roleID := db.StringFromNullString(def.RoleID)
 	if roleID == nil || *roleID == "" {
 		return s.failRun(ctx, runRepo, runID, startTime, "agent definition has no role_id; cannot execute without permissions")
 	}
@@ -530,22 +531,22 @@ func (s *runnerSvc) emitEventAs(ctx context.Context, runID, accountID string, se
 		Metadata:   metadata,
 	}
 	if content != nil {
-		params.Content = agentdb.PgText(*content)
+		params.Content = db.NullString(*content)
 	}
 	if durationMs != nil {
-		params.DurationMs = agentdb.PgInt4(*durationMs)
+		params.DurationMs = sql.NullInt32{Int32: *durationMs, Valid: true}
 	}
 	if actionID != nil {
-		params.AgentActionID = agentdb.PgText(*actionID)
+		params.AgentActionID = db.NullString(*actionID)
 	}
 	if actorID != "" {
-		params.ActorID = agentdb.PgText(actorID)
+		params.ActorID = db.NullString(actorID)
 	}
 	if actorType != "" {
-		params.ActorType = agentdb.PgText(actorType)
+		params.ActorType = db.NullString(actorType)
 	}
 	if actorName != "" {
-		params.ActorName = agentdb.PgText(actorName)
+		params.ActorName = db.NullString(actorName)
 	}
 	if insertErr := eventRepo.Insert(ctx, params); insertErr != nil {
 		slog.Error("Failed to insert run event", "error", insertErr, "run_id", runID, "step_type", stepType)
@@ -602,7 +603,7 @@ const chatReplyDeliveryPreamble = `Your written response is delivered into this 
 
 // isChatRun reports whether a run is linked to a conversation (so it streams native reasoning into the thread and links the records it references).
 func isChatRun(run *sqlc.AgentRun) bool {
-	cid := agentdb.StringFromPgText(run.ConversationID)
+	cid := db.StringFromNullString(run.ConversationID)
 	return cid != nil && *cid != ""
 }
 
@@ -737,7 +738,7 @@ func (s *runnerSvc) executeAgent(
 		CoreClient:               s.coreClient,
 		GatewayClient:            s.gatewayClient,
 		NotificationClient:       s.notificationClient,
-		ConversationID:           ptrutil.Deref(agentdb.StringFromPgText(run.ConversationID)),
+		ConversationID:           ptrutil.Deref(db.StringFromNullString(run.ConversationID)),
 		Identity:                 identity,
 		RequireReviewBySlug:      requireReviewBySlug,
 		AlwaysAllowedSlugs:       make(map[string]bool),
@@ -1676,9 +1677,9 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 			_ = approvalRepo.MarkReviewed(ctx, sqlc.MarkAgentActionReviewedParams{
 				ID:                  a.ID,
 				StatusCode:          domain.ActionStatusApproved,
-				ReviewedBy:          agentdb.PgText(actorID),
-				ReviewedByActorType: agentdb.PgText(actorType),
-				ReviewedByActorName: agentdb.PgText(actorName),
+				ReviewedBy:          db.NullString(actorID),
+				ReviewedByActorType: db.NullString(actorType),
+				ReviewedByActorName: db.NullString(actorName),
 			})
 		}
 	}
@@ -1712,9 +1713,9 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 				_ = approvalRepo.MarkReviewed(ctx, sqlc.MarkAgentActionReviewedParams{
 					ID:                  a.ID,
 					StatusCode:          domain.ActionStatusRejected,
-					ReviewedBy:          agentdb.PgText(actorID),
-					ReviewedByActorType: agentdb.PgText(actorType),
-					ReviewedByActorName: agentdb.PgText(actorName),
+					ReviewedBy:          db.NullString(actorID),
+					ReviewedByActorType: db.NullString(actorType),
+					ReviewedByActorName: db.NullString(actorName),
 				})
 			}
 		}
@@ -1781,7 +1782,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 	}
 
 	// Resolve agent identity
-	roleID := agentdb.StringFromPgText(def.RoleID)
+	roleID := db.StringFromNullString(def.RoleID)
 	if roleID == nil || *roleID == "" {
 		return s.failRun(ctx, runRepo, runID, startTime, "agent definition has no role_id")
 	}
@@ -1883,7 +1884,7 @@ func (s *runnerSvc) ContinueRun(ctx context.Context, runID, accountID, message s
 		CoreClient:               s.coreClient,
 		GatewayClient:            s.gatewayClient,
 		NotificationClient:       s.notificationClient,
-		ConversationID:           ptrutil.Deref(agentdb.StringFromPgText(run.ConversationID)),
+		ConversationID:           ptrutil.Deref(db.StringFromNullString(run.ConversationID)),
 		Identity:                 agentIdentity,
 		RequireReviewBySlug:      requireReviewBySlug,
 		AlwaysAllowedSlugs:       alwaysAllowed,
@@ -2317,8 +2318,8 @@ func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, usageA
 			AgentRunID:     runID,
 			ToolSlug:       a.ToolSlug,
 			StatusCode:     statusCode,
-			Label:          agentdb.PgText(a.Label),
-			Description:    agentdb.PgText(a.Description),
+			Label:          db.NullString(a.Label),
+			Description:    db.NullString(a.Description),
 			Input:          actionInput,
 			Output:         actionOutput,
 			RequiresReview: a.RequiresReview,
@@ -2336,7 +2337,7 @@ func (s *runnerSvc) persistOutputs(ctx context.Context, runID, accountID, usageA
 	if upsertErr := tokenRepo.Upsert(ctx, sqlc.UpsertAgentTokenUsageParams{
 		ID:           tokenID,
 		AccountID:    usageAccountID,
-		Date:         agentdb.PgDate(time.Now().Truncate(24 * time.Hour)),
+		Date:         time.Now().Truncate(24 * time.Hour),
 		InputTokens:  int64(result.InputTokens),
 		OutputTokens: int64(result.OutputTokens),
 		TotalCost:    0, // cost calculation deferred
@@ -2392,15 +2393,15 @@ func (s *runnerSvc) writeRunCompletedEvent(ctx context.Context, runID, accountID
 
 // writeRunCompletedNotification enqueues an in-app "agent run completed" notification to the user who triggered the run. Best-effort: it fires only for user-triggered runs (not scheduled/system/agent triggers), attributing the notification to the agent as sender and linking to the run. The notification-service fan-out resolves the recipient user id to the per-account account_user id and pushes it to the bell in real time.
 func (s *runnerSvc) writeRunCompletedNotification(ctx context.Context, run *sqlc.AgentRun, def *sqlc.AgentDefinition, runID, accountID string) {
-	identityType := agentdb.StringFromPgText(run.TriggeredByIdentityType)
-	actorID := agentdb.StringFromPgText(run.TriggeredByActorID)
+	identityType := db.StringFromNullString(run.TriggeredByIdentityType)
+	actorID := db.StringFromNullString(run.TriggeredByActorID)
 	if identityType == nil || *identityType != string(types.IdentityActorTypeUser) || actorID == nil || *actorID == "" {
 		return // only the human who started the run gets the bell notification
 	}
 
 	// The sender is the agent; attribute by its config id when present, else its definition id.
 	senderID := def.ID
-	if cfgID := agentdb.StringFromPgText(run.AgentConfigID); cfgID != nil && *cfgID != "" {
+	if cfgID := db.StringFromNullString(run.AgentConfigID); cfgID != nil && *cfgID != "" {
 		senderID = *cfgID
 	}
 
@@ -2449,7 +2450,7 @@ func (s *runnerSvc) beginChatStream(ctx context.Context, run *sqlc.AgentRun, run
 	if !chatTurnFromConversation(ctx) {
 		return ctx
 	}
-	conversationID := agentdb.StringFromPgText(run.ConversationID)
+	conversationID := db.StringFromNullString(run.ConversationID)
 	if conversationID == nil || *conversationID == "" {
 		return ctx
 	}
@@ -2499,7 +2500,7 @@ func (s *runnerSvc) finalizeChatReply(ctx context.Context, run *sqlc.AgentRun, r
 	if !chatTurnFromConversation(ctx) {
 		return
 	}
-	conversationID := agentdb.StringFromPgText(run.ConversationID)
+	conversationID := db.StringFromNullString(run.ConversationID)
 	if conversationID == nil || *conversationID == "" {
 		return
 	}
@@ -2541,7 +2542,7 @@ func (s *runnerSvc) finalizeChatReply(ctx context.Context, run *sqlc.AgentRun, r
 
 // writeChatApprovalNotice posts a non-bubble timeline event into the run's conversation recording who approved which tool(s) (e.g. "Dane approved update_customer"), so the thread shows the human decision before the agent's resumed reply. No-op for runs not linked to a conversation. Keyed on the run id + current turn so a redelivered continue doesn't double-post.
 func (s *runnerSvc) writeChatApprovalNotice(ctx context.Context, run *sqlc.AgentRun, runID, accountID, approverName string, approvedSlugs []string) {
-	conversationID := agentdb.StringFromPgText(run.ConversationID)
+	conversationID := db.StringFromNullString(run.ConversationID)
 	if conversationID == nil || *conversationID == "" || len(approvedSlugs) == 0 {
 		return
 	}
@@ -2565,7 +2566,7 @@ func (s *runnerSvc) writeChatApprovalNotice(ctx context.Context, run *sqlc.Agent
 
 // writeChatRejectionNotice mirrors writeChatApprovalNotice for the deny side: it posts a non-bubble "who denied what" timeline event so a chat thread records the rejection decision.
 func (s *runnerSvc) writeChatRejectionNotice(ctx context.Context, run *sqlc.AgentRun, runID, accountID, reviewerName string, rejectedSlugs []string) {
-	conversationID := agentdb.StringFromPgText(run.ConversationID)
+	conversationID := db.StringFromNullString(run.ConversationID)
 	if conversationID == nil || *conversationID == "" || len(rejectedSlugs) == 0 {
 		return
 	}
@@ -2669,12 +2670,12 @@ func (s *runnerSvc) emitChatRunStarted(ctx context.Context, accountID string, ru
 	if s.broker == nil {
 		return
 	}
-	conversationID := agentdb.StringFromPgText(run.ConversationID)
+	conversationID := db.StringFromNullString(run.ConversationID)
 	if conversationID == nil || *conversationID == "" {
 		return
 	}
 	triggerMessageID := ""
-	if tm := agentdb.StringFromPgText(run.TriggerMessageID); tm != nil {
+	if tm := db.StringFromNullString(run.TriggerMessageID); tm != nil {
 		triggerMessageID = *tm
 	}
 	payload, _ := json.Marshal(map[string]string{
@@ -2739,7 +2740,7 @@ func (s *runnerSvc) maybeAutoRetry(ctx context.Context, runRepo domain.AgentRunR
 
 	// Resume the existing transcript with no new input, mirroring the manual retry path. Reply back into the original thread (if any) so a chat-triggered run's resumed reply is posted, not kept private.
 	replyTo := ""
-	if tid := agentdb.StringFromPgText(run.TriggerMessageID); tid != nil {
+	if tid := db.StringFromNullString(run.TriggerMessageID); tid != nil {
 		replyTo = *tid
 	}
 	data := messaging.AgentContinueRunData{
@@ -2782,7 +2783,7 @@ func (s *runnerSvc) maybeAutoRetry(ctx context.Context, runRepo domain.AgentRunR
 // revertAutoRetry rolls a run back to a terminal failed state after an auto-retry bumped the counter but could not enqueue the resume, so the increment doesn't leave the run stuck in 'running' with no pending work. Manual retry is still possible afterward (retry_count is preserved).
 func (s *runnerSvc) revertAutoRetry(ctx context.Context, runRepo domain.AgentRunRepo, runID string, cause error) {
 	if failErr := runRepo.UpdateFailed(ctx, sqlc.UpdateAgentRunFailedParams{
-		ErrorMessage: agentdb.PgText(cause.Error()),
+		ErrorMessage: db.NullString(cause.Error()),
 		ID:           runID,
 	}); failErr != nil {
 		slog.Error("auto-retry: failed to revert run to failed", "error", failErr, "run_id", runID)
@@ -2806,8 +2807,8 @@ func (s *runnerSvc) failRunFromErr(ctx context.Context, runRepo domain.AgentRunR
 func (s *runnerSvc) failRunWithCode(ctx context.Context, runRepo domain.AgentRunRepo, runID string, startTime time.Time, errMsg, errorCode string) *apierror.APIError {
 	durationMs := safeconv.Int64ToInt32(time.Since(startTime).Milliseconds())
 	if failErr := runRepo.UpdateFailed(ctx, sqlc.UpdateAgentRunFailedParams{
-		ErrorMessage: agentdb.PgText(errMsg),
-		DurationMs:   agentdb.PgInt4(durationMs),
+		ErrorMessage: db.NullString(errMsg),
+		DurationMs:   sql.NullInt32{Int32: durationMs, Valid: true},
 		ID:           runID,
 	}); failErr != nil {
 		slog.Error("Failed to mark run as failed", "error", failErr, "run_id", runID)
@@ -2846,7 +2847,7 @@ func (s *runnerSvc) emitFailureEvent(ctx context.Context, run *sqlc.AgentRun, er
 func (s *runnerSvc) writeChatFailureReply(ctx context.Context, run *sqlc.AgentRun, runID, accountID, errMsg, errorCode string) {
 	// Gating (conversation turn + linked conversation) is handled in finalizeChatReply. If a streaming bubble was already posted for this turn, this resolves it to the error message rather than leaving it stuck "thinking".
 	var replyTo string
-	if tid := agentdb.StringFromPgText(run.TriggerMessageID); tid != nil {
+	if tid := db.StringFromNullString(run.TriggerMessageID); tid != nil {
 		replyTo = *tid
 	}
 	// Errors may carry internal detail, so chat sees only a generic notice.
@@ -2872,7 +2873,7 @@ func resolveAllowedEndpointTools(slugs []string) map[string]bool {
 }
 
 // buildAgentToolDefs assembles the tools an agent run exposes up front and the per-tool require-review map. Up-front tools are the agent's explicitly-linked DB tools (hand-crafted), its linked built-in tools, — only when the agent has been granted endpoint-tools — the search_api_tools meta-tool, and on a chat run find_app_page. That last one is added to every chat run rather than granted per agent: linking a page is part of how a chat reply is written, not a capability a merchant chooses to hand out, and gating it behind a grant would leave every existing agent unable to link. The endpoint-tools themselves are NOT injected here; the agent discovers them on demand via search (progressive disclosure) and the runner reveals matches into the live tool list. allowedEndpointTools is the agent's resolved grant; each granted endpoint-tool is gated only when endpointReview marks its slug true (default off, mirroring linked built-in tools), so gating applies once it is revealed and called.
-func (s *runnerSvc) buildAgentToolDefs(linkedTools []sqlc.ListToolsByAgentDefinitionIDRow, allowedEndpointTools map[string]bool, endpointReview map[string]bool, chatRun bool) ([]llm.ToolDefinition, map[string]bool) {
+func (s *runnerSvc) buildAgentToolDefs(linkedTools []sqlc.AgentDefinitionTool, allowedEndpointTools map[string]bool, endpointReview map[string]bool, chatRun bool) ([]llm.ToolDefinition, map[string]bool) {
 	requireReviewBySlug := make(map[string]bool, len(linkedTools)+len(allowedEndpointTools))
 
 	// Linked tools are built-in tools, granted by slug. Their description and input schema come from the code catalog (agents.BuiltinTools), not the database.

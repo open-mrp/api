@@ -631,7 +631,7 @@ INSERT IGNORE INTO request_log (id, method, host, path, normalized_route, status
 -- presenter rewrites host -> the public API host and drops client_ip for
 -- identity_type='agent' (apiresource.RequestLog.ScrubInternalInfra), while user/
 -- api_key logs keep theirs. The agent's actor_id is the agent definition
--- agdf_01infraseedagent (seeded in agent-service), whose name + slug the request-logs
+-- agdf_01infraseedagent (seeded in 0017_agent_e2e.sql), whose name + slug the request-logs
 -- presenter hydrates onto the actor. api_version is set so the customer-facing log
 -- shows the version the agent's internal call carried (the agent client sends
 -- OpenMRP-Version). The agent row's id is also referenced by an audit_event

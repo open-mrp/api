@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
@@ -51,7 +51,7 @@ func (r *idempotencyKeyRepoImpl) Create(ctx context.Context, key *domain.Idempot
 		ServiceName:    key.ServiceName,
 		Handler:        key.Handler,
 		IdempotencyKey: key.IdempotencyKey,
-		ActorID:        agentdb.PgTextPtr(key.ActorID),
+		ActorID:        db.NullStringPtr(key.ActorID),
 		IdentityType:   key.IdentityType,
 		ScopeHash:      key.ScopeHash,
 		RecoveryPoint:  key.RecoveryPoint,
@@ -111,8 +111,8 @@ func (r *idempotencyKeyRepoImpl) SetResponse(ctx context.Context, typeID string,
 	defer span.End()
 
 	err := r.queries.SetIdempotencyResponse(ctx, sqlc.SetIdempotencyResponseParams{
-		ResponseCode:  agentdb.PgInt4(safeconv.IntToInt32(code)),
-		ResponseBody:  body,
+		ResponseCode:  sql.NullInt32{Int32: safeconv.IntToInt32(code), Valid: true},
+		ResponseBody:  &body,
 		RecoveryPoint: string(recoveryPoint),
 		TypeID:        typeID,
 	})
@@ -131,17 +131,22 @@ func rowToDomainIdempotencyKey(row sqlc.ServiceIdempotencyKey) *domain.Idempoten
 		responseCode = &code
 	}
 
+	var responseBody json.RawMessage
+	if row.ResponseBody != nil {
+		responseBody = *row.ResponseBody
+	}
+
 	return &domain.IdempotencyKey{
 		ID:             row.ID,
 		TypeID:         row.TypeID,
 		ServiceName:    row.ServiceName,
 		Handler:        row.Handler,
 		IdempotencyKey: row.IdempotencyKey,
-		ActorID:        agentdb.StringFromPgText(row.ActorID),
+		ActorID:        db.StringFromNullString(row.ActorID),
 		IdentityType:   row.IdentityType,
 		ScopeHash:      row.ScopeHash,
 		ResponseCode:   responseCode,
-		ResponseBody:   row.ResponseBody,
+		ResponseBody:   responseBody,
 		RecoveryPoint:  row.RecoveryPoint,
 	}
 }

@@ -136,7 +136,7 @@ func (mr *MockAgentDefinitionRepoMockRecorder) ListByAccount(ctx, accountID any)
 }
 
 // ListByAccountCursor mocks base method.
-func (m *MockAgentDefinitionRepo) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentDefinitionsByAccountCursorParams) ([]sqlc.AgentDefinition, *apierror.APIError) {
+func (m *MockAgentDefinitionRepo) ListByAccountCursor(ctx context.Context, params domain.AgentDefinitionPageQuery) ([]sqlc.AgentDefinition, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAccountCursor", ctx, params)
 	ret0, _ := ret[0].([]sqlc.AgentDefinition)
@@ -148,21 +148,6 @@ func (m *MockAgentDefinitionRepo) ListByAccountCursor(ctx context.Context, param
 func (mr *MockAgentDefinitionRepoMockRecorder) ListByAccountCursor(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccountCursor", reflect.TypeOf((*MockAgentDefinitionRepo)(nil).ListByAccountCursor), ctx, params)
-}
-
-// ListByAccountFiltered mocks base method.
-func (m *MockAgentDefinitionRepo) ListByAccountFiltered(ctx context.Context, accountID string, definitionTypes, triggerTypes []string) ([]sqlc.AgentDefinition, *apierror.APIError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByAccountFiltered", ctx, accountID, definitionTypes, triggerTypes)
-	ret0, _ := ret[0].([]sqlc.AgentDefinition)
-	ret1, _ := ret[1].(*apierror.APIError)
-	return ret0, ret1
-}
-
-// ListByAccountFiltered indicates an expected call of ListByAccountFiltered.
-func (mr *MockAgentDefinitionRepoMockRecorder) ListByAccountFiltered(ctx, accountID, definitionTypes, triggerTypes any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByAccountFiltered", reflect.TypeOf((*MockAgentDefinitionRepo)(nil).ListByAccountFiltered), ctx, accountID, definitionTypes, triggerTypes)
 }
 
 // SoftDelete mocks base method.
@@ -246,10 +231,10 @@ func (mr *MockAgentDefinitionToolRepoMockRecorder) Insert(ctx, params any) *gomo
 }
 
 // ListByAgentDefinitionID mocks base method.
-func (m *MockAgentDefinitionToolRepo) ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.ListToolsByAgentDefinitionIDRow, *apierror.APIError) {
+func (m *MockAgentDefinitionToolRepo) ListByAgentDefinitionID(ctx context.Context, agentDefinitionID string) ([]sqlc.AgentDefinitionTool, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAgentDefinitionID", ctx, agentDefinitionID)
-	ret0, _ := ret[0].([]sqlc.ListToolsByAgentDefinitionIDRow)
+	ret0, _ := ret[0].([]sqlc.AgentDefinitionTool)
 	ret1, _ := ret[1].(*apierror.APIError)
 	return ret0, ret1
 }
@@ -427,7 +412,7 @@ func (mr *MockAgentRunRepoMockRecorder) Insert(ctx, params any) *gomock.Call {
 }
 
 // ListByAccountFiltered mocks base method.
-func (m *MockAgentRunRepo) ListByAccountFiltered(ctx context.Context, params sqlc.ListAgentRunsByAccountFilteredParams) ([]sqlc.AgentRun, *apierror.APIError) {
+func (m *MockAgentRunRepo) ListByAccountFiltered(ctx context.Context, params domain.AgentRunPageQuery) ([]sqlc.AgentRun, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAccountFiltered", ctx, params)
 	ret0, _ := ret[0].([]sqlc.AgentRun)
@@ -862,7 +847,7 @@ func (mr *MockAgentMemoryRepoMockRecorder) ListByAccount(ctx, accountID, limit a
 }
 
 // ListByAccountCursor mocks base method.
-func (m *MockAgentMemoryRepo) ListByAccountCursor(ctx context.Context, params sqlc.ListAgentMemoriesByAccountCursorParams) ([]sqlc.AgentMemory, *apierror.APIError) {
+func (m *MockAgentMemoryRepo) ListByAccountCursor(ctx context.Context, params domain.AgentMemoryPageQuery) ([]sqlc.AgentMemory, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAccountCursor", ctx, params)
 	ret0, _ := ret[0].([]sqlc.AgentMemory)
@@ -961,7 +946,7 @@ func (mr *MockAgentTokenUsageRepoMockRecorder) GetMonthlyUsage(ctx, accountID, s
 }
 
 // ListByAccount mocks base method.
-func (m *MockAgentTokenUsageRepo) ListByAccount(ctx context.Context, params sqlc.ListAgentTokenUsageByAccountParams) ([]sqlc.AgentTokenUsage, *apierror.APIError) {
+func (m *MockAgentTokenUsageRepo) ListByAccount(ctx context.Context, params domain.AgentTokenUsagePageQuery) ([]sqlc.AgentTokenUsage, *apierror.APIError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByAccount", ctx, params)
 	ret0, _ := ret[0].([]sqlc.AgentTokenUsage)

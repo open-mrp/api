@@ -228,8 +228,8 @@ jobs:
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
         run: ./scripts/planetscale-release-branch.sh
 
-      # The MySQL schema half gets a reviewable deploy request; the Postgres schema and both sets of
-      # backfills do not, so the manifest is their review surface.
+      # The schema gets a reviewable deploy request; the backfills do not, so the manifest is their
+      # review surface.
       - name: Build the migration manifest
         id: manifest
         env:
@@ -447,16 +447,12 @@ jobs:
           {
             echo "core_schema=$(changed_in shared/db/migrations)"
             echo "core_data=$(changed_in shared/db/data-migrations)"
-            echo "agent_schema=$(changed_in services/agent-service/db/migrations)"
-            echo "agent_data=$(changed_in services/agent-service/db/data-migrations)"
           } | tee -a "$GITHUB_OUTPUT"
 
       - name: Install goose, pscale and the MySQL client
         if: |
           steps.changes.outputs.core_schema == 'true' ||
-          steps.changes.outputs.core_data == 'true' ||
-          steps.changes.outputs.agent_schema == 'true' ||
-          steps.changes.outputs.agent_data == 'true'
+          steps.changes.outputs.core_data == 'true'
         run: |
           set -euo pipefail
           sudo apt-get update -qq
@@ -475,7 +471,7 @@ jobs:
 
           echo "/usr/local/bin/ci-tools" >> "$GITHUB_PATH"
 
-      # The four steps below are ordered, and the order is the point: schema first so the new code
+      # The two steps below are ordered, and the order is the point: schema first so the new code
       # never meets a column that does not exist, then backfills so it never meets an empty one. Each
       # step failing fails the job, and `deploy` requires this job to succeed.
 
@@ -488,29 +484,11 @@ jobs:
           PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 
-      # 2. Postgres schema — applied directly. Postgres has no deploy requests; PlanetScale's guidance
-      # is that Postgres branches apply DDL directly, and the branch has safe migrations off.
-      - name: Deploy the agent-service schema to prod (Postgres)
-        if: steps.changes.outputs.agent_schema == 'true'
-        run: ./scripts/planetscale-postgres-migrate.sh
-        env:
-          MIGRATIONS: schema
-          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-
-      # 3 & 4. Backfills, once both schemas are live and before any image rolls.
+      # 2. Backfills, once the schema is live and before any image rolls.
       - name: Run core data migrations (MySQL)
         if: steps.changes.outputs.core_data == 'true'
         run: ./scripts/planetscale-data-migrations.sh
         env:
-          PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
-          PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
-
-      - name: Run agent-service data migrations (Postgres)
-        if: steps.changes.outputs.agent_data == 'true'
-        run: ./scripts/planetscale-postgres-migrate.sh
-        env:
-          MIGRATIONS: data
           PLANETSCALE_SERVICE_TOKEN_ID: ${{ secrets.PLANETSCALE_SERVICE_TOKEN_ID }}
           PLANETSCALE_SERVICE_TOKEN: ${{ secrets.PLANETSCALE_SERVICE_TOKEN }}
 

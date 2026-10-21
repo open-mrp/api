@@ -20,6 +20,6 @@ for name in $names; do
 done
 
 if ((${#to_remove[@]})); then
-	# -v: the mysql and postgres images declare anonymous data volumes, which otherwise leak ~2.5GB per run.
+	# -v: the mysql image declares anonymous data volumes, which otherwise leak ~2.5GB per run.
 	docker rm -fv "${to_remove[@]}"
 fi

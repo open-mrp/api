@@ -10,9 +10,9 @@ import (
 	"github.com/open-mrp/api/services/agent-service/internal/domain"
 	factorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/factory"
 	repositorymock "github.com/open-mrp/api/services/agent-service/internal/domain/mock/repository"
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
 	"github.com/open-mrp/api/services/agent-service/internal/llm"
+	"github.com/open-mrp/api/shared/db"
 	"go.uber.org/mock/gomock"
 )
 
@@ -93,9 +93,9 @@ func newCapturingRunner(t *testing.T, provider llm.LLMProvider, registry *agents
 func blockedCallEvents(userMsg, toolUseID, name, input string) []sqlc.AgentRunEvent {
 	meta, _ := json.Marshal(map[string]any{"tool_use_id": toolUseID, "tool_name": name, "input": json.RawMessage(input)})
 	return []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText(userMsg)},
+		{StepType: "user_message", Content: db.NullString(userMsg)},
 		{StepType: "tool_call", Metadata: meta},
-		{StepType: "tool_blocked", Metadata: meta, Content: agentdb.PgText(approvalPlaceholder)},
+		{StepType: "tool_blocked", Metadata: meta, Content: db.NullString(approvalPlaceholder)},
 	}
 }
 
@@ -390,12 +390,12 @@ func TestReconstructMessages_ResumeAfterExecutionHasNoDuplicateResult(t *testing
 	blockMeta, _ := json.Marshal(map[string]any{"tool_use_id": "toolu_1", "tool_name": guardGatedTool, "input": json.RawMessage(`{"status":"hold_all"}`)})
 	resultMeta, _ := json.Marshal(map[string]any{"tool_use_id": "toolu_1", "is_error": false, "full_result": `{"status":"hold_all"}`})
 	events := []sqlc.AgentRunEvent{
-		{StepType: "user_message", Content: agentdb.PgText("hold the customer")},
+		{StepType: "user_message", Content: db.NullString("hold the customer")},
 		{StepType: "tool_call", Metadata: blockMeta},
-		{StepType: "tool_blocked", Metadata: blockMeta, Content: agentdb.PgText(approvalPlaceholder)},
-		{StepType: "user_message", Content: agentdb.PgText("Approved all pending tool actions")},
+		{StepType: "tool_blocked", Metadata: blockMeta, Content: db.NullString(approvalPlaceholder)},
+		{StepType: "user_message", Content: db.NullString("Approved all pending tool actions")},
 		{StepType: "tool_result", Metadata: resultMeta},
-		{StepType: "assistant_message", Content: agentdb.PgText("Done.")},
+		{StepType: "assistant_message", Content: db.NullString("Done.")},
 	}
 
 	messages := reconstructMessages(events)

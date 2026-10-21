@@ -98,7 +98,7 @@ Messages cross between services through the outbox and inbox tables, so a publis
 | `auth-service`         | Identity, JWTs, API keys                | MySQL      |
 | `notification-service` | Email, messaging, notifications         | MySQL      |
 | `platform-service`     | Audit events, request logs, idempotency | MySQL      |
-| `agent-service`        | Agent runs, tools, memories             | PostgreSQL |
+| `agent-service`        | Agent runs, tools, memories             | MySQL      |
 
 
 Every service is layered the same way:
@@ -136,7 +136,7 @@ Cross-cutting concerns live in `shared/`: gRPC interceptors and identity propaga
 |                         |                                                                      |
 | ----------------------- | -------------------------------------------------------------------- |
 | Go 1.27                 | gRPC + Protocol Buffers, via [buf](https://buf.build)                |
-| MySQL 8 · PostgreSQL 16 | [sqlc](https://sqlc.dev) · [goose](https://github.com/pressly/goose) |
+| MySQL 8                 | [sqlc](https://sqlc.dev) · [goose](https://github.com/pressly/goose) |
 | RabbitMQ                | OpenTelemetry tracing                                                |
 | Kubernetes / EKS        | [Tilt](https://tilt.dev) + minikube for local dev                    |
 | Stripe                  | AWS S3 · SES · SQS                                                   |
@@ -231,27 +231,21 @@ make fmt                # Format Go sources
 
 **Local databases and seed data**
 
-`make local-db` spins up both databases in Docker containers, applies all migrations, and writes connection strings to `.env` automatically:
+`make local-db` spins up MySQL in a Docker container, applies all migrations, and writes the connection string to `.env` automatically:
 
-- **MySQL 8** on port `3306` — core-service (`openmrp` database)
-- **PostgreSQL 16** on port `5432` — agent-service (`openmrp_agents` database)
+- **MySQL 8** on port `3306` — every service (`openmrp` database)
 
-Data is persisted in named Docker volumes so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`.
+Data is persisted in a named Docker volume so it survives container restarts. `make local-db` also seeds the core database with sample data (accounts, users, items, orders, etc.) via the SQL files in `shared/db/seed/`.
 
 ```bash
 # Re-seed core data (idempotent, safe to run multiple times)
 make seed-core
-
-# Seed the agent-service (PostgreSQL) database with e2e test data
-# Migrations for it already ran as part of `make local-db`
-make seed-agent-db
 
 # Upload the seeded users' avatars to the user-photos S3 bucket
 make seed-user-photos
 
 # Connect directly
 make local-db-cli   # MySQL CLI using DB_URL from .env
-psql postgres://openmrp@localhost:5432/openmrp_agents
 
 # Tear down containers (data preserved)
 make local-db-down
@@ -265,13 +259,12 @@ make local-db-nuke
 
 #### Using with Tilt / Kubernetes
 
-Services running in minikube cannot reach `localhost` on the host machine. The K8s secret in `infra/development/kubernetes/config/secrets.yaml` uses `host.minikube.internal` to route traffic back to the host. These URIs match the Docker Compose databases started by `make local-db`:
+Services running in minikube cannot reach `localhost` on the host machine. The K8s secret in `infra/development/kubernetes/config/secrets.yaml` uses `host.minikube.internal` to route traffic back to the host. This URI matches the Docker Compose database started by `make local-db`:
 
 
-| Service            | URI                                                                             |
-| ------------------ | ------------------------------------------------------------------------------- |
-| Core (MySQL)       | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp`                     |
-| Agent (PostgreSQL) | `postgres://openmrp@host.minikube.internal:5432/openmrp_agents?sslmode=disable` |
+| Service       | URI                                                         |
+| ------------- | ----------------------------------------------------------- |
+| All (MySQL)   | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
 
 
 The seed script hardcodes the Docker Compose connection details, so no `.env` configuration is needed — just run `make local-db` before `make dev`.

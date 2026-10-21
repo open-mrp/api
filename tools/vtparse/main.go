@@ -167,7 +167,7 @@ func run(root string) (scanResult, error) {
 	return result, nil
 }
 
-// generatedDirs returns the output directory of every service whose sqlc.yaml declares engine: mysql. Reading the config rather than listing services is what keeps a Postgres service out without naming it: agent-service generates $1 placeholders, which this parser would reject for the wrong reason.
+// generatedDirs returns the output directory of every service whose sqlc.yaml declares engine: mysql. Reading the config rather than listing services is what keeps a Postgres service out without naming it: its $1 placeholders are something this parser would reject for the wrong reason.
 func generatedDirs(root string) ([]string, error) {
 	configs, err := filepath.Glob(filepath.Join(root, "services", "*", "sqlc.yaml"))
 	if err != nil {

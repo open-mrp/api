@@ -27,9 +27,6 @@ BASE_REF="${BASE_REF:-origin/main}"
 DIRS=(
     shared/db/migrations
     shared/db/data-migrations
-    services/agent-service/db/migrations
-    services/agent-service/db/data-migrations
-    services/agent-service/db/seeds
 )
 
 failed=0

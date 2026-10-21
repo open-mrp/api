@@ -5,17 +5,333 @@
 package sqlc
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"encoding/json"
+	"time"
+
 	"github.com/open-mrp/api/shared/db"
 )
+
+type Account struct {
+	ID                       string
+	Name                     string
+	AccountTypeCode          string
+	OnboardingStatusCode     string
+	AccountBillingID         sql.NullString
+	DefaultBillingAddressID  sql.NullString
+	DefaultShippingAddressID sql.NullString
+	UpdatedAt                time.Time
+	CreatedAt                time.Time
+}
+
+type AccountAddress struct {
+	ID        string
+	AccountID string
+	AddressID string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type AccountBilling struct {
+	ID                              string
+	AccountPlanID                   string
+	InternalStripeCustomerID        sql.NullString
+	InternalStripeSubscriptionID    sql.NullString
+	SubscriptionStatus              sql.NullString
+	SubscriptionCurrentPeriodEnd    sql.NullTime
+	StripeBillingProfileID          sql.NullString
+	StripeBillingCadenceID          sql.NullString
+	StripePricingPlanSubscriptionID sql.NullString
+	ServicingStatus                 sql.NullString
+	CollectionStatus                sql.NullString
+	AgentMonthlySpendingCapCents    sql.NullInt64
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+}
+
+type AccountBranding struct {
+	ID              string
+	OwnerAccountID  string
+	SupportEmail    sql.NullString
+	LogoUrl         sql.NullString
+	FaviconUrl      sql.NullString
+	PhoneNumber     sql.NullString
+	FacebookHandle  sql.NullString
+	InstagramHandle sql.NullString
+	LinkedinHandle  sql.NullString
+	TwitterHandle   sql.NullString
+	WebsiteUrl      sql.NullString
+	UpdatedAt       time.Time
+	CreatedAt       time.Time
+}
+
+type AccountGroup struct {
+	ID                    string
+	OwnerAccountID        string
+	Name                  string
+	Description           sql.NullString
+	CommissionStatusCode  string
+	FreightStatusCode     string
+	AccountGroupTypeCode  string
+	RegistrationFlowID    sql.NullString
+	UpdatedAt             time.Time
+	CreatedAt             time.Time
+	DefaultLeadTimeDays   sql.NullInt32
+	FulfillmentPolicyCode sql.NullString
+	ReceiveCalendarID     sql.NullString
+}
+
+type AccountGroupProductLine struct {
+	ID             string
+	AccountGroupID string
+	ProductLineID  string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type AccountGroupQuantityDiscount struct {
+	ID                 string
+	AccountGroupID     string
+	QuantityDiscountID string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type AccountIntegration struct {
+	ID              string
+	AccountID       string
+	IntegrationCode string
+	Name            string
+	CredentialsV2   string
+	IsActive        bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type AccountInventorySetting struct {
+	ID                  string
+	AccountID           string
+	InventoryPolicyCode string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type AccountPlanFeature struct {
+	ID            int64
+	AccountPlanID string
+	Key           string
+	Enabled       bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type AccountPortal struct {
+	ID             string
+	OwnerAccountID string
+	Slug           string
+	UpdatedAt      time.Time
+	CreatedAt      time.Time
+}
+
+type AccountPrice struct {
+	ID                 string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	OwnerAccountID     string
+	UnitValueID        string
+	ProductLineID      string
+	RecipientAccountID string
+}
+
+type AccountPriceAttribute struct {
+	ID             string
+	AccountPriceID string
+	AttributeID    string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type AccountPriceItemCategory struct {
+	ID             string
+	AccountPriceID string
+	ItemCategoryID string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type AccountProductionScheduleSetting struct {
+	ID                              string
+	AccountID                       string
+	ConstraintDepartmentID          sql.NullString
+	PlanningHorizonWeeks            int32
+	FrozenWeeks                     int32
+	WeekStartDay                    int32
+	DemandWindowMonths              int32
+	ForecastHistoryMonths           int32
+	ForecastMonths                  int32
+	DemandBasisCode                 string
+	ForecastZ                       string
+	ChangeoverAvgMinutes            string
+	ChangeoverMinMinutes            string
+	ChangeoverMaxMinutes            string
+	ChangeoverLaborRate             string
+	HoldingRatePct                  string
+	ServiceLevelZ                   string
+	FinishLeadTimeWeeks             string
+	DefaultConstraintLeadTimeWeeks  string
+	MaxWeeksSupply                  string
+	MaxFlowDepth                    int32
+	ShiftsPerDay                    int32
+	HoursPerShift                   string
+	WorkDaysPerWeek                 int32
+	WeeksPerYear                    int32
+	CapacityHeadroomPct             string
+	DefaultLotUnits                 string
+	IsEnabled                       bool
+	GenerationCron                  sql.NullString
+	GenerationTimezone              string
+	AutoPublish                     bool
+	LastGeneratedAt                 sql.NullTime
+	CreatedAt                       time.Time
+	UpdatedAt                       time.Time
+	DefaultCustomerLeadTimeDays     int32
+	DefaultFulfillmentPolicyCode    string
+	RecommendationAdiThreshold      string
+	RecommendationConcentrationPct  string
+	RecommendationCv2Threshold      string
+	RecommendationDormantMonths     int32
+	RecommendationHighValueUnitCost string
+	RecommendationSlowMoverCogs     string
+	ReceiveCalendarID               sql.NullString
+	ShipCalendarID                  sql.NullString
+	ShiftStartTime                  sql.NullString
+	ShiftTimezone                   sql.NullString
+	ShiftDaysOfWeek                 string
+}
+
+type AccountRelation struct {
+	ID                       string
+	OwnerAccountID           string
+	CounterpartyAccountID    string
+	ExternalNumber           string
+	StripeCustomerID         sql.NullString
+	StripeEmail              sql.NullString
+	HubspotCompanyID         sql.NullString
+	Notes                    sql.NullString
+	UpdatedAt                time.Time
+	CreatedAt                time.Time
+	ParentAccountRelationID  sql.NullString
+	Alias                    sql.NullString
+	DefaultBillingAddressID  sql.NullString
+	DefaultShippingAddressID sql.NullString
+	DefaultCarrierID         sql.NullString
+	DefaultCarrierOptionID   sql.NullString
+	DefaultSalesRepID        sql.NullString
+	PaymentTermID            sql.NullString
+	AccountGroupID           sql.NullString
+	ShippingTermID           sql.NullString
+	CarrierBillingAccount    sql.NullString
+	CreditLimitID            sql.NullString
+	DefaultLeadTimeDays      sql.NullInt32
+	ReceiveCalendarID        sql.NullString
+	AccountRelationRoleCode  string
+	PriorityCode             string
+	AccountStatusCode        sql.NullString
+	CommissionStatusCode     sql.NullString
+	FreightStatusCode        sql.NullString
+	FulfillmentPolicyCode    sql.NullString
+	CarrierBillingType       sql.NullString
+}
+
+type AccountRelationNotificationPreference struct {
+	ID                     string
+	AccountRelationID      string
+	RecipientAccountUserID string
+	NotificationTypeCode   string
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type AccountRelationNotificationType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type AccountRelationPriceGroup struct {
+	ID                string
+	AccountRelationID string
+	AccountGroupID    string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type AccountRelationProductLine struct {
+	ID                string
+	AccountRelationID string
+	ProductLineID     string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type AccountStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type AccountUser struct {
+	ID                   string
+	UserID               string
+	DepartmentID         sql.NullString
+	LastUsedAt           sql.NullTime
+	StatusCode           string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	RoleID               sql.NullString
+	AccountID            string
+	IsCommissionEligible bool
+}
+
+type ActionType struct {
+	ID        string
+	CreatedAt time.Time
+	Name      string
+	Code      string
+	UpdatedAt time.Time
+}
+
+type Address struct {
+	ID                string
+	Name              string
+	Phone             sql.NullString
+	Email             sql.NullString
+	IsDropShip        bool
+	GeolocationID     string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	ReceiveCalendarID sql.NullString
+}
+
+type AdjustmentType struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
 
 type AgentAccountStatus struct {
 	ID                string
 	AccountID         string
 	AgentDefinitionID string
 	StatusCode        string
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type AgentAction struct {
@@ -24,21 +340,21 @@ type AgentAction struct {
 	AgentRunID          string
 	ToolSlug            string
 	StatusCode          string
-	Label               pgtype.Text
-	Description         pgtype.Text
-	Input               []byte
-	Output              []byte
-	ErrorMessage        pgtype.Text
-	EntityType          pgtype.Text
-	EntityID            pgtype.Text
+	Label               sql.NullString
+	Description         sql.NullString
+	Input               json.RawMessage
+	Output              json.RawMessage
+	ErrorMessage        sql.NullString
+	EntityType          sql.NullString
+	EntityID            sql.NullString
 	RequiresReview      bool
-	ReviewedAt          pgtype.Timestamptz
-	ReviewedBy          pgtype.Text
-	ReviewedByActorType pgtype.Text
-	ReviewedByActorName pgtype.Text
-	ExecutedAt          pgtype.Timestamptz
-	CreatedAt           pgtype.Timestamptz
-	UpdatedAt           pgtype.Timestamptz
+	ReviewedAt          sql.NullTime
+	ReviewedBy          sql.NullString
+	ReviewedByActorType sql.NullString
+	ReviewedByActorName sql.NullString
+	ExecutedAt          sql.NullTime
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type AgentArtifact struct {
@@ -47,13 +363,13 @@ type AgentArtifact struct {
 	AgentActionID string
 	ArtifactType  string
 	Name          string
-	Content       pgtype.Text
-	Metadata      []byte
-	S3Key         pgtype.Text
-	MimeType      pgtype.Text
-	SizeBytes     pgtype.Int8
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	Content       sql.NullString
+	Metadata      json.RawMessage
+	S3Key         sql.NullString
+	MimeType      sql.NullString
+	SizeBytes     sql.NullInt64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type AgentConfig struct {
@@ -61,37 +377,37 @@ type AgentConfig struct {
 	AccountID         string
 	AgentDefinitionID string
 	IsEnabled         bool
-	Config            []byte
-	Schedule          pgtype.Text
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
+	Config            json.RawMessage
+	Schedule          sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type AgentDefinition struct {
 	ID             string
-	AccountID      pgtype.Text
+	AccountID      sql.NullString
 	Name           string
 	Slug           string
-	Description    pgtype.Text
+	Description    sql.NullString
 	DefinitionType string
 	CategoryCode   string
 	TriggerType    string
 	IsActive       bool
-	Config         []byte
-	RoleID         pgtype.Text
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
+	Config         json.RawMessage
+	RoleID         sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type AgentDefinitionTool struct {
 	ID                string
 	AgentDefinitionID string
-	Config            []byte
+	ToolSlug          string
+	Config            json.RawMessage
 	SortOrder         int32
 	RequireReview     bool
-	CreatedAt         pgtype.Timestamptz
-	UpdatedAt         pgtype.Timestamptz
-	ToolSlug          string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 type AgentMemory struct {
@@ -99,40 +415,40 @@ type AgentMemory struct {
 	AccountID  string
 	Category   string
 	Content    string
-	Metadata   []byte
-	EntityType pgtype.Text
-	EntityID   pgtype.Text
+	Metadata   json.RawMessage
+	EntityType sql.NullString
+	EntityID   sql.NullString
 	Importance float64
-	ExpiresAt  pgtype.Timestamptz
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
+	ExpiresAt  sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 type AgentRun struct {
 	ID                       string
 	AccountID                string
 	AgentDefinitionID        string
-	AgentConfigID            pgtype.Text
+	AgentConfigID            sql.NullString
 	StatusCode               string
 	TriggerType              string
-	Input                    []byte
-	Output                   []byte
-	ErrorMessage             pgtype.Text
-	StartedAt                pgtype.Timestamptz
-	CompletedAt              pgtype.Timestamptz
-	DurationMs               pgtype.Int4
+	Input                    json.RawMessage
+	Output                   json.RawMessage
+	ErrorMessage             sql.NullString
+	StartedAt                sql.NullTime
+	CompletedAt              sql.NullTime
+	DurationMs               sql.NullInt32
 	TotalInputTokens         int64
 	TotalOutputTokens        int64
-	TriggeredByActorID       pgtype.Text
-	TriggeredByIdentityType  pgtype.Text
-	TriggeredByActorName     pgtype.Text
-	AllowedToolSlugs         []byte
-	CreatedAt                pgtype.Timestamptz
-	UpdatedAt                pgtype.Timestamptz
-	ConversationID           pgtype.Text
-	TriggerMessageID         pgtype.Text
+	TriggeredByActorID       sql.NullString
+	TriggeredByIdentityType  sql.NullString
+	TriggeredByActorName     sql.NullString
+	AllowedToolSlugs         json.RawMessage
+	ConversationID           sql.NullString
+	TriggerMessageID         sql.NullString
 	DivergedFromConversation bool
 	RetryCount               int32
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
 }
 
 type AgentRunEvent struct {
@@ -141,35 +457,962 @@ type AgentRunEvent struct {
 	AccountID     string
 	StepType      string
 	Title         string
-	Content       pgtype.Text
+	Content       sql.NullString
 	Sequence      int32
-	DurationMs    pgtype.Int4
-	AgentActionID pgtype.Text
-	Metadata      []byte
-	ActorID       pgtype.Text
-	ActorType     pgtype.Text
-	ActorName     pgtype.Text
-	CreatedAt     pgtype.Timestamptz
+	DurationMs    sql.NullInt32
+	AgentActionID sql.NullString
+	Metadata      json.RawMessage
+	ActorID       sql.NullString
+	ActorType     sql.NullString
+	ActorName     sql.NullString
+	CreatedAt     time.Time
 }
 
 type AgentTokenUsage struct {
 	ID           string
 	AccountID    string
-	Date         pgtype.Date
+	Date         time.Time
 	InputTokens  int64
 	OutputTokens int64
 	TotalCost    float64
 	RunCount     int32
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type Announcement struct {
+	ID               string
+	Scope            string
+	AccountID        sql.NullString
+	Category         string
+	TemplateKey      sql.NullString
+	TemplateParams   json.RawMessage
+	Title            string
+	Body             sql.NullString
+	LinkResourceType sql.NullString
+	LinkResourceID   sql.NullString
+	Priority         string
+	Audience         json.RawMessage
+	PublishAt        time.Time
+	ExpiresAt        sql.NullTime
+	CreatedBy        sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type AnnouncementReceipt struct {
+	ID             string
+	AnnouncementID string
+	AccountUserID  string
+	SeenAt         sql.NullTime
+	ReadAt         sql.NullTime
+	DismissedAt    sql.NullTime
+	CreatedAt      time.Time
+}
+
+type ApiKey struct {
+	ID             int64
+	TypeID         string
+	KeyID          string
+	Name           sql.NullString
+	SecretHash     []byte
+	RedactedValue  string
+	OwnerAccountID string
+	RoleID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	LastUsedAt     sql.NullTime
+	ExpiresAt      sql.NullTime
+	RevokedAt      sql.NullTime
+}
+
+type Attribute struct {
+	ID         string
+	Text       string
+	Order      int32
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	PropertyID string
+	ColorCode  string
+	AccountID  string
+	IsPublic   bool
+}
+
+type AuditEvent struct {
+	ID               int64
+	TypeID           string
+	ActorID          string
+	ActorType        string
+	IdentityType     string
+	AccountID        string
+	TargetAccountID  string
+	Action           string
+	ResourceType     string
+	ResourceID       string
+	Changes          json.RawMessage
+	Metadata         json.RawMessage
+	ServiceName      string
+	RequestID        sql.NullString
+	IdempotencyKeyID sql.NullString
+	SourceIp         sql.NullString
+	OccurredAt       time.Time
+	CreatedAt        time.Time
+	RootResourceID   sql.NullString
+	RootResourceType sql.NullString
+}
+
+type BackfillProgress struct {
+	Name        string
+	CursorValue string
+	RowsDone    int64
+	CompletedAt sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type Batch struct {
+	ID                string
+	CreatedAt         time.Time
+	ClosedAt          sql.NullTime
+	UpdatedAt         time.Time
+	AccountID         string
+	ItemID            string
+	QuantityID        string
+	ScanningStationID sql.NullString
+	SecondsQuantityID sql.NullString
+	WasteQuantityID   sql.NullString
+	ProductionStepID  sql.NullString
+	ProductionRunID   sql.NullString
+	ScannedAt         sql.NullTime
+	LocationID        sql.NullString
+}
+
+type BatchCountAdjustment struct {
+	ID             string
+	AccountID      string
+	BatchID        string
+	ClosingBatchID string
+	PreviousValue  string
+	CountedValue   string
+	UnitID         string
+	CreatedAt      time.Time
+}
+
+type BatchFlow struct {
+	A string
+	B string
+}
+
+type BatchesMachine struct {
+	A string
+	B string
+}
+
+type Carrier struct {
+	ID                     string
+	Code                   sql.NullString
+	Description            sql.NullString
+	Name                   string
+	ShippoCarrierAccountID sql.NullString
+	AccountNumber          sql.NullString
+	AccountID              sql.NullString
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	IsPortalEnabled        bool
+	DeletedAt              sql.NullTime
+}
+
+type CarrierOption struct {
+	ID                 string
+	Code               string
+	Name               string
+	ServiceLevelToken  sql.NullString
+	IsPortalEnabled    bool
+	IsDefault          bool
+	CarrierID          string
+	AccountID          sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DefaultTransitDays sql.NullInt32
+}
+
+type CarrierTransitEstimate struct {
+	ID              string
+	AccountID       string
+	CarrierOptionID string
+	OriginCountry   string
+	OriginPostal    string
+	DestCountry     string
+	DestPostal      string
+	TransitDays     int32
+	SourceCode      string
+	RefreshedAt     time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type ChangeLog struct {
+	ID                string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Description       string
+	ResponsibleUserID sql.NullString
+	AccountID         string
+	RecordID          string
+	ActionTypeCode    string
+	ModelType         string
+}
+
+type Color struct {
+	ID        string
+	CreatedAt time.Time
+	DarkHex   sql.NullString
+	LightHex  sql.NullString
+	Name      sql.NullString
+	Code      string
+	UpdatedAt time.Time
+}
+
+type Consumption struct {
+	ID               string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ItemID           string
+	QuantityID       string
+	ProductionStepID sql.NullString
+	WasteQuantityID  string
+	Instructions     sql.NullString
+}
+
+type Conversation struct {
+	ID                     string
+	AccountID              string
+	Type                   string
+	Audience               string
+	Title                  sql.NullString
+	GroupID                sql.NullString
+	TopicResourceType      sql.NullString
+	TopicResourceID        sql.NullString
+	CreatedByParticipantID sql.NullString
+	NextSequence           int64
+	LastMessageID          sql.NullString
+	LastMessageAt          sql.NullTime
+	IsArchived             bool
+	LegalHold              bool
+	WorkflowStatus         sql.NullString
+	AssigneeResourceType   sql.NullString
+	AssigneeResourceID     sql.NullString
+	EmailInboxID           sql.NullString
+	EmailExternalAddress   sql.NullString
+	Metadata               json.RawMessage
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type ConversationDmKey struct {
+	AccountID      string
+	DmKey          string
+	ConversationID string
+}
+
+type ConversationLink struct {
+	ID                     string
+	AccountID              string
+	ConversationID         string
+	ResourceType           string
+	ResourceID             string
+	CreatedByParticipantID sql.NullString
+	CreatedAt              time.Time
+}
+
+type ConversationParticipant struct {
+	ID                   string
+	ConversationID       string
+	AccountID            string
+	ParticipantType      string
+	AccountUserID        sql.NullString
+	AgentConfigID        sql.NullString
+	Role                 string
+	Membership           string
+	Notifications        string
+	MutedUntil           sql.NullTime
+	LastReadMessageID    sql.NullString
+	LastReadSequence     int64
+	LastReadAt           sql.NullTime
+	LastSeenAt           sql.NullTime
+	HiddenAt             sql.NullTime
+	AgentTriggerPolicy   sql.NullString
+	AgentTriggerKeywords json.RawMessage
+	RelationAccountID    sql.NullString
+	JoinedAt             time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 type DeletedRecord struct {
 	ID           int64
-	DeletedAt    pgtype.Timestamptz
+	DeletedAt    time.Time
 	ResourceType string
 	ResourceID   string
-	Data         []byte
+	Data         json.RawMessage
+}
+
+type Delivery struct {
+	ID                 string
+	Number             string
+	SalesOrderID       string
+	AccountID          string
+	DeliveryStatusCode string
+	AcceptedAt         sql.NullTime
+	RejectedAt         sql.NullTime
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type DeliveryLine struct {
+	ID                   string
+	DeliveryID           string
+	ReceivingOrderLineID string
+	QuantityID           string
+	UnitCostID           string
+	StorageLocationID    sql.NullString
+	AcceptedAt           sql.NullTime
+	RejectedAt           sql.NullTime
+	LotID                sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type DeliveryStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type DemandOverride struct {
+	ID               string
+	AccountID        string
+	ScopeCode        string
+	ScopeRefID       string
+	PeriodStartDate  time.Time
+	PeriodEndDate    time.Time
+	OverrideTypeCode string
+	Value            string
+	UnitID           sql.NullString
+	ReasonCode       sql.NullString
+	Note             sql.NullString
+	CreatedByID      string
+	EffectiveFrom    time.Time
+	ExpiresAt        sql.NullTime
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type DemandOverrideType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Department struct {
+	ID          string
+	Name        string
+	Notes       sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	LocationID  sql.NullString
+	AccountID   string
+	LaborRateID sql.NullString
+}
+
+type DocApiKey struct {
+	ID              int64
+	TypeID          string
+	ApiKeyID        string
+	OwnerAccountID  string
+	EncryptedSecret string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type DocumentSetting struct {
+	ID             string
+	AccountID      string
+	DocumentType   string
+	ProcessOwner   sql.NullString
+	DocumentNumber sql.NullString
+	Revision       sql.NullString
+	FooterText     sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type EmailDomain struct {
+	ID             string
+	AccountID      string
+	Domain         string
+	Status         string
+	DkimTokens     json.RawMessage
+	VerifiedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	MailFromDomain sql.NullString
+}
+
+type EmailInbox struct {
+	ID                   string
+	AccountID            string
+	EmailDomainID        string
+	Address              string
+	FromName             sql.NullString
+	Status               string
+	AgentConfigID        sql.NullString
+	AgentTriggerPolicy   sql.NullString
+	AgentTriggerKeywords json.RawMessage
+	GroupID              sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type EmailLog struct {
+	ID           string
+	HasSent      bool
+	AccountID    string
+	SentByID     sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	Subject      sql.NullString
+	Filename     sql.NullString
+	SesMessageID sql.NullString
+}
+
+type EmailMessage struct {
+	ID             string
+	AccountID      string
+	ConversationID string
+	MessageID      string
+	EmailInboxID   string
+	Direction      string
+	RfcMessageID   string
+	InReplyTo      sql.NullString
+	References     sql.NullString
+	FromAddr       string
+	ToAddrs        string
+	CcAddrs        sql.NullString
+	Subject        sql.NullString
+	RawS3Key       sql.NullString
+	SesMessageID   sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type EmailRecipient struct {
+	ID         string
+	Email      string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	EmailLogID sql.NullString
+}
+
+type EmailSender struct {
+	ID            string
+	AccountID     string
+	EmailDomainID string
+	LocalPart     string
+	FromName      sql.NullString
+	ReplyTo       sql.NullString
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type ErrorLog struct {
+	ID                string
+	AffectedUserID    sql.NullString
+	ApiLocationCode   string
+	PublicMessage     string
+	PrivateMessage    sql.NullString
+	Name              string
+	ErrorSeverityCode string
+	LocationFile      string
+	LocationMethod    string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         sql.NullString
+}
+
+type FulfillmentPolicy struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Geolocation struct {
+	ID             string
+	StreetLine1    sql.NullString
+	StreetLine2    sql.NullString
+	Locality       sql.NullString
+	State          sql.NullString
+	PostalCode     sql.NullString
+	Country        string
+	AddressDetails json.RawMessage
+	GooglePlaceID  sql.NullString
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	Latitude       sql.NullFloat64
+	Longitude      sql.NullFloat64
+	Timezone       sql.NullString
+}
+
+type GooseDbVersionDatum struct {
+	ID        uint64
+	VersionID int64
+	IsApplied bool
+	Tstamp    sql.NullTime
+}
+
+type HubspotAccountUserLink struct {
+	ID                string
+	AccountUserID     string
+	HubspotContactID  string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	OwnerAccountID    string
+	CustomerAccountID string
+}
+
+type HubspotCompanyReview struct {
+	ID                string
+	JobID             string
+	AccountID         string
+	AugnoCustomerID   string
+	CustomerName      string
+	CustomerEmail     sql.NullString
+	CustomerUrl       sql.NullString
+	CandidateMatches  json.RawMessage
+	Status            string
+	Resolution        sql.NullString
+	ResolvedHubspotID sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+}
+
+type HubspotSyncJob struct {
+	ID             string
+	AccountID      string
+	Status         string
+	DryRun         bool
+	GoliveCutoffAt sql.NullTime
+	Cursors        json.RawMessage
+	Counts         json.RawMessage
+	LastError      sql.NullString
+	StartedAt      sql.NullTime
+	CompletedAt    sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type HubspotSyncRecord struct {
+	ID           string
+	AccountID    string
+	AugnoType    string
+	AugnoID      string
+	HubspotType  string
+	HubspotID    string
+	SyncHash     sql.NullString
+	LastSyncedAt sql.NullTime
+	LastError    sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type IdempotencyKey struct {
+	ID              int64
+	TypeID          string
+	IdempotencyKey  string
+	ActorID         sql.NullString
+	IdentityType    string
+	TargetAccountID sql.NullString
+	RequestMethod   string
+	NormalizedRoute string
+	RequestBodyHash string
+	ScopeHash       string
+	RequestParams   json.RawMessage
+	ResponseCode    sql.NullInt32
+	ResponseBody    json.RawMessage
+	ResponseHeaders json.RawMessage
+	RecoveryPoint   string
+	LockedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	LastRunAt       sql.NullTime
+	ExpiresAt       sql.NullTime
+	ResponseBodyKey sql.NullString
+}
+
+type InventoryAllocation struct {
+	ID                 string
+	InventoryReceiptID string
+	InventoryIssueID   string
+	QuantityID         string
+	UnitCostID         string
+	TotalCostID        string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type InventoryChangeLog struct {
+	ID                string
+	ItemID            string
+	QuantityID        string
+	ScanningStationID sql.NullString
+	CreatedAt         time.Time
+	AccountID         string
+	InventoryLogID    sql.NullString
+	UpdatedAt         time.Time
+	ResponsibleUserID sql.NullString
+	ActionTypeCode    string
+}
+
+type InventoryIssue struct {
+	ID                string
+	AccountID         string
+	ItemID            string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
+	IssuedAt          sql.NullTime
+	OrderID           sql.NullString
+	BatchID           sql.NullString
+	QuantityID        string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	StatusCode        string
+}
+
+type InventoryItemLock struct {
+	ItemID    string
+	CreatedAt time.Time
+}
+
+type InventoryLog struct {
+	ID         string
+	ItemID     string
+	QuantityID string
+	CreatedAt  time.Time
+	AccountID  string
+	UpdatedAt  time.Time
+}
+
+type InventoryPolicyType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type InventoryReceipt struct {
+	ID                string
+	OwnerAccountID    string
+	HolderAccountID   string
+	ItemID            string
+	StorageLocationID sql.NullString
+	LotID             sql.NullString
+	ReceivedAt        time.Time
+	QuantityID        string
+	UnitCostID        string
+	OrderID           sql.NullString
+	BatchID           sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	StatusCode        string
+}
+
+type InventoryReceiptStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Inventoryissuestatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Invoice struct {
+	ID                   string
+	Number               string
+	Note                 sql.NullString
+	HasBeenSent          bool
+	IsPaidInFull         bool
+	SalesOrderID         string
+	BillingAddressID     string
+	AccountID            string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	IsOverPaid           bool
+	PaidInFullMarkedByID sql.NullString
+	Metadata             json.RawMessage
+}
+
+type InvoiceLine struct {
+	ID               string
+	InvoiceID        string
+	QuantityID       string
+	SalesOrderLineID string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
+}
+
+type Item struct {
+	ID                 string
+	Sku                string
+	Description        sql.NullString
+	Notes              sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          sql.NullTime
+	UnitValueID        string
+	BurnRateID         string
+	AccountID          string
+	UnitCostID         string
+	ItemCategoryID     string
+	IsDirty            bool
+	ItemTypeCode       string
+	BurnRateComputedAt sql.NullTime
+}
+
+type ItemAttribute struct {
+	A string
+	B string
+}
+
+type ItemCategoriesProperty struct {
+	A string
+	B string
+}
+
+type ItemCategoriesQuantityDiscount struct {
+	A string
+	B string
+}
+
+type ItemCategory struct {
+	ID                   string
+	Name                 string
+	Notes                sql.NullString
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	AccountID            sql.NullString
+	ItemCategoryTypeCode string
+	UnitGroupID          string
+}
+
+type ItemCategoryType struct {
+	ID        string
+	CreatedAt time.Time
+	Name      string
+	Code      string
+	UpdatedAt time.Time
+}
+
+type ItemType struct {
+	ID        string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      sql.NullString
+	Code      string
+}
+
+type Job struct {
+	ID           int64
+	JobID        string
+	Type         string
+	AccountID    sql.NullString
+	CreatedBy    sql.NullString
+	Results      json.RawMessage
+	Errors       json.RawMessage
+	ErrorSummary sql.NullString
+	UpdatedAt    time.Time
+	CreatedAt    time.Time
+	StartedAt    sql.NullTime
+	CancelledAt  sql.NullTime
+	CompletedAt  sql.NullTime
+	FailedAt     sql.NullTime
+	Error        json.RawMessage
+	ResourceType sql.NullString
+	JobItems     json.RawMessage
+	JobItemsKey  sql.NullString
+}
+
+type JournalPosting struct {
+	ID                   string
+	AccountTransactionID string
+	AccountID            string
+	PostingSideCode      string
+	AmountID             string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type LabelSize struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type LabelType struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Lot struct {
+	ID             string
+	AccountID      string
+	ItemID         string
+	LotNumber      string
+	ManufacturedAt sql.NullTime
+	ExpiresAt      sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type Machine struct {
+	ID               string
+	AccountID        string
+	Name             string
+	Notes            sql.NullString
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ProductionStepID sql.NullString
+	SerialNumber     string
+	DepartmentID     string
+}
+
+type MachineDowntimeEvent struct {
+	ID               string
+	AccountID        string
+	MachineID        string
+	DepartmentID     sql.NullString
+	ProductionStepID sql.NullString
+	ReasonCode       string
+	StartedAt        time.Time
+	EndedAt          sql.NullTime
+	DurationSeconds  sql.NullInt32
+	ShiftDate        time.Time
+	ShiftCode        sql.NullString
+	ItemID           sql.NullString
+	ProductionRunID  sql.NullString
+	BatchID          sql.NullString
+	ScheduleLineID   sql.NullString
+	Note             sql.NullString
+	ReportedByID     string
+	SourceCode       string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type MachineDowntimeReason struct {
+	ID        string
+	Code      string
+	Name      string
+	OeeBucket string
+	IsPlanned bool
+	SortOrder int32
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type MachineItem struct {
+	AccountID string
+	MachineID string
+	ItemID    string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Material struct {
+	ID           string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ItemID       string
+	OrderPointID string
+	LeadTimeID   string
+}
+
+type Message struct {
+	ID                      string
+	ConversationID          string
+	AccountID               string
+	Sequence                sql.NullInt64
+	Kind                    string
+	Status                  string
+	Visibility              string
+	SenderParticipantID     sql.NullString
+	ClientMessageID         sql.NullString
+	Body                    sql.NullString
+	Subject                 sql.NullString
+	Channel                 sql.NullString
+	Preview                 sql.NullString
+	EventType               sql.NullString
+	TemplateKey             sql.NullString
+	TemplateParams          json.RawMessage
+	LinkResourceType        sql.NullString
+	LinkResourceID          sql.NullString
+	AgentRunID              sql.NullString
+	ReplyToMessageID        sql.NullString
+	SourceThreadMessageID   sql.NullString
+	ApprovedByAccountUserID sql.NullString
+	StreamingState          string
+	ScheduledFor            sql.NullTime
+	ScheduledAttempts       int32
+	LastError               sql.NullString
+	LockedAt                sql.NullTime
+	LockOwner               sql.NullString
+	EditedAt                sql.NullTime
+	DeletedAt               sql.NullTime
+	Metadata                json.RawMessage
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+type MessageAttachment struct {
+	ID           string
+	MessageID    string
+	AccountID    string
+	Kind         string
+	S3Key        sql.NullString
+	Url          sql.NullString
+	ThumbnailUrl sql.NullString
+	Filename     sql.NullString
+	ContentType  sql.NullString
+	SizeBytes    sql.NullInt64
+	ResourceType sql.NullString
+	ResourceID   sql.NullString
+	DeletedAt    sql.NullTime
+	S3PurgedAt   sql.NullTime
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 type MessageInbox struct {
@@ -178,16 +1421,17 @@ type MessageInbox struct {
 	ServiceName     string
 	Handler         string
 	MessageType     string
-	RequestID       pgtype.Text
-	ParentMessageID pgtype.Text
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
 	Status          string
 	Attempts        int32
-	LastError       pgtype.Text
-	ReceivedAt      pgtype.Timestamptz
-	ProcessedAt     pgtype.Timestamptz
-	FailedAt        pgtype.Timestamptz
-	LockOwner       pgtype.Text
-	LockExpiresAt   pgtype.Timestamptz
+	LastError       sql.NullString
+	ReceivedAt      time.Time
+	ProcessedAt     sql.NullTime
+	AlertedAt       sql.NullTime
+	FailedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
 }
 
 type MessageOutbox struct {
@@ -196,48 +1440,1285 @@ type MessageOutbox struct {
 	ServiceName     string
 	MessageType     string
 	Destination     string
-	RoutingKey      pgtype.Text
+	RoutingKey      sql.NullString
 	Headers         db.NullableRawMessage
-	Payload         []byte
+	Payload         json.RawMessage
 	Status          string
 	Attempts        int32
 	MaxAttempts     int32
-	NextRunAt       pgtype.Timestamptz
-	LockedAt        pgtype.Timestamptz
-	LockOwner       pgtype.Text
-	LockExpiresAt   pgtype.Timestamptz
-	LastError       pgtype.Text
-	PublishedAt     pgtype.Timestamptz
-	RequestID       pgtype.Text
-	ParentMessageID pgtype.Text
-	CreatedAt       pgtype.Timestamptz
-	UpdatedAt       pgtype.Timestamptz
+	NextRunAt       time.Time
+	LockedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
+	LastError       sql.NullString
+	PublishedAt     sql.NullTime
+	RequestID       sql.NullString
+	ParentMessageID sql.NullString
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	AlertedAt       sql.NullTime
+}
+
+type MessageReceipt struct {
+	ID             string
+	MessageID      string
+	ConversationID string
+	AccountUserID  string
+	DeliveredAt    sql.NullTime
+	ReadAt         sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type MessagingBlock struct {
+	ID                   string
+	AccountID            string
+	BlockerAccountUserID string
+	BlockedAccountUserID string
+	CreatedAt            time.Time
+}
+
+type MessagingGroup struct {
+	ID                     string
+	AccountID              string
+	Name                   string
+	CreatedByAccountUserID sql.NullString
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type MessagingGroupMember struct {
+	ID            string
+	GroupID       string
+	AccountID     string
+	MemberType    string
+	AccountUserID sql.NullString
+	AgentConfigID sql.NullString
+	CreatedAt     time.Time
+}
+
+type MessagingReport struct {
+	ID                    string
+	AccountID             string
+	ConversationID        string
+	MessageID             sql.NullString
+	ReporterAccountUserID string
+	Reason                string
+	CreatedAt             time.Time
+}
+
+type Notification struct {
+	ID                     string
+	AccountID              string
+	RecipientAccountUserID string
+	Category               string
+	SourceMessageID        sql.NullString
+	ConversationID         sql.NullString
+	Title                  string
+	Body                   sql.NullString
+	TemplateKey            sql.NullString
+	TemplateParams         json.RawMessage
+	LinkResourceType       sql.NullString
+	LinkResourceID         sql.NullString
+	SenderType             sql.NullString
+	SenderID               sql.NullString
+	SenderName             sql.NullString
+	Priority               string
+	SeenAt                 sql.NullTime
+	ReadAt                 sql.NullTime
+	DismissedAt            sql.NullTime
+	Metadata               json.RawMessage
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+}
+
+type NotificationPreference struct {
+	ID            string
+	AccountID     string
+	AccountUserID string
+	Category      string
+	InAppEnabled  bool
+	EmailEnabled  bool
+	PushEnabled   bool
+	Digest        string
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type OnboardingStatus struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type OperatingCalendar struct {
+	ID                        string
+	AccountID                 string
+	Code                      string
+	Name                      string
+	OperatingCalendarKindCode string
+	DaysOfWeek                string
+	CutoffAt                  sql.NullString
+	Timezone                  sql.NullString
+	IsDefault                 bool
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
+	DeletedAt                 sql.NullTime
+}
+
+type OperatingCalendarClosure struct {
+	ID                  string
+	AccountID           string
+	OperatingCalendarID string
+	ClosedOn            time.Time
+	Name                string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type OrderDiscount struct {
+	ID               string
+	Name             string
+	Code             string
+	Percentage       float64
+	Value            float64
+	DiscountTypeCode string
+	AccountID        string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type OrderEmailContact struct {
+	ID                   string
+	SalesOrderID         string
+	AccountUserID        string
+	NotificationTypeCode string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type OrderPaymentIntent struct {
+	ID              string
+	PaymentIntentID string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	SalesOrderID    string
+}
+
+type ParentChildProductionStep struct {
+	A string
+	B string
+}
+
+type Part struct {
+	ID        string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	ItemID    string
+}
+
+type PaymentTerm struct {
+	ID        string
+	IsActive  bool
+	Name      string
+	AccountID sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type PaymentTermsRegistrationFlow struct {
+	A string
+	B string
+}
+
+type Permission struct {
+	ID                  string
+	Name                string
+	Description         sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Code                string
+	PermissionGroupCode string
+}
+
+type PermissionGroup struct {
+	ID          string
+	Name        string
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Code        string
+}
+
+type Pick struct {
+	ID             string
+	Number         string
+	SalesOrderID   string
+	AccountID      string
+	FinishedAt     sql.NullTime
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	ShipBySortDate time.Time
+	BuyerAccountID sql.NullString
+}
+
+type PickLine struct {
+	ID               string
+	PickID           string
+	QuantityID       string
+	SalesOrderLineID string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	PackedAt         sql.NullTime
+	QuantityValue    sql.NullString
+	QuantityUnitID   sql.NullString
+}
+
+type PortalDomain struct {
+	ID         string
+	AccountID  string
+	Domain     string
+	Status     string
+	DnsRecords json.RawMessage
+	VerifiedAt sql.NullTime
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+type PortalRegistrationSession struct {
+	ID                 int64
+	TypeID             string
+	UserID             string
+	SellerAccountID    string
+	SellerSlug         string
+	IsExistingCustomer sql.NullBool
+	Step               string
+	CustomerID         sql.NullString
+	SessionData        json.RawMessage
+	CompletedAt        sql.NullTime
+	AbandonedAt        sql.NullTime
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+type Priority struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Product struct {
+	ID              string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	ItemID          string
+	ProductTypeCode string
+	ProductLineID   sql.NullString
+	IsPortalReady   bool
+}
+
+type ProductLine struct {
+	ID                    string
+	Name                  string
+	Description           sql.NullString
+	Notes                 sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	AccountID             sql.NullString
+	UnitGroupID           string
+	IsCommissionExempt    bool
+	IsFreightExempt       bool
+	DefaultLotID          sql.NullString
+	FulfillmentPolicyCode sql.NullString
+}
+
+type ProductLineTarget struct {
+	ID            string
+	StartDate     time.Time
+	EndDate       time.Time
+	ProductLineID string
+	SalesRepID    string
+	AccountID     string
+	CreatedAt     time.Time
+	AmountID      string
+	UpdatedAt     time.Time
+}
+
+type ProductLinesQuantityDiscount struct {
+	A string
+	B string
+}
+
+type ProductType struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Production struct {
+	ID               string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	ItemID           string
+	QuantityID       string
+	ProductionStepID sql.NullString
+}
+
+type ProductionRun struct {
+	ID                string
+	ResponsibleUserID string
+	Number            string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         string
+	CompletedAt       sql.NullTime
+	StartedAt         sql.NullTime
+}
+
+type ProductionSchedule struct {
+	ID                    string
+	AccountID             string
+	Version               int32
+	StatusCode            string
+	Name                  sql.NullString
+	PlanningAsOf          time.Time
+	HorizonStartDate      time.Time
+	HorizonEndDate        time.Time
+	HorizonWeeks          int32
+	FrozenWeeks           int32
+	FrozenThroughDate     sql.NullTime
+	DemandBasisCode       string
+	GenerationSourceCode  string
+	SolverVersion         string
+	SettingsSnapshot      json.RawMessage
+	Diagnostics           json.RawMessage
+	ErrorMessage          sql.NullString
+	FrozenLineCount       int32
+	FrozenPlannedQuantity string
+	GeneratedByID         sql.NullString
+	PublishedByID         sql.NullString
+	PublishedAt           sql.NullTime
+	SupersededByID        sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+type ProductionScheduleDerivedLine struct {
+	ID                   string
+	AccountID            string
+	ProductionScheduleID string
+	SourceLineID         string
+	ProductionStepID     string
+	DepartmentID         sql.NullString
+	ItemID               string
+	WeekIndex            int32
+	WeekStartDate        time.Time
+	Quantity             string
+	PlannedUnitID        sql.NullString
+	ExplosionDepth       int32
+	OffsetWeeks          int32
+	StatusCode           string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleDeviation struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	ProductionScheduleLineID sql.NullString
+	DeviationTypeCode        string
+	IsFrozenWeek             bool
+	WeekIndex                sql.NullInt32
+	MachineID                sql.NullString
+	ItemID                   sql.NullString
+	BeforeJson               json.RawMessage
+	AfterJson                json.RawMessage
+	DeltaQuantity            string
+	DeltaRunHours            string
+	ReasonCode               sql.NullString
+	ReasonNote               sql.NullString
+	ActorID                  string
+	CreatedAt                time.Time
+}
+
+type ProductionScheduleFinishedPolicy struct {
+	ID                   string
+	AccountID            string
+	ProductionScheduleID string
+	ItemID               string
+	Sku                  string
+	GreigeItemID         string
+	GreigeSku            string
+	ProductLineID        sql.NullString
+	AnnualDemand         string
+	WeeklyDemand         string
+	SigmaWeekly          string
+	SafetyStock          string
+	ReorderPoint         string
+	OnHand               string
+	WeeksOfCover         string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleFinishingLine struct {
+	ID                    string
+	AccountID             string
+	ProductionScheduleID  string
+	WeekIndex             int32
+	WeekStartDate         time.Time
+	ItemID                string
+	Sku                   string
+	GreigeItemID          string
+	GreigeSku             string
+	DepartmentID          sql.NullString
+	ProductionStepID      sql.NullString
+	PlannedQuantity       string
+	PlannedUnitID         sql.NullString
+	PlannedLots           int32
+	PlannedLotUnits       string
+	PlannedRunHours       string
+	GreigeConsumed        string
+	FirmUnits             string
+	ProjectedOnHandBefore string
+	ProjectedOnHandAfter  string
+	StatusCode            string
+	SourceCode            string
+	IsFrozen              bool
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+type ProductionScheduleItemPolicy struct {
+	ID                      string
+	AccountID               string
+	ProductionScheduleID    string
+	ItemID                  string
+	Sku                     string
+	ProductionStepID        sql.NullString
+	PrimaryMachineID        sql.NullString
+	AnnualDemand            string
+	WeeklyDemand            string
+	SecondsPerUnit          string
+	UnitCost                string
+	SetupCost               string
+	HoldingCost             string
+	EoqUnits                string
+	ConstraintLeadTimeWeeks string
+	FinishLeadTimeWeeks     string
+	SigmaWeeklyPooled       string
+	SigmaDownstreamSum      string
+	SafetyStockPrimary      string
+	SafetyStockDownstream   string
+	ReorderPoint            string
+	OrderUpTo               string
+	OnHandEchelon           string
+	OnHandGreige            string
+	AverageGreigeInventory  string
+	MaxGreigeInventory      string
+	WeeksOfCover            string
+	ProjectedOnHand         json.RawMessage
+	AnnualRunHours          string
+	AbcClass                sql.NullString
+	WasEoqCapped            bool
+	WasCapacityStarved      bool
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	UnitID                  sql.NullString
+	FirmDemandUnits         string
+	ForecastDemandUnits     string
+	FulfillmentPolicyCode   string
+	PolicySourceCode        string
+	ProjectedGreigeOnHand   json.RawMessage
+}
+
+type ProductionScheduleItemSetting struct {
+	ID                    string
+	AccountID             string
+	ItemID                string
+	IsExcluded            bool
+	MinLotUnits           sql.NullString
+	MaxLotUnits           sql.NullString
+	LotMultipleUnits      sql.NullString
+	FixedLeadTimeWeeks    sql.NullString
+	ServiceLevelZ         sql.NullString
+	ManualEoqUnits        sql.NullString
+	AbcClassOverride      sql.NullString
+	PreferredMachineID    sql.NullString
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	FulfillmentPolicyCode sql.NullString
+}
+
+type ProductionScheduleLine struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	WeekIndex                int32
+	WeekStartDate            time.Time
+	MachineID                string
+	ProductionStepID         sql.NullString
+	DepartmentID             sql.NullString
+	ItemID                   string
+	PlannedQuantity          string
+	PlannedUnitID            sql.NullString
+	PlannedLots              int32
+	PlannedRunHours          string
+	PlannedChangeoverMinutes string
+	SequenceIndex            int32
+	ProjectedOnHandBefore    string
+	ProjectedOnHandAfter     string
+	StatusCode               string
+	SourceCode               string
+	ReasonCode               sql.NullString
+	IsFrozen                 bool
+	ProductionRunID          sql.NullString
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+	PlannedLotUnits          string
+}
+
+type ProductionScheduleLineOrder struct {
+	ID                       string
+	AccountID                string
+	ProductionScheduleID     string
+	ProductionScheduleLineID string
+	SalesOrderID             string
+	SalesOrderLineID         string
+	AllocatedQuantity        string
+	CreatedAt                time.Time
+	UpdatedAt                time.Time
+}
+
+type ProductionScheduleLineStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type ProductionScheduleResourceSetting struct {
+	ID                   string
+	AccountID            string
+	ScopeCode            string
+	ScopeRefID           string
+	IsExcluded           bool
+	IsEnabled            bool
+	ShiftsPerDay         sql.NullInt32
+	HoursPerShift        sql.NullString
+	WorkDaysPerWeek      sql.NullInt32
+	CapacityHeadroomPct  sql.NullString
+	EfficiencyPct        sql.NullString
+	LeadTimeWeeks        sql.NullString
+	LeadTimeOffsetWeeks  string
+	ChangeoverAvgMinutes sql.NullString
+	ChangeoverMinMinutes sql.NullString
+	ChangeoverMaxMinutes sql.NullString
+	SortOrder            int32
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type ProductionScheduleStatus struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type ProductionShift struct {
+	ID              string
+	AccountID       string
+	DepartmentID    sql.NullString
+	Code            string
+	Name            string
+	StartTime       string
+	EndTime         string
+	CrossesMidnight bool
+	DaysOfWeek      string
+	IsActive        bool
+	SortOrder       int32
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type ProductionStep struct {
+	ID                string
+	Name              string
+	Notes             sql.NullString
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         string
+	ScanningStationID sql.NullString
+	Allowances        string
+	LaborRateID       string
+	LaborTimeID       string
+	LevelingFactor    string
+	OverheadRateID    string
+	DepartmentID      sql.NullString
+}
+
+type Property struct {
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	IsPublic  bool
+	AccountID string
+}
+
+type Quantity struct {
+	ID        string
+	Value     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	UnitID    string
+}
+
+type QuantityDiscount struct {
+	ID        string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	AccountID string
+}
+
+type QuantityDiscountTier struct {
+	ID                 string
+	DiscountPercentage string
+	Name               string
+	Threshold          string
+	ParentTierID       sql.NullString
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	QuantityDiscountID sql.NullString
+}
+
+type QuantityDiscountsAttribute struct {
+	A string
+	B string
+}
+
+type QuantityDiscountsUnit struct {
+	A string
+	B string
+}
+
+type Rate struct {
+	ID                string
+	Value             string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	NumeratorUnitID   string
+	DenominatorUnitID string
+}
+
+type ReceivingOrder struct {
+	ID          string
+	Number      string
+	OrderID     string
+	AccountID   string
+	CompletedAt sql.NullTime
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+type ReceivingOrderLine struct {
+	ID               string
+	ReceivingOrderID string
+	QuantityID       string
+	SalesOrderLineID string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	StockedAt        sql.NullTime
+}
+
+type RefreshToken struct {
+	Token     string
+	UserID    string
+	ExpiresAt time.Time
+	RevokedAt sql.NullTime
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type RegistrationFlow struct {
+	ID        string
+	Name      string
+	AccountID string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type RegistrationFlowsShippingTerm struct {
+	A string
+	B string
+}
+
+type RequestLog struct {
+	ID                   string
+	Method               string
+	Host                 string
+	Path                 string
+	NormalizedRoute      string
+	StatusCode           int32
+	LatencyUs            int64
+	TargetAccountID      sql.NullString
+	PublicEndpoint       bool
+	ApiVersion           sql.NullString
+	AccountID            sql.NullString
+	ActorID              sql.NullString
+	ClientIp             sql.NullString
+	ClientIpString       sql.NullString
+	UserAgent            sql.NullString
+	Referrer             sql.NullString
+	ErrorMessage         sql.NullString
+	CreatedAt            time.Time
+	OccurredAt           time.Time
+	IdempotencyKeyID     sql.NullString
+	InternalErrorMessage sql.NullString
+	TraceID              sql.NullString
+	Hidden               bool
+	ErrorCode            sql.NullString
+	IdentityType         sql.NullString
+	ActorType            sql.NullString
+	PayloadKey           sql.NullString
+}
+
+type Role struct {
+	ID           string
+	Name         string
+	RoleTypeCode string
+	AccountID    sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+type RolePermission struct {
+	ID             string
+	Create         bool
+	Read           bool
+	Update         bool
+	Delete         bool
+	RoleID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	PermissionCode string
+}
+
+type RoleType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type SalesBuyerSummary struct {
+	AccountID      string
+	BuyerAccountID string
+	FirstOrderedAt time.Time
+	TotalInvoiced  string
+	RefreshedAt    time.Time
+}
+
+type SalesFactDirty struct {
+	ScopeType string
+	ScopeID   string
+	AccountID string
+	MarkedAt  time.Time
+}
+
+type SalesFactRollup struct {
+	AccountID          string
+	SalesOrderTypeCode string
+	Dimension          string
+	ProductLineKey     string
+	Grain              string
+	BucketStart        time.Time
+	RowHash            []byte
+	DimensionID        string
+	SalesRepKey        string
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	InvoiceCount       int32
+	LineCount          int32
+}
+
+type SalesLineFact struct {
+	InvoicedAt         time.Time
+	SalesOrderID       string
+	ProductID          string
+	RefreshedAt        time.Time
+	QuantityBase       sql.NullString
+	TotalInvoiced      sql.NullString
+	TotalCost          sql.NullString
+	OrderedAt          sql.NullTime
+	IsPriced           bool
+	SalesOrderTypeCode string
+	AccountID          string
+	InvoiceLineID      string
+	InvoiceID          string
+	BuyerAccountID     string
+	SalesRepID         sql.NullString
+	OrderDiscountID    sql.NullString
+	ItemID             string
+	ProductLineID      string
+}
+
+type SalesOrder struct {
+	ID                     string
+	BillingAddressID       string
+	ShippingAddressID      string
+	CustomerPoNumber       sql.NullString
+	Note                   sql.NullString
+	Number                 string
+	IsAcknowledgmentSent   bool
+	CarrierID              sql.NullString
+	CarrierOptionID        sql.NullString
+	CarrierBillingAccount  sql.NullString
+	SalesRepID             sql.NullString
+	ShippingTermID         sql.NullString
+	PaymentTermID          sql.NullString
+	ProductionRunID        sql.NullString
+	OrderDiscountID        sql.NullString
+	BuyerAccountID         string
+	SellerAccountID        string
+	OwnerAccountID         string
+	CompletedAt            sql.NullTime
+	ExpiredAt              sql.NullTime
+	FirstShipAt            sql.NullTime
+	IssuedAt               sql.NullTime
+	PromisedAt             sql.NullTime
+	CreatedAt              time.Time
+	UpdatedAt              time.Time
+	LeadTimeDays           sql.NullInt32
+	LeadTimeSourceCode     sql.NullString
+	ShipByDate             sql.NullTime
+	TransitDays            sql.NullInt32
+	TransitSourceCode      sql.NullString
+	CalendarAdjustmentDays sql.NullInt32
+	LeadTimeOverrideDays   sql.NullInt32
+	ShipByCutoffAt         sql.NullTime
+	ShipByOverrideDate     sql.NullTime
+	SalesOrderTypeCode     string
+	SalesOrderStatusCode   string
+	PriorityCode           string
+	CarrierBillingType     sql.NullString
+	FreightPendingSince    sql.NullTime
+	Metadata               json.RawMessage
+}
+
+type SalesOrderLine struct {
+	ID                         string
+	ProductSku                 string
+	ProductDescription         sql.NullString
+	LineItemNumber             sql.NullInt32
+	ProductID                  sql.NullString
+	ItemID                     sql.NullString
+	SalesOrderID               string
+	QuantityID                 string
+	UnitPriceID                string
+	UnitCostID                 sql.NullString
+	CreatedAt                  time.Time
+	UpdatedAt                  time.Time
+	Metadata                   json.RawMessage
+	QuantityValue              sql.NullString
+	QuantityUnitID             sql.NullString
+	UnitPriceValue             sql.NullString
+	UnitPriceNumeratorUnitID   sql.NullString
+	UnitPriceDenominatorUnitID sql.NullString
+	UnitCostValue              sql.NullString
+	UnitCostNumeratorUnitID    sql.NullString
+	UnitCostDenominatorUnitID  sql.NullString
+}
+
+type SalesOrderStatus struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type SalesOrderType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type SalesSync struct {
+	Name                 string
+	CursorCreatedAt      sql.NullTime
+	CursorInvoiceID      sql.NullString
+	CursorAccountID      sql.NullString
+	CursorDay            sql.NullTime
+	CursorBuyerAccountID sql.NullString
+	FactsSince           sql.NullTime
+	PassStartedAt        sql.NullTime
+	LastCompletedAt      sql.NullTime
+	UpdatedAt            time.Time
+}
+
+type SandboxAccount struct {
+	ID             int64
+	TypeID         string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	OwnerAccountID string
+	AccountID      string
+}
+
+type ScanningStation struct {
+	ID                      string
+	Name                    string
+	Notes                   sql.NullString
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+	DepartmentID            string
+	AccountID               string
+	ScanningStationTypeCode string
+	LabelSizeCode           sql.NullString
+	LabelTypeCode           sql.NullString
+	MaterialCheckRequired   bool
+}
+
+type ScanningStationType struct {
+	ID        string
+	CreatedAt time.Time
+	Name      string
+	Code      string
+	UpdatedAt time.Time
+}
+
+type ScheduleDeviationType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 type ServiceIdempotencyKey struct {
-	ID             int64
-	TypeID         string
-	ServiceName    string
-	Handler        string
-	IdempotencyKey string
-	ActorID        pgtype.Text
-	IdentityType   string
-	ScopeHash      string
-	ResponseCode   pgtype.Int4
-	ResponseBody   []byte
-	RecoveryPoint  string
-	LockedAt       pgtype.Timestamptz
-	LockOwner      pgtype.Text
-	LockExpiresAt  pgtype.Timestamptz
-	CreatedAt      pgtype.Timestamptz
-	UpdatedAt      pgtype.Timestamptz
-	LastRunAt      pgtype.Timestamptz
-	ExpiresAt      pgtype.Timestamptz
+	ID              int64
+	TypeID          string
+	ServiceName     string
+	Handler         string
+	IdempotencyKey  string
+	ActorID         sql.NullString
+	IdentityType    string
+	ScopeHash       string
+	ResponseCode    sql.NullInt32
+	ResponseBody    *json.RawMessage
+	RecoveryPoint   string
+	LockedAt        sql.NullTime
+	LockOwner       sql.NullString
+	LockExpiresAt   sql.NullTime
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	LastRunAt       sql.NullTime
+	ExpiresAt       sql.NullTime
+	ResponseBodyKey sql.NullString
+}
+
+type Settlement struct {
+	ID                string
+	ResponsibleUserID sql.NullString
+	AccountID         string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	Note              sql.NullString
+	Number            string
+}
+
+type Shipment struct {
+	ID                   string
+	BillOfLading         sql.NullString
+	ShippedAt            sql.NullTime
+	Note                 sql.NullString
+	Number               string
+	InvoiceID            sql.NullString
+	CarrierID            string
+	CarrierOptionID      sql.NullString
+	ShippingAddressID    string
+	ShippedByID          sql.NullString
+	SalesOrderID         string
+	AccountID            string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	MasterTrackingNumber sql.NullString
+	ShipmentStatusCode   string
+	BuyerAccountID       sql.NullString
+}
+
+type ShipmentLine struct {
+	ID               string
+	ShipmentID       string
+	SalesOrderLineID string
+	QuantityID       string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type ShipmentStatus struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type ShippingCase struct {
+	ID                  string
+	Number              string
+	Sscc                sql.NullString
+	TrackingNumber      sql.NullString
+	ShippoTransactionID sql.NullString
+	ShippingLabelUrl    sql.NullString
+	ShippedAt           sql.NullTime
+	FreightAmountID     string
+	FreightWeightID     string
+	ShipmentID          string
+	CarrierID           string
+	AccountID           string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type ShippingTerm struct {
+	ID              string
+	Name            string
+	IsFreightExempt bool
+	IsCarrierRate   bool
+	AccountID       sql.NullString
+	FlatRateID      sql.NullString
+	MinimumOrderID  sql.NullString
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+type ShippingTermFreeShippingRule struct {
+	ID              string
+	ShippingTermID  string
+	CarrierOptionID string
+	CreatedAt       time.Time
+}
+
+type StorageLocation struct {
+	ID                      string
+	AccountID               string
+	AddressID               sql.NullString
+	StorageLocationTypeCode string
+	Name                    string
+	ParentID                sql.NullString
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+type StorageLocationType struct {
+	ID        string
+	Code      string
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type SupplierMaterial struct {
+	ID                  string
+	MaterialID          string
+	SupplierAccountID   string
+	SupplierPartNumber  string
+	SupplierDescription sql.NullString
+	IsActive            bool
+	OwnerAccountID      string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type SupportRoute struct {
+	ID                  string
+	AccountID           string
+	RelationAccountID   string
+	GroupConversationID string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type SysProperty struct {
+	ID                  string
+	SysPropertyTypeCode string
+	Value               int32
+	AccountID           string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+type SysPropertyType struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type Target struct {
+	ID         string
+	StartDate  time.Time
+	EndDate    time.Time
+	SalesRepID string
+	AccountID  string
+	CreatedAt  time.Time
+	AmountID   string
+	UpdatedAt  time.Time
 }
 
 type TaskLease struct {
 	Name       string
 	Holder     string
-	AcquiredAt pgtype.Timestamptz
-	ExpiresAt  pgtype.Timestamptz
+	AcquiredAt time.Time
+	ExpiresAt  time.Time
+}
+
+type Territory struct {
+	ID            string
+	StartZipcode  sql.NullInt32
+	EndZipcode    sql.NullInt32
+	State         string
+	SalesRepID    string
+	AccountID     string
+	ProductLineID sql.NullString
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+type TokenPackPurchase struct {
+	ID                      string
+	AccountID               string
+	PackID                  string
+	TokenCount              int64
+	PriceCents              int64
+	StripePaymentIntentID   sql.NullString
+	StripeCheckoutSessionID sql.NullString
+	Status                  string
+	CreatedAt               time.Time
+	UpdatedAt               time.Time
+}
+
+type Transaction struct {
+	ID                    string
+	CustomerAccountID     string
+	AmountID              string
+	Note                  sql.NullString
+	IsFullyAllocated      bool
+	ResponsibleUserID     sql.NullString
+	AccountID             string
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+	StripePaymentID       sql.NullString
+	FundsReceivedAt       sql.NullTime
+	Number                string
+	TransactionTypeCode   string
+	TransactionMethodCode sql.NullString
+	AdjustmentTypeCode    sql.NullString
+	CreatedBySettlementID sql.NullString
+}
+
+type TransactionAllocation struct {
+	ID                  string
+	TransactionID       string
+	AmountID            string
+	InvoiceID           string
+	SettlementID        sql.NullString
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+	Note                sql.NullString
+	AccountID           sql.NullString
+	TransactionTypeCode sql.NullString
+}
+
+type TransactionMethod struct {
+	ID        string
+	Name      string
+	Code      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type TransactionType struct {
+	ID                   string
+	Name                 string
+	Code                 string
+	IsCommissionAffected bool
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+}
+
+type Unit struct {
+	ID                string
+	Name              string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	AccountID         sql.NullString
+	Abbreviation      string
+	UnitDimensionCode string
+	RatioNumerator    string
+	RatioDenominator  string
+	OffsetNumerator   string
+	OffsetDenominator string
+	IsBaseUnit        bool
+}
+
+type UnitGroup struct {
+	ID           string
+	Name         string
+	Notes        sql.NullString
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	BaseUnitID   string
+	AccountID    sql.NullString
+	UnitTypeCode string
+}
+
+type UnitGroupUnit struct {
+	ID                 string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	UnitGroupID        string
+	UnitID             string
+	DiscountPercentage string
+	DiscountFixed      string
+	IsVisible          bool
+}
+
+type UnitType struct {
+	ID        string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Name      sql.NullString
+	Code      string
+}
+
+type User struct {
+	ID             string
+	Email          sql.NullString
+	Name           sql.NullString
+	Username       sql.NullString
+	HashedPassword sql.NullString
+	EmailVerified  sql.NullTime
+	ImageUrl       sql.NullString
+	StatusCode     string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }

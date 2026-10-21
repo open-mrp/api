@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/stretchr/testify/require"
 )
 
@@ -82,36 +81,12 @@ func backdateIssuedAt(t *testing.T, salesOrderID string, days int) {
 	require.NoError(t, err, "backdating issued_at for order %s", salesOrderID)
 }
 
-// defaultE2EAgentDBURL points at the agent-service Postgres published on the host (5432 is the
-// local dev Postgres). CI can override via E2E_AGENT_DB_URL.
-const defaultE2EAgentDBURL = "postgres://openmrp@127.0.0.1:5433/openmrp_agents?sslmode=disable"
-
-var (
-	agentDBOnce sync.Once
-	agentDBConn *sql.DB
-	agentDBErr  error
-)
-
-// agentDB returns a lazily-opened connection to the e2e agent-service database, which tests use to
-// put a one-shot fixture back to its seeded state so the suite can run again on the same stack.
-func agentDB(t *testing.T) *sql.DB {
-	t.Helper()
-	agentDBOnce.Do(func() {
-		agentDBConn, agentDBErr = sql.Open("pgx", envOr("E2E_AGENT_DB_URL", defaultE2EAgentDBURL))
-		if agentDBErr == nil {
-			agentDBErr = agentDBConn.Ping()
-		}
-	})
-	require.NoError(t, agentDBErr, "connecting to e2e agent database (is the stack up with postgres-e2e published on 5433?)")
-	return agentDBConn
-}
-
 // resetAgentRun puts a seeded run back to the status a one-shot test expects to find it in.
 func resetAgentRun(t *testing.T, runID, status string) {
 	t.Helper()
-	_, err := agentDB(t).Exec(`UPDATE agent_run
-		SET status_code = $1, output = '{}', error_message = NULL, completed_at = NULL, retry_count = 0, updated_at = now()
-		WHERE id = $2`, status, runID)
+	_, err := authDB(t).Exec(`UPDATE agent_run
+		SET status_code = ?, output = '{}', error_message = NULL, completed_at = NULL, retry_count = 0, updated_at = NOW(6)
+		WHERE id = ?`, status, runID)
 	require.NoError(t, err, "resetting agent run %s", runID)
 }
 

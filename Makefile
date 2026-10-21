@@ -1,4 +1,4 @@
-.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit audit-gaps test-ledger test-plans test-verbose test-sql-prepare-smoke vitess-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status migrate-agent-db migrate-agent-create migrate-agent-create-data migrate-agent-data migrate-agent-status seed-agent-db seed-core seed-user-photos fmt stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
+.PHONY: help dev sqlc proto buf-lint no-binaries migration-versions test test-e2e test-inbox tx-audit audit-gaps test-ledger test-plans test-verbose test-sql-prepare-smoke vitess-smoke install-tools install-ci-tools docs mocks lint gosec gosec-fast govet static-check check-format jaeger-tracing connect-minikube version validate-openapi-specs httpie local-db local-db-cli local-db-down local-db-nuke setup teardown migrate-create migrate-create-data migrate-up migrate-down migrate-status migrate-baseline migrate-data-up migrate-data-status seed-core seed-user-photos fmt stripe-webhook-account view-otel e2e-up e2e-up-ci e2e e2e-down fix-minikube-dns openapi openapi-quiet gen-agent-tools stainless openapi-stainless openapi-stainless-quiet generate generate-quiet install-stlc stlc-internal-sdk stlc-public-typescript-sdk stlc-public-python-sdk stlc-public-go-sdk stlc-public-sdks stlc-sdks sdk-yalc
 
 # Include .env file if it exists (optional for CI)
 -include .env
@@ -193,30 +193,6 @@ migrate-data-up: ## Apply pending core-service data migrations. Usage: make migr
 migrate-data-status: ## Show core-service data migration status. Usage: make migrate-data-status [TARGET=local|branch|prod]
 	@./scripts/migrate.sh data-status --target $(TARGET)
 
-migrate-agent-db: ## Apply migrations to the agent-service PostgreSQL database
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
-		goose -dir services/agent-service/db/migrations up
-
-migrate-agent-create: ## Create an agent-service schema migration. Usage: make migrate-agent-create name=add_foo
-	@goose -s -dir services/agent-service/db/migrations create $(name) sql
-
-migrate-agent-create-data: ## Create an agent-service data (backfill) migration. Usage: make migrate-agent-create-data name=backfill_foo
-	@goose -s -table goose_db_version_data -dir services/agent-service/db/data-migrations create $(name) sql
-
-migrate-agent-data: ## Apply agent-service data migrations to the PostgreSQL database
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
-		goose -table goose_db_version_data -dir services/agent-service/db/data-migrations up
-
-migrate-agent-status: ## Show agent-service schema + data migration status
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
-		goose -dir services/agent-service/db/migrations status
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
-		goose -table goose_db_version_data -dir services/agent-service/db/data-migrations status
-
-seed-agent-db: ## Seed agent-service DB with e2e test data
-	@GOOSE_DRIVER=postgres GOOSE_DBSTRING="$$AGENT_DB_URL" \
-		goose -table goose_db_version_seeds -dir services/agent-service/db/seeds up
-
 seed-core: ## Seed core-service DB with sample data
 	@./scripts/seed-core-db.sh
 
@@ -241,6 +217,7 @@ test-inbox: ## Run message-inbox lease/recovery-point tests against the real dat
 test-sql-prepare-smoke: ## Run sqlc Prepare smoke tests for MySQL services (requires local-db)
 	@echo "Running SQL prepare smoke tests..."
 	@time go test -tags integration -v -count=1 -timeout 120s \
+		./services/agent-service/internal/infrastructure/sqlc \
 		./services/api-gateway/internal/infrastructure/sqlc \
 		./services/auth-service/internal/infrastructure/sqlc \
 		./services/core-service/internal/infrastructure/sqlc \
@@ -357,13 +334,13 @@ view-otel: ## Open Jaeger UI via port-forward
 e2e-up: openapi-quiet ## Start the E2E stack (isolated services + seeded DBs)
 	@./scripts/run-quiet.sh "Building E2E service images" docker compose -f docker-compose.e2e.yml build --parallel
 	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq redis minio-e2e
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e rabbitmq redis minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 
 e2e-up-ci: openapi-quiet ## Start the E2E stack using pre-built images (for CI)
 	@./scripts/run-quiet.sh "Clearing leftover E2E containers" ./scripts/e2e-rm-named-containers.sh
-	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e postgres-e2e rabbitmq redis minio-e2e
+	@./scripts/run-quiet.sh "Starting E2E databases" docker compose -f docker-compose.e2e.yml up -d --wait mysql-e2e rabbitmq redis minio-e2e
 	@./scripts/setup-e2e-db.sh
 	@./scripts/run-quiet.sh "Starting E2E services" ./scripts/start-e2e-services.sh
 

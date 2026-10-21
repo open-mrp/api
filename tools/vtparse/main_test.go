@@ -9,7 +9,7 @@ import (
 
 // The whole point of this tool is to fail on a statement MySQL accepts, so the test drives it with the real one: `FOR UPDATE OF ia, q` shipped green through every check in this repository and then dead-lettered every allocate_open_issues message in production.
 //
-// The Postgres fixture is the other half. Its $1 placeholders are a parse error to this parser, so a tool that scanned every service rather than reading each sqlc.yaml would report agent-service as broken forever and be turned off within a day.
+// The Postgres fixture is the other half. Its $1 placeholders are a parse error to this parser, so a tool that scanned every service rather than reading each sqlc.yaml would report a Postgres service as broken forever and be turned off within a day.
 func TestRun_RejectsWhatVtgateRejectsAndSkipsPostgres(t *testing.T) {
 	root := t.TempDir()
 	writeService(t, root, "mysql-svc", "mysql", "mysql_queries.go.txt")

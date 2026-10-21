@@ -1,17 +1,21 @@
--- name: AcquireTaskLease :execrows
+-- name: AcquireTaskLease :execresult
 INSERT INTO task_leases (name, holder, acquired_at, expires_at)
-VALUES ($1, $2, now(), now() + ($3 || ' seconds')::interval)
-ON CONFLICT (name) DO UPDATE SET
-    holder      = EXCLUDED.holder,
-    acquired_at = EXCLUDED.acquired_at,
-    expires_at  = EXCLUDED.expires_at
-WHERE task_leases.expires_at < now() OR task_leases.holder = EXCLUDED.holder;
+VALUES (?, ?, NOW(6), DATE_ADD(NOW(6), INTERVAL ? SECOND))
+ON DUPLICATE KEY UPDATE
+    holder      = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(holder), holder),
+    acquired_at = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(acquired_at), acquired_at),
+    expires_at  = IF(expires_at < NOW(6) OR holder = VALUES(holder), VALUES(expires_at), expires_at);
 
--- name: RenewTaskLease :execrows
+-- name: GetTaskLeaseHolder :one
+SELECT holder
+FROM task_leases
+WHERE name = ?;
+
+-- name: RenewTaskLease :execresult
 UPDATE task_leases
-SET expires_at = now() + ($1 || ' seconds')::interval
-WHERE name = $2 AND holder = $3;
+SET expires_at = DATE_ADD(NOW(6), INTERVAL ? SECOND)
+WHERE name = ? AND holder = ?;
 
 -- name: ReleaseTaskLease :exec
 DELETE FROM task_leases
-WHERE name = $1 AND holder = $2;
+WHERE name = ? AND holder = ?;

@@ -2,11 +2,10 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"time"
 
-	agentdb "github.com/open-mrp/api/services/agent-service/internal/infrastructure/db"
 	"github.com/open-mrp/api/services/agent-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/db"
 	"github.com/open-mrp/api/shared/messaging"
 	"github.com/open-mrp/api/shared/tracing"
 )
@@ -45,7 +44,7 @@ func (r *inboxRepoImpl) InboxStats(ctx context.Context, serviceName string) ([]m
 		stats = append(stats, messaging.InboxHandlerStat{
 			Handler:   row.Handler,
 			Status:    messaging.InboxStatus(row.Status),
-			Failed:    row.HasFailed,
+			Failed:    row.HasFailed != 0,
 			Count:     row.MessageCount,
 			OldestAge: time.Duration(max(row.OldestAgeUs, 0)) * time.Microsecond,
 		})
@@ -58,10 +57,16 @@ func (r *inboxRepoImpl) PurgeProcessed(ctx context.Context, retentionHours int, 
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.purge_processed")
 	defer span.End()
 
-	count, err := r.queries.PurgeProcessedInboxMessages(ctx, sqlc.PurgeProcessedInboxMessagesParams{
-		Column1: agentdb.PgText(fmt.Sprintf("%d", retentionHours)),
+	result, err := r.queries.PurgeProcessedInboxMessages(ctx, sqlc.PurgeProcessedInboxMessagesParams{
+		Column1: retentionHours,
 		Limit:   limit,
 	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	count, err := result.RowsAffected()
 	if err != nil {
 		span.RecordError(err)
 		return 0, err
@@ -74,16 +79,22 @@ func (r *inboxRepoImpl) TryInsert(ctx context.Context, input messaging.InboxReco
 	ctx, span := inboxRepoTracer.Start(ctx, "repository.inbox.try_insert")
 	defer span.End()
 
-	id, err := r.queries.TryInsertInboxRecord(ctx, sqlc.TryInsertInboxRecordParams{
-		MessageID:       input.MessageID,
-		ServiceName:     input.ServiceName,
-		Handler:         input.Handler,
-		MessageType:     input.MessageType,
-		RequestID:       agentdb.PgText(input.RequestID),
-		ParentMessageID: agentdb.PgText(input.ParentMessageID),
-		LockOwner:       agentdb.PgText(input.LockOwner),
-		Column8:         agentdb.PgText(fmt.Sprintf("%d", input.LockTTLSeconds)),
+	result, err := r.queries.TryInsertInboxRecord(ctx, sqlc.TryInsertInboxRecordParams{
+		MessageID:           input.MessageID,
+		ServiceName:         input.ServiceName,
+		Handler:             input.Handler,
+		MessageType:         input.MessageType,
+		RequestID:           db.NullString(input.RequestID),
+		ParentMessageID:     db.NullString(input.ParentMessageID),
+		LockOwner:           db.NullString(input.LockOwner),
+		LockDurationSeconds: input.LockTTLSeconds,
 	})
+	if err != nil {
+		span.RecordError(err)
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
 	if err != nil {
 		span.RecordError(err)
 		return 0, err
@@ -111,16 +122,16 @@ func (r *inboxRepoImpl) GetByMessageAndHandler(ctx context.Context, messageID, h
 		ServiceName:     row.ServiceName,
 		Handler:         row.Handler,
 		MessageType:     row.MessageType,
-		RequestID:       agentdb.StringFromPgText(row.RequestID),
-		ParentMessageID: agentdb.StringFromPgText(row.ParentMessageID),
+		RequestID:       db.StringFromNullString(row.RequestID),
+		ParentMessageID: db.StringFromNullString(row.ParentMessageID),
 		Status:          messaging.InboxStatus(row.Status),
 		Attempts:        int(row.Attempts),
-		LastError:       agentdb.StringFromPgText(row.LastError),
-		ReceivedAt:      row.ReceivedAt.Time,
-		ProcessedAt:     agentdb.TimeFromPgTimestamptz(row.ProcessedAt),
-		FailedAt:        agentdb.TimeFromPgTimestamptz(row.FailedAt),
-		LockOwner:       agentdb.StringFromPgText(row.LockOwner),
-		LockExpiresAt:   agentdb.TimeFromPgTimestamptz(row.LockExpiresAt),
+		LastError:       db.StringFromNullString(row.LastError),
+		ReceivedAt:      row.ReceivedAt,
+		ProcessedAt:     db.TimeFromNullTime(row.ProcessedAt),
+		FailedAt:        db.TimeFromNullTime(row.FailedAt),
+		LockOwner:       db.StringFromNullString(row.LockOwner),
+		LockExpiresAt:   db.TimeFromNullTime(row.LockExpiresAt),
 	}
 
 	return record, nil
@@ -131,9 +142,9 @@ func (r *inboxRepoImpl) Claim(ctx context.Context, id int64, owner string, ttlSe
 	defer span.End()
 
 	rows, err := r.queries.ClaimInboxRecord(ctx, sqlc.ClaimInboxRecordParams{
-		ID:        id,
-		LockOwner: agentdb.PgText(owner),
-		Column3:   agentdb.PgText(fmt.Sprintf("%d", ttlSeconds)),
+		ID:                  id,
+		LockOwner:           db.NullString(owner),
+		LockDurationSeconds: ttlSeconds,
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -149,7 +160,7 @@ func (r *inboxRepoImpl) Complete(ctx context.Context, id int64, owner string) (b
 
 	rows, err := r.queries.CompleteInboxRecord(ctx, sqlc.CompleteInboxRecordParams{
 		ID:        id,
-		LockOwner: agentdb.PgText(owner),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -165,8 +176,8 @@ func (r *inboxRepoImpl) MarkFailed(ctx context.Context, id int64, owner, errMsg 
 
 	_, err := r.queries.MarkInboxRecordFailed(ctx, sqlc.MarkInboxRecordFailedParams{
 		ID:        id,
-		LastError: agentdb.PgText(errMsg),
-		LockOwner: agentdb.PgText(owner),
+		LastError: db.NullString(errMsg),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -182,8 +193,8 @@ func (r *inboxRepoImpl) MarkDiscarded(ctx context.Context, id int64, owner, reas
 
 	_, err := r.queries.MarkInboxRecordDiscarded(ctx, sqlc.MarkInboxRecordDiscardedParams{
 		ID:        id,
-		LastError: agentdb.PgText(reason),
-		LockOwner: agentdb.PgText(owner),
+		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)
@@ -199,8 +210,8 @@ func (r *inboxRepoImpl) MarkIgnored(ctx context.Context, id int64, owner, reason
 
 	_, err := r.queries.MarkInboxRecordIgnored(ctx, sqlc.MarkInboxRecordIgnoredParams{
 		ID:        id,
-		LastError: agentdb.PgText(reason),
-		LockOwner: agentdb.PgText(owner),
+		LastError: db.NullString(reason),
+		LockOwner: db.NullString(owner),
 	})
 	if err != nil {
 		span.RecordError(err)

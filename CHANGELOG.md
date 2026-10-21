@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.1.0](https://github.com/open-mrp/api/compare/v6.0.0...v6.1.0) (2026-10-21)
+
+
+### Features
+
+* **db:** add agent tables to the core MySQL schema ([#358](https://github.com/open-mrp/api/issues/358)) ([fc70cf4](https://github.com/open-mrp/api/commit/fc70cf4c0be6680bc53563200f4b1a2cedb6269c))
+
+
+### Performance Improvements
+
+* read demand forecast and quarterly orders from line copies ([#356](https://github.com/open-mrp/api/issues/356)) ([285b612](https://github.com/open-mrp/api/commit/285b612cb2b4218485db65d70d1dc142965ed6a1))
+
 ## [6.0.0](https://github.com/open-mrp/api/compare/v5.1.0...v6.0.0) (2026-10-20)
 
 

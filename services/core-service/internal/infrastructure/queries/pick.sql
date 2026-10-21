@@ -259,6 +259,21 @@ WHERE pl.pick_id IN (sqlc.slice('pick_ids'))
 AND p.product_type_code = 'sale'
 GROUP BY pl.pick_id;
 
+-- name: GetPickProgressFromCopies :many
+-- GetPickProgress once every line carries its quantity copy (see lineCopiesComplete): the pick and order
+-- lines' copied values replace two quantity rows per line.
+SELECT
+    pl.pick_id,
+    COALESCE(SUM(sol.quantity_value), 0) AS quantity_ordered,
+    COALESCE(SUM(pl.quantity_value), 0) AS quantity_picked,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl.quantity_value ELSE 0 END), 0) AS quantity_packed
+FROM pick_line pl
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN product p ON p.id = sol.product_id
+WHERE pl.pick_id IN (sqlc.slice('pick_ids'))
+AND p.product_type_code = 'sale'
+GROUP BY pl.pick_id;
+
 -- name: UpdatePickFinishedAt :exec
 UPDATE pick SET
     finished_at = sqlc.arg('finished_at'),

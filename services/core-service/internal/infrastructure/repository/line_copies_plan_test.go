@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -115,4 +116,79 @@ func TestLineCopies_ReportsAnswerAsFromTheRows(t *testing.T) {
 		require.NotRegexp(t, copyReadRe, st.plan, "a copy read visits a row it copies\n%s\n%s", st.query, st.plan)
 	}
 	require.Positive(t, reads, "the copy reads were measured")
+}
+
+// TestLineCopies_FulfillmentRollupsAnswerAsFromTheRows requires the sales order lines, sales order fulfillment
+// progress and pick progress to answer exactly the same from the copies as from the quantity rows, and the
+// copy reads to sum pick and invoice lines from their copy keys alone.
+func TestLineCopies_FulfillmentRollupsAnswerAsFromTheRows(t *testing.T) {
+	ensureLegacyAnalyticsCorpus(t)
+	ensureDeliveryPerformanceCorpus(t)
+	db := planDB(t)
+	fillCorpusLineCopies(t, db, planAnaAccount)
+	prev := lineCopiesDone.Load()
+	t.Cleanup(func() { lineCopiesDone.Store(prev) })
+	ctx := context.Background()
+
+	ids := func(query string) []string {
+		t.Helper()
+		rows, err := db.Query(query, planAnaAccount)
+		require.NoError(t, err)
+		defer rows.Close()
+		var out []string
+		for rows.Next() {
+			var id string
+			require.NoError(t, rows.Scan(&id))
+			out = append(out, id)
+		}
+		require.NoError(t, rows.Err())
+		require.NotEmpty(t, out, query)
+		return out
+	}
+	// The corpus picks and invoices every line, so a page of the oldest orders and one of the newest.
+	picked := ids(`SELECT so.id FROM sales_order so WHERE so.owner_account_id = ? ORDER BY so.id LIMIT 25`)
+	newest := ids(`SELECT so.id FROM sales_order so WHERE so.owner_account_id = ? ORDER BY so.id DESC LIMIT 25`)
+	picks := ids(`SELECT p.id FROM pick p WHERE p.account_id = ? ORDER BY p.id LIMIT 50`)
+	orders := append(append([]string{}, picked...), newest...)
+
+	read := func(q *sqlc.Queries) map[string]string {
+		orderRepo, pickRepo := NewSalesOrderRepo(q), &pickRepoImpl{queries: q}
+		got := map[string]string{}
+		lines, apiErr := orderRepo.GetLinesForOrders(ctx, orders)
+		require.Nil(t, apiErr)
+		got["lines_for_orders"] = planDigest(t, lines)
+		one, apiErr := orderRepo.GetLines(ctx, picked[0])
+		require.Nil(t, apiErr)
+		got["lines"] = planDigest(t, one)
+		progress, apiErr := orderRepo.GetFulfillmentProgress(ctx, orders)
+		require.Nil(t, apiErr)
+		got["order_progress"] = planDigest(t, progress)
+		pickProgress, apiErr := pickRepo.GetProgress(ctx, picks)
+		require.Nil(t, apiErr)
+		got["pick_progress"] = planDigest(t, pickProgress)
+		return got
+	}
+
+	lineCopiesDone.Store(false)
+	fromRows := read(sqlc.New(db))
+
+	lineCopiesDone.Store(true)
+	edb := &explainingDB{db: db, explainRows: true}
+	fromCopies := read(sqlc.New(edb))
+	require.Equal(t, fromRows, fromCopies)
+
+	reads := 0
+	for _, st := range edb.statements {
+		if !strings.Contains(st.query, "FORCE INDEX (pick_line_sol_packed_copies_idx)") {
+			continue
+		}
+		reads++
+		require.Contains(t, st.plan, "Covering index lookup on pl using pick_line_sol_packed_copies_idx", "%s\n%s", st.query, st.plan)
+		require.Contains(t, st.plan, "Covering index lookup on il using invoice_line_sol_copies_idx", "%s\n%s", st.query, st.plan)
+		require.NotRegexp(t, `on (plq|ilq) using`, st.plan, "%s\n%s", st.query, st.plan)
+		if strings.Contains(st.query, "GetSalesOrderFulfillmentProgressFromCopies") {
+			require.Contains(t, st.plan, "Covering index range scan on sol using sales_order_line_order_copies_idx", "%s\n%s", st.query, st.plan)
+		}
+	}
+	require.Equal(t, 3, reads, "the lines for orders, the lines and the order progress read the copies")
 }

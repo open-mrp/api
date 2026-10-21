@@ -31,7 +31,7 @@ func (r *salesOrderLineRepoImpl) List(ctx context.Context, salesOrderID string) 
 	ctx, span := salesOrderLineRepoTracer.Start(ctx, "repository.sales_order_line.list")
 	defer span.End()
 
-	rows, err := r.queries.GetSalesOrderLines(ctx, sqlc.GetSalesOrderLinesParams{SalesOrderID: salesOrderID})
+	rows, err := listSalesOrderLines(ctx, r.queries, []string{salesOrderID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -736,10 +736,33 @@ func mapSalesOrderLineRow(row sqlc.GetSalesOrderLineRow) *domain.SalesOrderLine 
 	return line
 }
 
-// mapSalesOrderLinesRow maps a GetSalesOrderLinesRow to a domain.SalesOrderLine.
-func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesRow) *domain.SalesOrderLine {
+// listSalesOrderLines reads the lines of the given orders, ordered by order and line number, with each
+// line's picked, packed and invoiced totals: from the lines' quantity copies once every line carries
+// them, and from the quantity rows until then.
+func listSalesOrderLines(ctx context.Context, q *sqlc.Queries, salesOrderIDs []string) ([]sqlc.GetSalesOrderLinesForOrdersRow, error) {
+	copies, err := lineCopiesComplete(ctx, q.DB())
+	if err != nil {
+		return nil, err
+	}
+	if !copies {
+		return q.GetSalesOrderLinesForOrders(ctx, sqlc.GetSalesOrderLinesForOrdersParams{SalesOrderIds: salesOrderIDs})
+	}
+	copyRows, err := q.GetSalesOrderLinesForOrdersFromCopies(ctx, sqlc.GetSalesOrderLinesForOrdersFromCopiesParams{SalesOrderIds: salesOrderIDs})
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]sqlc.GetSalesOrderLinesForOrdersRow, len(copyRows))
+	for i, row := range copyRows {
+		rows[i] = sqlc.GetSalesOrderLinesForOrdersRow(row)
+	}
+	return rows, nil
+}
+
+// mapSalesOrderLinesRow maps a GetSalesOrderLinesForOrdersRow to a domain.SalesOrderLine.
+func mapSalesOrderLinesRow(row sqlc.GetSalesOrderLinesForOrdersRow) *domain.SalesOrderLine {
 	line := &domain.SalesOrderLine{
 		ID:                              row.ID,
+		SalesOrderID:                    row.SalesOrderID,
 		ProductSKU:                      row.ProductSku,
 		QuantityID:                      row.QuantityID,
 		QuantityValue:                   row.QuantityValue,

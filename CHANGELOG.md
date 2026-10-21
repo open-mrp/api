@@ -1,5 +1,16 @@
 # Changelog
 
+## [7.0.0](https://github.com/open-mrp/api/compare/v6.1.0...v7.0.0) (2026-10-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **agent-service:** agent-service reads DB_URL as a MySQL DSN. The agent Postgres migrations, make migrate-agent-* targets and Postgres CI and release steps are removed.
+
+### Features
+
+* **agent-service:** store agent data in the core MySQL database ([#359](https://github.com/open-mrp/api/issues/359)) ([7866f2d](https://github.com/open-mrp/api/commit/7866f2d0364e4abf99694b83d6a2e836d4048751))
+
 ## [6.1.0](https://github.com/open-mrp/api/compare/v6.0.0...v6.1.0) (2026-10-21)
 
 

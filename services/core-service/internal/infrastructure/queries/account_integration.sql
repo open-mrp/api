@@ -5,6 +5,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -28,6 +30,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -50,6 +54,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -63,6 +69,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -77,6 +85,8 @@ INSERT INTO account_integration (
     name,
     credentials_v2,
     is_active,
+    monthly_spend_limit_amount,
+    monthly_spend_limit_currency,
     created_at,
     updated_at
 ) VALUES (
@@ -86,6 +96,8 @@ INSERT INTO account_integration (
     sqlc.arg('name'),
     sqlc.arg('credentials_v2'),
     1,
+    sqlc.narg('monthly_spend_limit_amount'),
+    sqlc.narg('monthly_spend_limit_currency'),
     NOW(3),
     NOW(3)
 );
@@ -94,6 +106,8 @@ INSERT INTO account_integration (
 UPDATE account_integration SET
     name = sqlc.arg('name'),
     credentials_v2 = sqlc.arg('credentials_v2'),
+    monthly_spend_limit_amount = IF(sqlc.arg('set_monthly_spend_limit'), sqlc.narg('monthly_spend_limit_amount'), monthly_spend_limit_amount),
+    monthly_spend_limit_currency = IF(sqlc.arg('set_monthly_spend_limit'), sqlc.narg('monthly_spend_limit_currency'), monthly_spend_limit_currency),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -102,6 +116,8 @@ AND account_id = sqlc.arg('account_id');
 UPDATE account_integration SET
     name = COALESCE(sqlc.narg('name'), name),
     is_active = COALESCE(sqlc.narg('is_active'), is_active),
+    monthly_spend_limit_amount = IF(sqlc.arg('set_monthly_spend_limit'), sqlc.narg('monthly_spend_limit_amount'), monthly_spend_limit_amount),
+    monthly_spend_limit_currency = IF(sqlc.arg('set_monthly_spend_limit'), sqlc.narg('monthly_spend_limit_currency'), monthly_spend_limit_currency),
     updated_at = NOW(3)
 WHERE id = sqlc.arg('id')
 AND account_id = sqlc.arg('account_id');
@@ -120,6 +136,8 @@ SELECT
     account_integration.integration_code,
     account_integration.name,
     account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency,
     account_integration.created_at,
     account_integration.updated_at
 FROM account_integration
@@ -129,7 +147,9 @@ AND account_integration.account_id = sqlc.arg('account_id');
 -- name: GetAccountIntegrationCredentials :one
 SELECT
     account_integration.credentials_v2,
-    account_integration.is_active
+    account_integration.is_active,
+    account_integration.monthly_spend_limit_amount,
+    account_integration.monthly_spend_limit_currency
 FROM account_integration
 WHERE account_integration.account_id = sqlc.arg('account_id')
 AND account_integration.integration_code = sqlc.arg('integration_code');

@@ -7,9 +7,11 @@ import (
 	"github.com/open-mrp/api/services/api-gateway/internal/domain"
 	grpcutil "github.com/open-mrp/api/services/api-gateway/internal/grpc"
 	"github.com/open-mrp/api/services/api-gateway/internal/resourceloaders"
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	apiresource "github.com/open-mrp/api/services/api-gateway/pkg/resource"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
+	"github.com/open-mrp/api/shared/field"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"github.com/open-mrp/api/shared/tracing"
 	"google.golang.org/grpc"
@@ -22,6 +24,7 @@ type AccountIntegrationSvc interface {
 	DeleteAccountIntegration(ctx context.Context, req *DeleteAccountIntegrationRequest) (*apiresource.AccountIntegration, *apierror.APIError)
 	GetStripePublishableKey(ctx context.Context, req *GetStripePublishableKeyRequest) (*apiresource.StripePublishableKey, *apierror.APIError)
 	GetStripeStatus(ctx context.Context, req *GetStripeStatusRequest) (*apiresource.StripeStatus, *apierror.APIError)
+	GetOpenRouterUsage(ctx context.Context, req *GetOpenRouterUsageRequest) (*apiresource.OpenRouterUsage, *apierror.APIError)
 }
 
 type AccountIntegrationSvcConfig struct {
@@ -85,6 +88,9 @@ func (m *accountIntegrationSvcImpl) CreateAccountIntegration(ctx context.Context
 		IntegrationCode: string(req.IntegrationCode),
 		Credentials:     req.Credentials,
 	}
+	if limit, ok := req.MonthlySpendLimit.Value(); ok {
+		pbReq.MonthlySpendLimit = moneyInputToProto(limit)
+	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateAccountIntegrationResponse, error) {
 			return m.coreClient.CreateAccountIntegration(ctx, pbReq, opts...)
@@ -104,9 +110,10 @@ func (m *accountIntegrationSvcImpl) UpdateAccountIntegration(ctx context.Context
 		isActive = &active
 	}
 	pbReq := &pb.UpdateAccountIntegrationRequest{
-		Id:       req.AccountIntegrationID,
-		Name:     req.Name.Ptr(),
-		IsActive: isActive,
+		Id:                req.AccountIntegrationID,
+		Name:              req.Name.Ptr(),
+		IsActive:          isActive,
+		MonthlySpendLimit: moneyClearableToProto(req.MonthlySpendLimit),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.update", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.UpdateAccountIntegrationResponse, error) {
@@ -160,6 +167,60 @@ func (m *accountIntegrationSvcImpl) GetStripeStatus(ctx context.Context, req *Ge
 		Object: constants.ObjectTypeStripeStatus,
 		Status: constants.StripeConnectionStatusFromExists(resp.HasStripeIntegration),
 	}, nil
+}
+
+func (m *accountIntegrationSvcImpl) GetOpenRouterUsage(ctx context.Context, req *GetOpenRouterUsageRequest) (*apiresource.OpenRouterUsage, *apierror.APIError) {
+	pbReq := &pb.GetOpenRouterUsageRequest{}
+	resp, apiErr := grpcutil.CallRPC(ctx, accountIntegrationSvcTracer, "service.account-integrations.get-openrouter-usage", domain.ServiceName,
+		func(ctx context.Context, opts ...grpc.CallOption) (*pb.GetOpenRouterUsageResponse, error) {
+			return m.coreClient.GetOpenRouterUsage(ctx, pbReq, opts...)
+		})
+	if apiErr != nil {
+		return nil, apiErr
+	}
+	return openRouterUsageFromProto(resp), nil
+}
+
+func openRouterUsageFromProto(resp *pb.GetOpenRouterUsageResponse) *apiresource.OpenRouterUsage {
+	return &apiresource.OpenRouterUsage{
+		Object:                constants.ObjectTypeOpenRouterUsage,
+		SpentToday:            usd(resp.SpentToday),
+		SpentThisWeek:         usd(resp.SpentThisWeek),
+		SpentThisMonth:        usd(resp.SpentThisMonth),
+		SpentTotal:            usd(resp.SpentTotal),
+		MonthlySpendLimit:     resourceloaders.MoneyFromProto(resp.MonthlySpendLimit),
+		MonthlySpendRemaining: resourceloaders.MoneyFromProto(resp.MonthlySpendRemaining),
+		KeyLimit:              usdPtr(resp.KeyLimit),
+		KeyLimitRemaining:     usdPtr(resp.KeyLimitRemaining),
+	}
+}
+
+// usd wraps an OpenRouter figure, which is always US dollars.
+func usd(amount string) apiresource.Money {
+	return apiresource.Money{Amount: amount, Currency: "usd"}
+}
+
+func usdPtr(amount *string) *apiresource.Money {
+	if amount == nil {
+		return nil
+	}
+	m := usd(*amount)
+	return &m
+}
+
+func moneyInputToProto(m apirequest.MoneyInput) *pb.MoneyInfo {
+	return &pb.MoneyInfo{Amount: m.Amount, Currency: m.Currency}
+}
+
+func moneyClearableToProto(f field.Clearable[apirequest.MoneyInput]) *pb.MoneyPatch {
+	if f.IsUnset() {
+		return nil
+	}
+	value, ok := f.Value()
+	if !ok {
+		return &pb.MoneyPatch{Clear: true}
+	}
+	return &pb.MoneyPatch{Value: moneyInputToProto(value)}
 }
 
 // loadAccountIntegrationByID wraps the single-ID load pattern used after

@@ -1937,9 +1937,10 @@ func (h *gRPCHandler) CreateAccountIntegration(ctx context.Context, req *pb.Crea
 	defer finalizeIdempotency()
 
 	params := domain.CreateAccountIntegrationParams{
-		Name:            req.Name,
-		IntegrationCode: constants.IntegrationCode(req.IntegrationCode),
-		Credentials:     req.Credentials,
+		Name:              req.Name,
+		IntegrationCode:   constants.IntegrationCode(req.IntegrationCode),
+		Credentials:       req.Credentials,
+		MonthlySpendLimit: moneyFromProto(req.MonthlySpendLimit),
 	}
 
 	integration, apiErr := h.accountIntegrationSvc.CreateAccountIntegration(ctx, params)
@@ -1961,6 +1962,12 @@ func (h *gRPCHandler) UpdateAccountIntegration(ctx context.Context, req *pb.Upda
 		ID:       req.Id,
 		Name:     req.Name,
 		IsActive: req.IsActive,
+	}
+	if patch := req.MonthlySpendLimit; patch != nil {
+		params.SetMonthlySpendLimit = true
+		if !patch.Clear {
+			params.MonthlySpendLimit = moneyFromProto(patch.Value)
+		}
 	}
 
 	integration, apiErr := h.accountIntegrationSvc.UpdateAccountIntegration(ctx, params)
@@ -2022,15 +2029,72 @@ func (h *gRPCHandler) GetStripeStatus(ctx context.Context, req *pb.GetStripeStat
 	}, nil
 }
 
+func (h *gRPCHandler) GetOpenRouterUsage(ctx context.Context, req *pb.GetOpenRouterUsageRequest) (*pb.GetOpenRouterUsageResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	usage, apiErr := h.accountIntegrationSvc.GetOpenRouterUsage(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetOpenRouterUsageResponse{
+		SpentToday:            usage.Key.SpentToday,
+		SpentThisWeek:         usage.Key.SpentThisWeek,
+		SpentThisMonth:        usage.Key.SpentThisMonth,
+		SpentTotal:            usage.Key.SpentTotal,
+		KeyLimit:              usage.Key.KeyLimit,
+		KeyLimitRemaining:     usage.Key.KeyLimitRemaining,
+		MonthlySpendLimit:     moneyToProto(usage.MonthlySpendLimit),
+		MonthlySpendRemaining: moneyToProto(usage.MonthlySpendRemaining),
+	}, nil
+}
+
+func (h *gRPCHandler) GetOpenRouterAccess(ctx context.Context, req *pb.GetOpenRouterAccessRequest) (*pb.GetOpenRouterAccessResponse, error) {
+	if req == nil {
+		return nil, contracts.NewMissingGRPCRequestDataError()
+	}
+
+	access, apiErr := h.accountIntegrationSvc.GetOpenRouterAccess(ctx)
+	if apiErr != nil {
+		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)
+	}
+
+	return &pb.GetOpenRouterAccessResponse{
+		Configured:        access.Configured,
+		IsActive:          access.IsActive,
+		ApiKey:            access.APIKey,
+		MonthlySpendLimit: moneyToProto(access.MonthlySpendLimit),
+		SpentThisMonth:    access.SpentThisMonth,
+		LimitReached:      access.LimitReached,
+	}, nil
+}
+
 func accountIntegrationToProto(ai *domain.AccountIntegration) *pb.AccountIntegrationInfo {
 	return &pb.AccountIntegrationInfo{
-		Id:              ai.ID,
-		Name:            ai.Name,
-		IntegrationCode: string(ai.IntegrationCode),
-		IsActive:        ai.IsActive,
-		CreatedAt:       timestamppb.New(ai.CreatedAt),
-		UpdatedAt:       timestamppb.New(ai.UpdatedAt),
+		Id:                ai.ID,
+		Name:              ai.Name,
+		IntegrationCode:   string(ai.IntegrationCode),
+		IsActive:          ai.IsActive,
+		CreatedAt:         timestamppb.New(ai.CreatedAt),
+		UpdatedAt:         timestamppb.New(ai.UpdatedAt),
+		MonthlySpendLimit: moneyToProto(ai.MonthlySpendLimit),
 	}
+}
+
+func moneyToProto(m *domain.Money) *pb.MoneyInfo {
+	if m == nil {
+		return nil
+	}
+	return &pb.MoneyInfo{Amount: m.Amount, Currency: m.Currency}
+}
+
+func moneyFromProto(m *pb.MoneyInfo) *domain.Money {
+	if m == nil {
+		return nil
+	}
+	return &domain.Money{Amount: m.Amount, Currency: m.Currency}
 }
 
 func adjustmentTypeToProto(at *domain.AdjustmentType) *pb.AdjustmentTypeInfo {

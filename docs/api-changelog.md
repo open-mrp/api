@@ -20,6 +20,19 @@ OpenMRP no longer sells plans or subscriptions, so these routes and fields are r
 - The `billing` permission. A role that sends `billing:read` or `billing:update` is refused with `400`.
 - The error codes `payment_required` and `agent_spending_cap_reached` (`402`) and `limit_exceeded` (`403`), and `quota` on the error object. No account has a seat, sandbox, invoice or batch limit any more.
 
+## 1.0.forge-preview.10
+
+### Breaking changes
+
+- **OpenRouter is an account integration.** `provider` on `AccountIntegration` and on Create Account Integration takes a new value, `openrouter`, whose `credentials` are `{"api_key": "sk-or-..."}`. Agent runs in an account with an OpenRouter integration bill to its key; an account without one keeps using the deployment's key, if it has one.
+  - Older versions: a list pinned to 1.0.forge-preview.9 or earlier leaves OpenRouter integrations out. A create, update or delete that names one returns it unchanged.
+  - Migration: expect `openrouter` in `provider`.
+
+### Additions
+
+- `monthly_spend_limit` (`Money`, or `null`) on `AccountIntegration`, settable on Create Account Integration and Update Account Integration (`null` removes it). Only `openrouter` integrations take one, in `usd`. Agent runs stop starting once OpenRouter reports the month's spend at the limit.
+- `GET /v1/settings/integrations/openrouter/usage` returns the account's OpenRouter spend today, this week, this month and in total, with the monthly limit, what is left of it, and any credit limit on the key itself.
+
 ## 1.0.forge-preview.9
 
 ### Breaking changes

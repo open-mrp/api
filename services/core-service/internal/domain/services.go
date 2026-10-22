@@ -365,6 +365,12 @@ type AccountIntegrationSvc interface {
 
 	// BatchGetAccountIntegrationsByIDs returns account integrations matching the input IDs that the caller's account is authorized to read. Used by the api-gateway resourcekit include resolver.
 	BatchGetAccountIntegrationsByIDs(ctx context.Context, ids []string) ([]*AccountIntegration, *apierror.APIError)
+
+	// GetOpenRouterUsage returns the caller's account's OpenRouter spend and monthly cap. Admin only.
+	GetOpenRouterUsage(ctx context.Context) (*OpenRouterUsage, *apierror.APIError)
+
+	// GetOpenRouterAccess returns the OpenRouter key and spend-cap state an agent run bills to. Agent actors only.
+	GetOpenRouterAccess(ctx context.Context) (*OpenRouterAccess, *apierror.APIError)
 }
 
 type PropertySvc interface {

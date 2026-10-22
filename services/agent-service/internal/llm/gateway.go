@@ -85,7 +85,11 @@ func (p *GatewayProvider) CompleteWithTools(ctx context.Context, req *ToolReques
 		return nil, fmt.Errorf("failed to create gateway request: %w", err)
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	apiKey, err := resolveAPIKey(ctx, p.apiKey)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	httpResp, err := p.httpClient.Do(httpReq) // #nosec G704 -- URL from server-configured LLM gateway endpoint
@@ -290,7 +294,11 @@ func (p *GatewayProvider) StreamCompleteWithTools(ctx context.Context, req *Tool
 		return nil, fmt.Errorf("failed to create gateway request: %w", err)
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+p.apiKey)
+	apiKey, err := resolveAPIKey(ctx, p.apiKey)
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	httpResp, err := p.httpClient.Do(httpReq) // #nosec G704 -- URL from server-configured LLM gateway endpoint

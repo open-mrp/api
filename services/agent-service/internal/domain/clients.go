@@ -62,6 +62,20 @@ type CoreClient interface {
 	// GetUserAccess returns the user's current role and permissions in the account, or nil when the user is not a member.
 	GetUserAccess(ctx context.Context, userID, accountID string) (*UserAccess, error)
 	GetAccountContext(ctx context.Context, accountID string) (*AccountContext, error)
+	// GetOpenRouterAccess returns the OpenRouter key the identity's target account bills agent runs to.
+	GetOpenRouterAccess(ctx context.Context) (*OpenRouterAccess, error)
+}
+
+// OpenRouterAccess is an account's OpenRouter integration as an agent run sees it.
+type OpenRouterAccess struct {
+	// Configured is false when the account has no OpenRouter integration, leaving the deployment's own key, if any, to serve it.
+	Configured bool
+	IsActive   bool
+	APIKey     string
+	// MonthlySpendLimit and SpentThisMonth are US dollar amounts, set only when the integration has a cap and its spend could be read.
+	MonthlySpendLimit *string
+	SpentThisMonth    *string
+	LimitReached      bool
 }
 
 // RoleInfo identifies a role's type and owning account.

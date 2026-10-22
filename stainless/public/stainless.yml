@@ -100,7 +100,7 @@ client_settings:
   # info.version by `make stainless` (see tools/apidocs/stainless.go).
   default_headers:
     OpenMRP-Version:
-      value: "1.0.forge-preview.9"
+      value: "1.0.forge-preview.10"
       version_header: true
   bearer_token_refresh:
     method: PUT
@@ -1425,8 +1425,16 @@ resources:
           create: post /v1/settings/integrations
           update: put /v1/settings/integrations/{id}
           delete: delete /v1/settings/integrations/{id}
+        subresources:
+          openrouter:
+            methods:
+              retrieve_usage: get /v1/settings/integrations/openrouter/usage
+            models:
+              open_router_usage: '#/components/schemas/OpenRouterUsage'
         models:
           account_integration: '#/components/schemas/AccountIntegration'
           create_account_integration_request: '#/components/schemas/CreateAccountIntegrationRequest'
           list_account_integration: '#/components/schemas/List_AccountIntegration'
+          money: '#/components/schemas/Money'
+          money_input: '#/components/schemas/MoneyInput'
           update_account_integration_request: '#/components/schemas/UpdateAccountIntegrationRequest'

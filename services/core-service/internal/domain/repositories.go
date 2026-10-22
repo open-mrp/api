@@ -407,10 +407,11 @@ type AccountIntegrationRepo interface {
 	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*AccountIntegration, *apierror.APIError)
 	FindByCode(ctx context.Context, accountID string, code constants.IntegrationCode) (*AccountIntegration, *apierror.APIError)
 	Create(ctx context.Context, id string, params CreateAccountIntegrationParams, encryptedCredentials string) (*AccountIntegration, *apierror.APIError)
-	UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*AccountIntegration, *apierror.APIError)
+	UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, monthlySpendLimit *Money) (*AccountIntegration, *apierror.APIError)
 	Update(ctx context.Context, params UpdateAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	Delete(ctx context.Context, params DeleteAccountIntegrationParams) (*AccountIntegration, *apierror.APIError)
 	GetEncryptedCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (credentials string, isActive bool, err *apierror.APIError)
+	GetStoredCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (*StoredIntegrationCredentials, *apierror.APIError)
 	HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError)
 }
 

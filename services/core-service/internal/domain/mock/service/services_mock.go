@@ -1998,6 +1998,36 @@ func (mr *MockAccountIntegrationSvcMockRecorder) DeleteAccountIntegration(ctx, p
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccountIntegration", reflect.TypeOf((*MockAccountIntegrationSvc)(nil).DeleteAccountIntegration), ctx, params)
 }
 
+// GetOpenRouterAccess mocks base method.
+func (m *MockAccountIntegrationSvc) GetOpenRouterAccess(ctx context.Context) (*domain.OpenRouterAccess, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenRouterAccess", ctx)
+	ret0, _ := ret[0].(*domain.OpenRouterAccess)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOpenRouterAccess indicates an expected call of GetOpenRouterAccess.
+func (mr *MockAccountIntegrationSvcMockRecorder) GetOpenRouterAccess(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenRouterAccess", reflect.TypeOf((*MockAccountIntegrationSvc)(nil).GetOpenRouterAccess), ctx)
+}
+
+// GetOpenRouterUsage mocks base method.
+func (m *MockAccountIntegrationSvc) GetOpenRouterUsage(ctx context.Context) (*domain.OpenRouterUsage, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOpenRouterUsage", ctx)
+	ret0, _ := ret[0].(*domain.OpenRouterUsage)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetOpenRouterUsage indicates an expected call of GetOpenRouterUsage.
+func (mr *MockAccountIntegrationSvcMockRecorder) GetOpenRouterUsage(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenRouterUsage", reflect.TypeOf((*MockAccountIntegrationSvc)(nil).GetOpenRouterUsage), ctx)
+}
+
 // GetStripePublishableKey mocks base method.
 func (m *MockAccountIntegrationSvc) GetStripePublishableKey(ctx context.Context) (string, *apierror.APIError) {
 	m.ctrl.T.Helper()

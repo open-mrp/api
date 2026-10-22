@@ -12,6 +12,8 @@ import (
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pagination"
 	"github.com/open-mrp/api/shared/tracing"
+
+	"github.com/shopspring/decimal"
 )
 
 var accountIntegrationRepoTracer = tracing.GetTracer("core-service.account_integration_repository")
@@ -110,28 +112,44 @@ func integrationID(item *domain.AccountIntegration) string {
 	return item.ID
 }
 
-func mapForwardIntegrationRow(row sqlc.ListAccountIntegrationsForwardRow) *domain.AccountIntegration {
+func integrationFromRow(id, accountID, code, name string, isActive bool, limitAmount, limitCurrency sql.NullString, createdAt, updatedAt time.Time) *domain.AccountIntegration {
 	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+		ID:                id,
+		AccountID:         accountID,
+		IntegrationCode:   constants.IntegrationCode(code),
+		Name:              name,
+		IsActive:          isActive,
+		MonthlySpendLimit: moneyFromColumns(limitAmount, limitCurrency),
+		CreatedAt:         createdAt,
+		UpdatedAt:         updatedAt,
 	}
 }
 
-func mapBackwardIntegrationRow(row sqlc.ListAccountIntegrationsBackwardRow) *domain.AccountIntegration {
-	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+func moneyFromColumns(amount, currency sql.NullString) *domain.Money {
+	if !amount.Valid {
+		return nil
 	}
+	// The column's fixed scale pads "25" to "25.0000"; return the amount as it was written.
+	value := amount.String
+	if parsed, err := decimal.NewFromString(value); err == nil {
+		value = parsed.String()
+	}
+	return &domain.Money{Amount: value, Currency: currency.String}
+}
+
+func moneyToColumns(m *domain.Money) (sql.NullString, sql.NullString) {
+	if m == nil {
+		return sql.NullString{}, sql.NullString{}
+	}
+	return sql.NullString{String: m.Amount, Valid: true}, sql.NullString{String: m.Currency, Valid: true}
+}
+
+func mapForwardIntegrationRow(row sqlc.ListAccountIntegrationsForwardRow) *domain.AccountIntegration {
+	return integrationFromRow(row.ID, row.AccountID, row.IntegrationCode, row.Name, row.IsActive, row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency, row.CreatedAt, row.UpdatedAt)
+}
+
+func mapBackwardIntegrationRow(row sqlc.ListAccountIntegrationsBackwardRow) *domain.AccountIntegration {
+	return integrationFromRow(row.ID, row.AccountID, row.IntegrationCode, row.Name, row.IsActive, row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency, row.CreatedAt, row.UpdatedAt)
 }
 
 func (r *accountIntegrationRepoImpl) Get(ctx context.Context, accountID, id string) (*domain.AccountIntegration, *apierror.APIError) {
@@ -146,15 +164,7 @@ func (r *accountIntegrationRepoImpl) Get(ctx context.Context, accountID, id stri
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
-	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}, nil
+	return integrationFromRow(row.ID, row.AccountID, row.IntegrationCode, row.Name, row.IsActive, row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *accountIntegrationRepoImpl) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.AccountIntegration, *apierror.APIError) {
@@ -173,15 +183,7 @@ func (r *accountIntegrationRepoImpl) GetByIDs(ctx context.Context, accountID str
 	}
 	out := make([]*domain.AccountIntegration, len(rows))
 	for i, row := range rows {
-		out[i] = &domain.AccountIntegration{
-			ID:              row.ID,
-			AccountID:       row.AccountID,
-			IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-			Name:            row.Name,
-			IsActive:        row.IsActive,
-			CreatedAt:       row.CreatedAt,
-			UpdatedAt:       row.UpdatedAt,
-		}
+		out[i] = integrationFromRow(row.ID, row.AccountID, row.IntegrationCode, row.Name, row.IsActive, row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency, row.CreatedAt, row.UpdatedAt)
 	}
 	return out, nil
 }
@@ -198,27 +200,22 @@ func (r *accountIntegrationRepoImpl) FindByCode(ctx context.Context, accountID s
 		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
-	return &domain.AccountIntegration{
-		ID:              row.ID,
-		AccountID:       row.AccountID,
-		IntegrationCode: constants.IntegrationCode(row.IntegrationCode),
-		Name:            row.Name,
-		IsActive:        row.IsActive,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
-	}, nil
+	return integrationFromRow(row.ID, row.AccountID, row.IntegrationCode, row.Name, row.IsActive, row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency, row.CreatedAt, row.UpdatedAt), nil
 }
 
 func (r *accountIntegrationRepoImpl) Create(ctx context.Context, id string, params domain.CreateAccountIntegrationParams, encryptedCredentials string) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.create")
 	defer span.End()
 
+	limitAmount, limitCurrency := moneyToColumns(params.MonthlySpendLimit)
 	err := r.queries.InsertAccountIntegration(ctx, sqlc.InsertAccountIntegrationParams{
-		ID:              id,
-		AccountID:       params.AccountID,
-		IntegrationCode: string(params.IntegrationCode),
-		Name:            params.Name,
-		CredentialsV2:   encryptedCredentials,
+		ID:                        id,
+		AccountID:                 params.AccountID,
+		IntegrationCode:           string(params.IntegrationCode),
+		Name:                      params.Name,
+		CredentialsV2:             encryptedCredentials,
+		MonthlySpendLimitAmount:   limitAmount,
+		MonthlySpendLimitCurrency: limitCurrency,
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -227,15 +224,19 @@ func (r *accountIntegrationRepoImpl) Create(ctx context.Context, id string, para
 	return r.Get(ctx, params.AccountID, id)
 }
 
-func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string) (*domain.AccountIntegration, *apierror.APIError) {
+func (r *accountIntegrationRepoImpl) UpdateCredentials(ctx context.Context, accountID, id, name, encryptedCredentials string, monthlySpendLimit *domain.Money) (*domain.AccountIntegration, *apierror.APIError) {
 	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.update_credentials")
 	defer span.End()
 
+	limitAmount, limitCurrency := moneyToColumns(monthlySpendLimit)
 	result, err := r.queries.UpdateAccountIntegrationCredentials(ctx, sqlc.UpdateAccountIntegrationCredentialsParams{
-		ID:            id,
-		AccountID:     accountID,
-		Name:          name,
-		CredentialsV2: encryptedCredentials,
+		ID:                        id,
+		AccountID:                 accountID,
+		Name:                      name,
+		CredentialsV2:             encryptedCredentials,
+		SetMonthlySpendLimit:      monthlySpendLimit != nil,
+		MonthlySpendLimitAmount:   limitAmount,
+		MonthlySpendLimitCurrency: limitCurrency,
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -265,11 +266,15 @@ func (r *accountIntegrationRepoImpl) Update(ctx context.Context, params domain.U
 		isActive = sql.NullBool{Bool: *params.IsActive, Valid: true}
 	}
 
+	limitAmount, limitCurrency := moneyToColumns(params.MonthlySpendLimit)
 	result, err := r.queries.UpdateAccountIntegration(ctx, sqlc.UpdateAccountIntegrationParams{
-		ID:        params.ID,
-		AccountID: params.AccountID,
-		Name:      name,
-		IsActive:  isActive,
+		ID:                        params.ID,
+		AccountID:                 params.AccountID,
+		Name:                      name,
+		IsActive:                  isActive,
+		SetMonthlySpendLimit:      params.SetMonthlySpendLimit,
+		MonthlySpendLimitAmount:   limitAmount,
+		MonthlySpendLimitCurrency: limitCurrency,
 	})
 	if err != nil {
 		return nil, tracing.Trace(span, db.MapSQLError(err))
@@ -316,7 +321,15 @@ func (r *accountIntegrationRepoImpl) Delete(ctx context.Context, params domain.D
 }
 
 func (r *accountIntegrationRepoImpl) GetEncryptedCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (string, bool, *apierror.APIError) {
-	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.get_encrypted_credentials")
+	creds, apiErr := r.GetStoredCredentials(ctx, accountID, code)
+	if apiErr != nil {
+		return "", false, apiErr
+	}
+	return creds.Encrypted, creds.IsActive, nil
+}
+
+func (r *accountIntegrationRepoImpl) GetStoredCredentials(ctx context.Context, accountID string, code constants.IntegrationCode) (*domain.StoredIntegrationCredentials, *apierror.APIError) {
+	ctx, span := accountIntegrationRepoTracer.Start(ctx, "repository.account_integration.get_stored_credentials")
 	defer span.End()
 
 	row, err := r.queries.GetAccountIntegrationCredentials(ctx, sqlc.GetAccountIntegrationCredentialsParams{
@@ -324,14 +337,18 @@ func (r *accountIntegrationRepoImpl) GetEncryptedCredentials(ctx context.Context
 		IntegrationCode: string(code),
 	})
 	if err != nil {
-		return "", false, tracing.Trace(span, db.MapSQLError(err))
+		return nil, tracing.Trace(span, db.MapSQLError(err))
 	}
 
 	if row.CredentialsV2 == "" {
-		return "", false, tracing.Trace(span, apierror.NewInternalError(nil, "Integration credentials not migrated to envelope format."))
+		return nil, tracing.Trace(span, apierror.NewInternalError(nil, "Integration credentials not migrated to envelope format."))
 	}
 
-	return row.CredentialsV2, row.IsActive, nil
+	return &domain.StoredIntegrationCredentials{
+		Encrypted:         row.CredentialsV2,
+		IsActive:          row.IsActive,
+		MonthlySpendLimit: moneyFromColumns(row.MonthlySpendLimitAmount, row.MonthlySpendLimitCurrency),
+	}, nil
 }
 
 func (r *accountIntegrationRepoImpl) HasIntegration(ctx context.Context, accountID string, code constants.IntegrationCode) (bool, *apierror.APIError) {

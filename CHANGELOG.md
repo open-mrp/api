@@ -1,5 +1,24 @@
 # Changelog
 
+## [7.1.0](https://github.com/open-mrp/api/compare/v7.0.0...v7.1.0) (2026-10-22)
+
+
+### Features
+
+* **notification-service:** list only your own topics and agent chats ([#361](https://github.com/open-mrp/api/issues/361)) ([52a3492](https://github.com/open-mrp/api/commit/52a34927fa13ce3f2546c4ff967dbd1af072062b))
+* OpenRouter account integration with a monthly spend limit ([#364](https://github.com/open-mrp/api/issues/364)) ([0f10e40](https://github.com/open-mrp/api/commit/0f10e4001bcd9f6b5ed6d92c587008bfa282e088))
+
+
+### Bug Fixes
+
+* **production-schedule:** plan both legs of an assembly, net allocations in their own unit, carry forward any open batch on a machine ([#362](https://github.com/open-mrp/api/issues/362)) ([a62cf09](https://github.com/open-mrp/api/commit/a62cf093ca055246709bc3d97ca7993604ab1504))
+
+
+### Performance Improvements
+
+* **core-service:** speed up the demand forecast reads ([#365](https://github.com/open-mrp/api/issues/365)) ([d8ec73b](https://github.com/open-mrp/api/commit/d8ec73b0448f42f147038c688aa2294d30aaed95))
+* read sales order and pick fulfillment totals from line copies ([#363](https://github.com/open-mrp/api/issues/363)) ([eefa295](https://github.com/open-mrp/api/commit/eefa2955fce5b7d4855a84fed872a742f45577fb))
+
 ## [7.0.0](https://github.com/open-mrp/api/compare/v6.1.0...v7.0.0) (2026-10-21)
 
 

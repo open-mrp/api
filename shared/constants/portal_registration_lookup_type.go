@@ -29,3 +29,11 @@ func (t PortalRegistrationLookupType) EnumValues() []string {
 		string(PortalRegistrationLookupTypeInvoiceNumber),
 	}
 }
+
+func (t *PortalRegistrationLookupType) StringPtr() *string {
+	if t == nil {
+		return nil
+	}
+	v := string(*t)
+	return &v
+}

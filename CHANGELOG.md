@@ -1,5 +1,13 @@
 # Changelog
 
+## [7.1.2](https://github.com/open-mrp/api/compare/v7.1.1...v7.1.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **notification-service:** let the owner hide a conversation ([#370](https://github.com/open-mrp/api/issues/370)) ([9dc0bf3](https://github.com/open-mrp/api/commit/9dc0bf3115719d1e331467ad00fa16b6761f75dd))
+* register PortalRegistrationLookupType and fill lookup sample values ([#371](https://github.com/open-mrp/api/issues/371)) ([3aad381](https://github.com/open-mrp/api/commit/3aad38152658c82298c91e4720f090c2381f24d7))
+
 ## [7.1.1](https://github.com/open-mrp/api/compare/v7.1.0...v7.1.1) (2026-10-22)
 
 

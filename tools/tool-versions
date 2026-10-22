@@ -1,5 +1,5 @@
 github.com/bufbuild/buf/cmd/buf v1.74.0
-github.com/daveshanley/vacuum v0.33.2
+github.com/daveshanley/vacuum v0.23.8
 github.com/goreleaser/goreleaser/v2 v2.18.3
 github.com/planetscale/cli v0.348.0
 github.com/pressly/goose/v3 v3.29.0

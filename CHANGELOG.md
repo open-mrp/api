@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.3](https://github.com/open-mrp/api/compare/v7.1.2...v7.1.3) (2026-10-22)
+
+
+### Performance Improvements
+
+* read schedule batch history by step and item scan time ([#373](https://github.com/open-mrp/api/issues/373)) ([5fd2f44](https://github.com/open-mrp/api/commit/5fd2f4426a8b997c4aa473714a3b1f292e317b77))
+
 ## [7.1.2](https://github.com/open-mrp/api/compare/v7.1.1...v7.1.2) (2026-10-22)
 
 

@@ -90,11 +90,18 @@ func itemPlanCases() []planCase[domain.ListItemsParams] {
 }
 
 // itemPlanFloor is how many items a request must read when some filter cannot be served in list order.
-// A substring search examines every item the item-column filters leave (no B-tree finds a substring);
-// otherwise a filter on another table (attribute, supplier, product line, customer, subassembly) is
-// held to the items it matches.
+// A substring search the ngram keys narrow to a few items is held to those; one they cannot examines
+// every item the item-column filters leave (no B-tree finds a substring); otherwise a filter on another
+// table (attribute, supplier, product line, customer, subassembly) is held to the items it matches.
 func itemPlanFloor(t *testing.T, sqlDB *sql.DB, p domain.ListItemsParams) float64 {
 	t.Helper()
+	if p.Query != nil && *p.Query != "" && !p.IsExactMatch {
+		matches, ok, err := catalogSearchMatches(context.Background(), sqlDB, p.AccountID, *p.Query)
+		require.NoError(t, err)
+		if ok {
+			return float64(len(matches))
+		}
+	}
 	where := []string{"i.account_id = ?", "i.deleted_at IS NULL"}
 	args := []any{p.AccountID}
 	in := func(col string, vals []string) {

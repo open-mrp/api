@@ -1149,6 +1149,67 @@ func (q *Queries) GetPickProgress(ctx context.Context, pickIds []string) ([]GetP
 	return items, nil
 }
 
+const getPickProgressFromCopies = `-- name: GetPickProgressFromCopies :many
+SELECT
+    pl.pick_id,
+    COALESCE(SUM(sol.quantity_value), 0) AS quantity_ordered,
+    COALESCE(SUM(pl.quantity_value), 0) AS quantity_picked,
+    COALESCE(SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl.quantity_value ELSE 0 END), 0) AS quantity_packed
+FROM pick_line pl
+JOIN sales_order_line sol ON sol.id = pl.sales_order_line_id
+JOIN product p ON p.id = sol.product_id
+WHERE pl.pick_id IN (/*SLICE:pick_ids*/?)
+AND p.product_type_code = 'sale'
+GROUP BY pl.pick_id
+`
+
+type GetPickProgressFromCopiesRow struct {
+	PickID          string
+	QuantityOrdered interface{}
+	QuantityPicked  interface{}
+	QuantityPacked  interface{}
+}
+
+// GetPickProgress once every line carries its quantity copy (see lineCopiesComplete): the pick and order
+// lines' copied values replace two quantity rows per line.
+func (q *Queries) GetPickProgressFromCopies(ctx context.Context, pickIds []string) ([]GetPickProgressFromCopiesRow, error) {
+	query := getPickProgressFromCopies
+	var queryParams []interface{}
+	if len(pickIds) > 0 {
+		for _, v := range pickIds {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", strings.Repeat(",?", len(pickIds))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:pick_ids*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPickProgressFromCopiesRow
+	for rows.Next() {
+		var i GetPickProgressFromCopiesRow
+		if err := rows.Scan(
+			&i.PickID,
+			&i.QuantityOrdered,
+			&i.QuantityPicked,
+			&i.QuantityPacked,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPicksByIDs = `-- name: GetPicksByIDs :many
 SELECT
     p.id,

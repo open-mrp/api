@@ -602,7 +602,20 @@ func (r *pickRepoImpl) GetProgress(ctx context.Context, pickIDs []string) (map[s
 		return map[string]domain.PickProgress{}, nil
 	}
 
-	rows, err := r.queries.GetPickProgress(ctx, pickIDs)
+	copies, err := lineCopiesComplete(ctx, r.queries.DB())
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	var rows []sqlc.GetPickProgressRow
+	if copies {
+		var copyRows []sqlc.GetPickProgressFromCopiesRow
+		copyRows, err = r.queries.GetPickProgressFromCopies(ctx, pickIDs)
+		for _, row := range copyRows {
+			rows = append(rows, sqlc.GetPickProgressRow(row))
+		}
+	} else {
+		rows, err = r.queries.GetPickProgress(ctx, pickIDs)
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}

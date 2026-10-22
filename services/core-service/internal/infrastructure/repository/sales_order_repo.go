@@ -285,7 +285,20 @@ func (r *salesOrderRepoImpl) GetFulfillmentProgress(ctx context.Context, salesOr
 		return map[string]domain.SalesOrderFulfillmentProgress{}, nil
 	}
 
-	rows, err := r.queries.GetSalesOrderFulfillmentProgress(ctx, sqlc.GetSalesOrderFulfillmentProgressParams{SalesOrderIds: salesOrderIDs})
+	copies, err := lineCopiesComplete(ctx, r.queries.DB())
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	var rows []sqlc.GetSalesOrderFulfillmentProgressRow
+	if copies {
+		var copyRows []sqlc.GetSalesOrderFulfillmentProgressFromCopiesRow
+		copyRows, err = r.queries.GetSalesOrderFulfillmentProgressFromCopies(ctx, sqlc.GetSalesOrderFulfillmentProgressFromCopiesParams{SalesOrderIds: salesOrderIDs})
+		for _, row := range copyRows {
+			rows = append(rows, sqlc.GetSalesOrderFulfillmentProgressRow(row))
+		}
+	} else {
+		rows, err = r.queries.GetSalesOrderFulfillmentProgress(ctx, sqlc.GetSalesOrderFulfillmentProgressParams{SalesOrderIds: salesOrderIDs})
+	}
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -383,7 +396,7 @@ func (r *salesOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) 
 	ctx, span := salesOrderRepoTracer.Start(ctx, "repository.sales_order.get_lines")
 	defer span.End()
 
-	rows, err := r.queries.GetSalesOrderLines(ctx, sqlc.GetSalesOrderLinesParams{SalesOrderID: salesOrderID})
+	rows, err := listSalesOrderLines(ctx, r.queries, []string{salesOrderID})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
@@ -391,7 +404,6 @@ func (r *salesOrderRepoImpl) GetLines(ctx context.Context, salesOrderID string) 
 	lines := make([]*domain.SalesOrderLine, len(rows))
 	for i, row := range rows {
 		lines[i] = mapSalesOrderLinesRow(row)
-		lines[i].SalesOrderID = salesOrderID
 	}
 
 	return lines, nil
@@ -427,16 +439,14 @@ func (r *salesOrderRepoImpl) GetLinesForOrders(ctx context.Context, salesOrderID
 		return map[string][]*domain.SalesOrderLine{}, nil
 	}
 
-	rows, err := r.queries.GetSalesOrderLinesForOrders(ctx, sqlc.GetSalesOrderLinesForOrdersParams{SalesOrderIds: salesOrderIDs})
+	rows, err := listSalesOrderLines(ctx, r.queries, salesOrderIDs)
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
 	}
 
 	byOrder := make(map[string][]*domain.SalesOrderLine, len(salesOrderIDs))
 	for _, row := range rows {
-		line := mapSalesOrderLinesRow(sqlc.GetSalesOrderLinesRow(row))
-		line.SalesOrderID = row.SalesOrderID
-		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], line)
+		byOrder[row.SalesOrderID] = append(byOrder[row.SalesOrderID], mapSalesOrderLinesRow(row))
 	}
 	return byOrder, nil
 }

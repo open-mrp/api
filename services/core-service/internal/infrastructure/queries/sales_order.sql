@@ -428,100 +428,9 @@ AND so.owner_account_id = sqlc.arg('account_id')
 AND so.seller_account_id = so.owner_account_id
 AND so.buyer_account_id = sqlc.arg('buyer_account_id');
 
--- name: GetSalesOrderLines :many
-SELECT
-    sol.id,
-    sol.sales_order_id,
-    sol.line_item_number,
-    sol.product_sku,
-    sol.product_description,
-    sol.product_id,
-    sol.item_id,
-    i.sku AS item_sku,
-    -- Quantity ordered
-    q.id AS quantity_id,
-    q.value AS quantity_value,
-    qu.id AS quantity_unit_id,
-    qu.name AS quantity_unit_name,
-    qu.abbreviation AS quantity_unit_abbreviation,
-    qu.unit_dimension_code AS quantity_unit_type,
-    -- Quantity picked/packed/invoiced, aggregated once per child table in a derived table
-    -- (see the joins below) rather than with a correlated subquery re-run per line.
-    COALESCE(pk.picked, 0) AS quantity_picked_value,
-    COALESCE(pk.packed, 0) AS quantity_packed_value,
-    COALESCE(iv.invoiced, 0) AS quantity_invoiced_value,
-    -- Unit price
-    up.id AS unit_price_id,
-    up.value AS unit_price_value,
-    up_nu.id AS unit_price_numerator_unit_id,
-    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
-    up_du.id AS unit_price_denominator_unit_id,
-    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
-    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
-    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
-    -- dashboard would price the line differently: units of different dimensions, a unit with an
-    -- offset, or a price in a non-base currency unit.
-    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
-        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
-        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
-    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
-        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
-        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
-    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
-        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
-        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
-    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
-        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
-        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
-    -- Unit cost
-    uc.id AS unit_cost_id,
-    uc.value AS unit_cost_value,
-    uc_nu.id AS unit_cost_numerator_unit_id,
-    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
-    uc_du.id AS unit_cost_denominator_unit_id,
-    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
-    -- Product type
-    p.product_type_code AS product_type_code,
-    -- Timestamps
-    sol.created_at,
-    sol.updated_at,
-    CAST(sol.metadata AS CHAR) AS metadata
-FROM sales_order_line sol
-JOIN quantity q ON q.id = sol.quantity_id
-JOIN unit qu ON qu.id = q.unit_id
-JOIN rate up ON up.id = sol.unit_price_id
-JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
-JOIN unit up_du ON up_du.id = up.denominator_unit_id
-LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
-LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
-LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
-LEFT JOIN item i ON i.id = sol.item_id
-LEFT JOIN product p ON p.id = sol.product_id
-LEFT JOIN (
-    SELECT pl.sales_order_line_id AS sales_order_line_id,
-        SUM(plq.value) AS picked,
-        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN plq.value END) AS packed
-    FROM sales_order_line s
-    JOIN pick_line pl ON pl.sales_order_line_id = s.id
-    JOIN quantity plq ON plq.id = pl.quantity_id
-    WHERE s.sales_order_id = sqlc.arg('sales_order_id')
-    GROUP BY pl.sales_order_line_id
-) pk ON pk.sales_order_line_id = sol.id
-LEFT JOIN (
-    SELECT il.sales_order_line_id AS sales_order_line_id,
-        SUM(ilq.value) AS invoiced
-    FROM sales_order_line s
-    JOIN invoice_line il ON il.sales_order_line_id = s.id
-    JOIN quantity ilq ON ilq.id = il.quantity_id
-    WHERE s.sales_order_id = sqlc.arg('sales_order_id')
-    GROUP BY il.sales_order_line_id
-) iv ON iv.sales_order_line_id = sol.id
-WHERE sol.sales_order_id = sqlc.arg('sales_order_id')
-ORDER BY sol.line_item_number ASC;
-
 -- name: GetSalesOrderLinesForOrders :many
--- The batched form of GetSalesOrderLines for a page of orders; the columns must stay identical so
--- the rows convert to GetSalesOrderLinesRow.
+-- The order lines of a page of orders (or of one order), with each line's picked, packed and invoiced
+-- totals. GetSalesOrderLinesForOrdersFromCopies must return the same columns, so its rows convert to these.
 SELECT
     sol.id,
     sol.sales_order_id,
@@ -606,6 +515,98 @@ LEFT JOIN (
     FROM sales_order_line s
     JOIN invoice_line il ON il.sales_order_line_id = s.id
     JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+    GROUP BY il.sales_order_line_id
+) iv ON iv.sales_order_line_id = sol.id
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+ORDER BY sol.sales_order_id, sol.line_item_number ASC;
+
+-- name: GetSalesOrderLinesForOrdersFromCopies :many
+-- GetSalesOrderLinesForOrders once every line carries its quantity copy (see lineCopiesComplete): the
+-- picked, packed and invoiced totals are summed from the keys holding each order line's pick and invoice
+-- lines with their copied values, so no pick, invoice or quantity row is visited for them.
+SELECT
+    sol.id,
+    sol.sales_order_id,
+    sol.line_item_number,
+    sol.product_sku,
+    sol.product_description,
+    sol.product_id,
+    sol.item_id,
+    i.sku AS item_sku,
+    -- Quantity ordered
+    q.id AS quantity_id,
+    q.value AS quantity_value,
+    qu.id AS quantity_unit_id,
+    qu.name AS quantity_unit_name,
+    qu.abbreviation AS quantity_unit_abbreviation,
+    qu.unit_dimension_code AS quantity_unit_type,
+    -- Quantity picked/packed/invoiced, aggregated once per child table in a derived table
+    -- (see the joins below) rather than with a correlated subquery re-run per line.
+    COALESCE(pk.picked, 0) AS quantity_picked_value,
+    COALESCE(pk.packed, 0) AS quantity_packed_value,
+    COALESCE(iv.invoiced, 0) AS quantity_invoiced_value,
+    -- Unit price
+    up.id AS unit_price_id,
+    up.value AS unit_price_value,
+    up_nu.id AS unit_price_numerator_unit_id,
+    up_nu.abbreviation AS unit_price_numerator_unit_abbreviation,
+    up_du.id AS unit_price_denominator_unit_id,
+    up_du.abbreviation AS unit_price_denominator_unit_abbreviation,
+    -- The base ratios of the quantity's unit and of the unit the price is quoted per, which
+    -- shared/pricing converts between the way the dashboard's multiplyRate does. Null where the
+    -- dashboard would price the line differently: units of different dimensions, a unit with an
+    -- offset, or a price in a non-base currency unit.
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_numerator AS CHAR) END AS pricing_quantity_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(qu.ratio_denominator AS CHAR) END AS pricing_quantity_ratio_denominator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_numerator AS CHAR) END AS pricing_price_ratio_numerator,
+    CASE WHEN qu.id = up_du.id AND qu.id <> up_nu.id THEN '1'
+        WHEN qu.unit_dimension_code = up_du.unit_dimension_code AND qu.unit_dimension_code <> up_nu.unit_dimension_code AND qu.offset_numerator = 0 AND up_du.offset_numerator = 0 AND (qu.is_base_unit = 0 OR qu.ratio_numerator = qu.ratio_denominator) AND (up_du.is_base_unit = 0 OR up_du.ratio_numerator = up_du.ratio_denominator) AND (up_nu.is_base_unit = 1 OR (up_nu.ratio_numerator = up_nu.ratio_denominator AND up_nu.offset_numerator = 0))
+        THEN CAST(up_du.ratio_denominator AS CHAR) END AS pricing_price_ratio_denominator,
+    -- Unit cost
+    uc.id AS unit_cost_id,
+    uc.value AS unit_cost_value,
+    uc_nu.id AS unit_cost_numerator_unit_id,
+    uc_nu.abbreviation AS unit_cost_numerator_unit_abbreviation,
+    uc_du.id AS unit_cost_denominator_unit_id,
+    uc_du.abbreviation AS unit_cost_denominator_unit_abbreviation,
+    -- Product type
+    p.product_type_code AS product_type_code,
+    -- Timestamps
+    sol.created_at,
+    sol.updated_at,
+    CAST(sol.metadata AS CHAR) AS metadata
+FROM sales_order_line sol
+JOIN quantity q ON q.id = sol.quantity_id
+JOIN unit qu ON qu.id = q.unit_id
+JOIN rate up ON up.id = sol.unit_price_id
+JOIN unit up_nu ON up_nu.id = up.numerator_unit_id
+JOIN unit up_du ON up_du.id = up.denominator_unit_id
+LEFT JOIN rate uc ON uc.id = sol.unit_cost_id
+LEFT JOIN unit uc_nu ON uc_nu.id = uc.numerator_unit_id
+LEFT JOIN unit uc_du ON uc_du.id = uc.denominator_unit_id
+LEFT JOIN item i ON i.id = sol.item_id
+LEFT JOIN product p ON p.id = sol.product_id
+LEFT JOIN (
+    SELECT pl.sales_order_line_id AS sales_order_line_id,
+        SUM(pl.quantity_value) AS picked,
+        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl.quantity_value END) AS packed
+    FROM sales_order_line s
+    JOIN pick_line pl FORCE INDEX (pick_line_sol_packed_copies_idx) ON pl.sales_order_line_id = s.id
+    WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+    GROUP BY pl.sales_order_line_id
+) pk ON pk.sales_order_line_id = sol.id
+LEFT JOIN (
+    SELECT il.sales_order_line_id AS sales_order_line_id,
+        SUM(il.quantity_value) AS invoiced
+    FROM sales_order_line s
+    JOIN invoice_line il FORCE INDEX (invoice_line_sol_copies_idx) ON il.sales_order_line_id = s.id
     WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
     GROUP BY il.sales_order_line_id
 ) iv ON iv.sales_order_line_id = sol.id
@@ -952,6 +953,39 @@ LEFT JOIN (
     FROM sales_order_line s
     JOIN invoice_line il ON il.sales_order_line_id = s.id
     JOIN quantity ilq ON ilq.id = il.quantity_id
+    WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+    GROUP BY il.sales_order_line_id
+) iv ON iv.sales_order_line_id = sol.id
+WHERE sol.sales_order_id IN (sqlc.slice('sales_order_ids'))
+AND p.product_type_code = 'sale'
+GROUP BY sol.sales_order_id;
+
+-- name: GetSalesOrderFulfillmentProgressFromCopies :many
+-- GetSalesOrderFulfillmentProgress once every line carries its quantity copy (see lineCopiesComplete).
+-- Each order's lines, their pick lines and their invoice lines are read from keys that hold the copied
+-- quantities, so no line or quantity row is visited: the rollup is three index ranges per order.
+SELECT
+    sol.sales_order_id,
+    COALESCE(SUM(sol.quantity_value), 0) AS quantity_ordered,
+    COALESCE(SUM(pk.picked), 0) AS quantity_picked,
+    COALESCE(SUM(pk.packed), 0) AS quantity_packed,
+    COALESCE(SUM(iv.invoiced), 0) AS quantity_invoiced
+FROM sales_order_line sol FORCE INDEX (sales_order_line_order_copies_idx)
+JOIN product p ON p.id = sol.product_id
+LEFT JOIN (
+    SELECT pl.sales_order_line_id AS sales_order_line_id,
+        SUM(pl.quantity_value) AS picked,
+        SUM(CASE WHEN pl.packed_at IS NOT NULL THEN pl.quantity_value END) AS packed
+    FROM sales_order_line s
+    JOIN pick_line pl FORCE INDEX (pick_line_sol_packed_copies_idx) ON pl.sales_order_line_id = s.id
+    WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
+    GROUP BY pl.sales_order_line_id
+) pk ON pk.sales_order_line_id = sol.id
+LEFT JOIN (
+    SELECT il.sales_order_line_id AS sales_order_line_id,
+        SUM(il.quantity_value) AS invoiced
+    FROM sales_order_line s
+    JOIN invoice_line il FORCE INDEX (invoice_line_sol_copies_idx) ON il.sales_order_line_id = s.id
     WHERE s.sales_order_id IN (sqlc.slice('sales_order_ids'))
     GROUP BY il.sales_order_line_id
 ) iv ON iv.sales_order_line_id = sol.id

@@ -102,9 +102,46 @@ func catalogSearchTier(search db.CatalogSearch) (string, []any) {
 	END)`, []any{exact, exact, exact, exact, search.Prefix.String}
 }
 
+// catalogSearchMatchCap is the most items a search may match and still be read by id. Past it, the term
+// is common and the account is walked in list order as before, so the probe that found out is kept
+// within one page's row budget: a narrow filter beside a common term must not pay more than that.
+const catalogSearchMatchCap = 200
+
+// catalogSearchMatches is the account's items whose SKU or description contains term, read through the
+// ngram keys on each column, or ok false when no key can narrow the term or it matches more than
+// catalogSearchMatchCap, and each item walked is tested instead. LIKE '%q%' reads every item of the
+// account; the keys read a rare term's few.
+func catalogSearchMatches(ctx context.Context, q sqlc.DBTX, accountID, term string) (ids []string, ok bool, err error) {
+	phrase := db.NewNgramSubstring(term)
+	if !phrase.Indexed() {
+		return nil, false, nil
+	}
+	arm := func(col string) pickArm {
+		return pickArm{"SELECT i.id FROM item i WHERE i.account_id = ? AND " + phrase.Where("i."+col),
+			append([]any{accountID}, phrase.Args()...)}
+	}
+	// UNION ALL streams and stops at the limit, where UNION would collect every match to deduplicate first.
+	query, args := joinPickArms([]pickArm{arm("sku"), arm("description")}, " UNION ALL ")
+	matches, err := selectStrings(ctx, q, query+" LIMIT ?", append(args, catalogSearchMatchCap+1)...)
+	if err != nil || len(matches) > catalogSearchMatchCap {
+		return nil, false, err
+	}
+	seen := make(map[string]bool, len(matches))
+	ids = []string{}
+	for _, id := range matches {
+		if !seen[id] {
+			seen[id] = true
+			ids = append(ids, id)
+		}
+	}
+	return ids, true, nil
+}
+
 // newItemListQuery applies every filter but the page's cursor. lineIDs are the product lines the
 // items' products must be on, already narrowed to the customers' lines when customers are filtered.
-func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemListQuery {
+// searchIDs are the search's matches when they were read up front (see catalogSearchMatches), or nil
+// to test the search on each item.
+func newItemListQuery(params domain.ListItemsParams, lineIDs, searchIDs []string) *itemListQuery {
 	q := &itemListQuery{catalogFilter: catalogFilter{search: db.NewCatalogSearch(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
 	q.add("i.deleted_at IS NULL")
@@ -127,6 +164,10 @@ func newItemListQuery(params domain.ListItemsParams, lineIDs []string) *itemList
 	if q.search.Contains.Valid {
 		if params.IsExactMatch {
 			q.add("(i.sku COLLATE utf8mb4_general_ci = ? OR i.description LIKE ?)", q.search.Exact.String, q.search.Contains.String)
+		} else if searchIDs != nil {
+			// The matches replace the terms, and their ids are read by primary key and sorted.
+			q.driven = true
+			q.in("i.id", searchIDs)
 		} else {
 			q.add("(i.sku LIKE ? OR i.description LIKE ?)", q.search.Contains.String, q.search.Contains.String)
 		}

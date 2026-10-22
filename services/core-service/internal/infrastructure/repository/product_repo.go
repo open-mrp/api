@@ -445,7 +445,21 @@ func (r *productRepoImpl) List(ctx context.Context, params domain.ListProductsFu
 		return &domain.ListProductsFullResult{Products: []*domain.ProductFull{}, PageInfo: pagination.PageInfo{}}, nil
 	}
 
-	q := newProductListQuery(params, lineIDs)
+	var searchIDs []string
+	if params.Query != nil && *params.Query != "" {
+		matches, ok, err := catalogSearchMatches(ctx, r.queries.DB(), params.AccountID, *params.Query)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if ok && len(matches) == 0 {
+			return &domain.ListProductsFullResult{Products: []*domain.ProductFull{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		if ok {
+			searchIDs = matches
+		}
+	}
+
+	q := newProductListQuery(params, lineIDs, searchIDs)
 	orderBy, orderArgs := q.page(cur, "p.created_at", "p.id")
 	products, err := r.list(ctx, q, orderBy, orderArgs, params.Limit+1)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

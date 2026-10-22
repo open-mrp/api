@@ -27,11 +27,14 @@ type productListQuery struct {
 	lines bool
 	// attributes reports an attribute filter, whose matches the page may be read from by item id.
 	attributes bool
+	// matches reports a search whose matching items were read up front, which the page is read from by id.
+	matches bool
 }
 
 // newProductListQuery applies every filter but the page's cursor. lineIDs are the product lines the
-// products must be on, or nil for any.
-func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string) *productListQuery {
+// products must be on, or nil for any. searchIDs are the search's matching items when they were read up
+// front (see catalogSearchMatches), or nil to test the search on each item.
+func newProductListQuery(params domain.ListProductsFullParams, lineIDs, searchIDs []string) *productListQuery {
 	q := &productListQuery{catalogFilter: catalogFilter{search: db.NewCatalogSearch(params.Query)}}
 	q.add("i.account_id = ?", params.AccountID)
 	q.add("i.deleted_at IS NULL")
@@ -53,7 +56,11 @@ func newProductListQuery(params domain.ListProductsFullParams, lineIDs []string)
 	if params.IsPortalReady != nil {
 		q.add("p.is_portal_ready = ?", *params.IsPortalReady)
 	}
-	if q.search.Contains.Valid {
+	if q.search.Contains.Valid && searchIDs != nil {
+		// The matches replace the terms, and their items are read by primary key and sorted.
+		q.matches = true
+		q.in("i.id", searchIDs)
+	} else if q.search.Contains.Valid {
 		q.add("(i.sku LIKE ? OR i.description LIKE ?)", q.search.Contains.String, q.search.Contains.String)
 	}
 	if lineIDs != nil {
@@ -83,7 +90,7 @@ func (q *productListQuery) itemIndexes() []string {
 	if q.categories {
 		keys = []string{itemCategoryIndex}
 	}
-	if q.lines || q.attributes {
+	if q.lines || q.attributes || q.matches {
 		keys = append(keys, "PRIMARY")
 	}
 	return keys

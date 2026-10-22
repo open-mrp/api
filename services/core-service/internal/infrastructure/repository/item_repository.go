@@ -477,7 +477,21 @@ func (r *itemRepoImpl) List(ctx context.Context, params domain.ListItemsParams) 
 		return &domain.ListItemsResult{Items: []*domain.Item{}, PageInfo: pagination.PageInfo{}}, nil
 	}
 
-	q := newItemListQuery(params, lineIDs)
+	var searchIDs []string
+	if params.Query != nil && *params.Query != "" && !params.IsExactMatch {
+		matches, ok, err := catalogSearchMatches(ctx, r.queries.DB(), params.AccountID, *params.Query)
+		if apiErr := db.MapSQLError(err); apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		if ok && len(matches) == 0 {
+			return &domain.ListItemsResult{Items: []*domain.Item{}, PageInfo: pagination.PageInfo{}}, nil
+		}
+		if ok {
+			searchIDs = matches
+		}
+	}
+
+	q := newItemListQuery(params, lineIDs, searchIDs)
 	orderBy, orderArgs := q.page(cur, "i.created_at", "i.id")
 	items, err := r.list(ctx, q, orderBy, orderArgs, params.Limit+1)
 	if apiErr := db.MapSQLError(err); apiErr != nil {

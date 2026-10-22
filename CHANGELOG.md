@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.1](https://github.com/open-mrp/api/compare/v7.1.0...v7.1.1) (2026-10-22)
+
+
+### Performance Improvements
+
+* read item and product search matches through ngram keys ([#367](https://github.com/open-mrp/api/issues/367)) ([fa7f541](https://github.com/open-mrp/api/commit/fa7f541c33dc6d5eab11d1bed6951de7e6a5d3f3))
+
 ## [7.1.0](https://github.com/open-mrp/api/compare/v7.0.0...v7.1.0) (2026-10-22)
 
 

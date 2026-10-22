@@ -3461,9 +3461,6 @@ func (s *conversationSvcImpl) Hide(ctx context.Context, conversationID string) *
 	if apiErr != nil {
 		return tracing.Trace(span, apiErr)
 	}
-	if part.Role == string(constants.ParticipantRoleOwner) {
-		return tracing.Trace(span, apierror.NewAuthorizationError("The owner cannot hide a conversation."))
-	}
 	apiErr = s.txManager.WithTx(ctx, func(txCtx context.Context, f domain.RepoFactory) *apierror.APIError {
 		if apiErr := f.NewParticipantRepo().Hide(txCtx, conversationID, callerAcus); apiErr != nil {
 			return apiErr

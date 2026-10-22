@@ -104,8 +104,25 @@ func (r *productionScheduleInputRepoImpl) GetConstraintBatchMeasurements(
 	ctx, span := scheduleInputRepoTracer.Start(ctx, "repository.production_schedule_input.get_constraint_batch_measurements")
 	defer span.End()
 
+	if len(params.MachineIDs) == 0 {
+		return nil, nil
+	}
+	// The batches are found by step and scan time, so the department's steps are read first. A department
+	// with none has no measurements, which is what the department test answered before.
+	stepIDs, err := r.queries.GetDepartmentStepIDs(ctx, sqlc.GetDepartmentStepIDsParams{
+		AccountID:    params.AccountID,
+		DepartmentID: gosql.NullString{String: params.ConstraintDepartmentID, Valid: true},
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	if len(stepIDs) == 0 {
+		return nil, nil
+	}
+
 	rows, err := r.queries.GetConstraintBatchMeasurements(ctx, sqlc.GetConstraintBatchMeasurementsParams{
 		AccountID:              params.AccountID,
+		StepIds:                scheduleNullStrings(stepIDs),
 		WindowStart:            gosql.NullTime{Time: params.WindowStart, Valid: true},
 		WindowEnd:              gosql.NullTime{Time: params.WindowEnd, Valid: true},
 		MachineIds:             params.MachineIDs,

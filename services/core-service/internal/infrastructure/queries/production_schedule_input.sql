@@ -33,9 +33,22 @@ FROM machine m
 WHERE m.account_id = sqlc.arg('account_id')
   AND m.department_id = sqlc.arg('department_id');
 
+-- GetDepartmentStepIDs returns the account's production steps that belong to a department: by the step's own department, or else by the department of the station it is scanned at.
+--
+-- It is the department filter of GetConstraintBatchMeasurements resolved ahead of the read, so the batches can be found by step and scan time rather than through every batch the machines ever ran.
+-- name: GetDepartmentStepIDs :many
+SELECT ps.id
+FROM production_step ps
+LEFT JOIN scanning_station ss ON ss.id = ps.scanning_station_id
+WHERE ps.account_id = sqlc.arg('account_id')
+  AND COALESCE(ps.department_id, ss.department_id) = sqlc.arg('department_id')
+ORDER BY ps.id;
+
 -- GetConstraintBatchMeasurements returns one row per historical batch produced on the constraint machines, which is what the run rate, cost, lot count, machine affinity and measured lead time are all derived from.
 --
 -- labor_time is a Rate quoted as a time per a quantity, and BOTH halves carry a unit: the numerator sets the time scale (min/hr/sec) and the denominator sets what quantity that time buys (per each, per pair, per case). Both ratio pairs come out so the caller can reach seconds per base unit; converting only the time half counts a pair-rated step twice. production_run.created_at paired with scanned_at gives the observed lead time for that batch.
+--
+-- The batches are read as a scan-time range of each of the department's steps (step_ids, from GetDepartmentStepIDs), and only then matched to the machines. Starting from the machines visited every batch they ever ran to keep the window's: 79k batch lookups for 12k rows on one plant. The department test stays, so a step moved since its id was read is still filtered as before.
 -- name: GetConstraintBatchMeasurements :many
 SELECT
     b.id AS batch_id,
@@ -59,8 +72,8 @@ SELECT
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
-FROM batch b
-JOIN _batches_machines bm ON bm.A = b.id
+FROM batch b FORCE INDEX (batch_step_scanned_idx)
+STRAIGHT_JOIN _batches_machines bm ON bm.A = b.id
 JOIN machine mc ON mc.id = bm.B
 JOIN item i ON i.id = b.item_id
 LEFT JOIN quantity q ON q.id = b.quantity_id
@@ -75,6 +88,7 @@ LEFT JOIN rate labor_rate ON labor_rate.id = ps.labor_rate_id
 LEFT JOIN rate overhead_rate ON overhead_rate.id = ps.overhead_rate_id
 LEFT JOIN production_run pr ON pr.id = b.production_run_id
 WHERE b.account_id = sqlc.arg('account_id')
+  AND b.production_step_id IN (sqlc.slice('step_ids'))
   AND b.scanned_at IS NOT NULL
   AND b.scanned_at >= sqlc.arg('window_start')
   AND b.scanned_at <= sqlc.arg('window_end')
@@ -386,6 +400,8 @@ ORDER BY m.name, m.id;
 -- The mirror of GetConstraintBatchMeasurements, and it excludes constraint-department steps for the same reason that one includes only them: a knitting scan recorded against a finishing machine is not a measurement of finishing, and letting it in would size the department's hours against the wrong operation. The step's own department is also carried out, so a finished good's line can name the room that makes it without a second query.
 --
 -- The machine join is a LEFT JOIN, unlike the constraint mirror's inner join: stage two is planned as one department pool, so the run rate is read off the production step's labor time and the machine is only carried for display. Finishing stations (boarding, dyeing, packing) are commonly scanned with no machine recorded; an inner join would silently drop every one of those scans and leave the SKU with no measured rate, which is exactly the failure this avoids. The constraint side keeps the inner join because it plans machine by machine and filters on the machine.
+--
+-- Each finished good's batches are a scan-time range of batch_item_scanned_idx, so the window is read and nothing older.
 -- name: GetFinishingBatchMeasurements :many
 SELECT
     b.id AS batch_id,
@@ -410,7 +426,7 @@ SELECT
     labor_rate.value AS labor_rate,
     overhead_rate.value AS overhead_rate,
     pr.created_at AS run_created_at
-FROM batch b
+FROM batch b FORCE INDEX (batch_item_scanned_idx)
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 LEFT JOIN machine mc ON mc.id = bm.B
 JOIN item i ON i.id = b.item_id
@@ -439,7 +455,7 @@ ORDER BY b.item_id, b.scanned_at, b.id;
 --
 -- The batch's own quantity unit comes out too: a campaign is counted in the item's scan unit, so the rate is rescaled into it the way the solver's is.
 --
--- Filtered on the item first, which batch_item_id_idx makes selective, and bounded by LIMIT because only the newest usable sample is read.
+-- Read newest first off batch_item_scanned_idx, so the LIMIT stops the read at the samples it returns instead of sorting the item's whole history.
 -- name: GetItemRunRateHistory :many
 SELECT
     bm.B AS machine_id,
@@ -450,7 +466,7 @@ SELECT
     labor_time_qty_unit.ratio_denominator AS labor_time_qty_ratio_denominator,
     u.ratio_numerator AS quantity_ratio_numerator,
     u.ratio_denominator AS quantity_ratio_denominator
-FROM batch b
+FROM batch b FORCE INDEX (batch_item_scanned_idx)
 LEFT JOIN _batches_machines bm ON bm.A = b.id
 JOIN production_step ps ON ps.id = b.production_step_id
 JOIN rate labor_time ON labor_time.id = ps.labor_time_id

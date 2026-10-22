@@ -20,7 +20,6 @@ var hiddenListQuery = url.Values{"status": {"hidden"}}
 
 func TestChat_HideAndUnhide(t *testing.T) {
 	t.Parallel()
-	// The owner cannot hide a group they own, so hiding is exercised by a member.
 	owner := chatUserClient(t)
 	member := chatUser2Client(t)
 	convID := jsonField(createGroupConversation(t, owner, uniqueName("hideme"), SeedAccountUser2ID), "id")
@@ -58,6 +57,25 @@ func TestChat_HideAndUnhide(t *testing.T) {
 		"an unhidden conversation returns to the active list")
 	assert.False(t, listContainsConversation(t, member, convID, hiddenListQuery),
 		"an unhidden conversation no longer appears under status=hidden")
+}
+
+func TestChat_OwnerCanHide(t *testing.T) {
+	t.Parallel()
+	owner := chatUserClient(t)
+	member := chatUser2Client(t)
+	convID := jsonField(createGroupConversation(t, owner, uniqueName("ownerhide"), SeedAccountUser2ID), "id")
+	sendMessage(t, owner, convID, uniqueName("hi"), newIdempotencyKey())
+
+	resp, err := owner.PostFull(conversationsPath+"/"+convID+"/actions/hide", map[string]any{}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, resp.StatusCode, resp.Body)
+
+	assert.False(t, listContainsConversation(t, owner, convID, nil),
+		"the owner's hidden conversation drops out of their active list")
+	assert.True(t, listContainsConversation(t, owner, convID, hiddenListQuery),
+		"the owner's hidden conversation appears under status=hidden")
+	assert.True(t, listContainsConversation(t, member, convID, nil),
+		"the owner hiding it leaves the member's view alone")
 }
 
 func TestChat_UnhideNonHiddenIsNoop(t *testing.T) {

@@ -285,13 +285,18 @@ WHERE b.account_id = ?
 AND b.item_id = ?
 AND b.scanned_at IS NULL
 AND b.closed_at IS NULL
-AND b.production_run_id IN (
-    SELECT DISTINCT l.production_run_id
+AND EXISTS (
+    SELECT 1
+    FROM _batches_machines bm
+    WHERE bm.A = b.id
+)
+AND b.production_run_id NOT IN (
+    SELECT l.production_run_id
     FROM production_schedule_line l
     WHERE l.account_id = ?
     AND l.item_id = ?
     AND l.production_run_id IS NOT NULL
-    AND l.week_start_date < ?
+    AND l.week_start_date >= ?
 )
 ORDER BY b.created_at ASC, b.id ASC
 LIMIT ?
@@ -314,13 +319,13 @@ type ListCarryForwardBatchesForItemRow struct {
 	ProductionRunNumber string
 }
 
-// ListCarryForwardBatchesForItem finds tickets an earlier week issued for an item that the floor never got to.
+// ListCarryForwardBatchesForItem finds open tickets for an item already sitting on a machine, which a release can move rather than print again.
 //
 // The plan already knows the week fell short — next week's quantity is smaller because the inventory it expected never arrived. What it cannot know is that the doffs it would issue for that shortfall are doffs somebody has already printed. Moving those tickets into the new run is what stops the floor being handed a second copy of work it is already holding.
 //
-// Only batches a schedule release created are eligible: the run has to be linked to a campaign of a week that has already begun. A hand-built run is somebody's own work and is never raided, and a run for a week still ahead of this one is not late — it has simply not been worked yet.
+// Any open ticket in a run and on a machine counts, whether a schedule release printed it or the run was built by hand: it is outstanding work either way. Runs released for this week or a later one are left alone, since that work is not late and taking it would leave its own week short.
 //
-// Unscanned and unclosed is what "never got to" means. A scanned batch is production that happened, and a closed one has left the floor.
+// Unscanned and unclosed is what "open" means. A scanned batch is production that happened, and a closed one has left the floor.
 func (q *Queries) ListCarryForwardBatchesForItem(ctx context.Context, arg ListCarryForwardBatchesForItemParams) ([]ListCarryForwardBatchesForItemRow, error) {
 	rows, err := q.db.QueryContext(ctx, listCarryForwardBatchesForItem,
 		arg.AccountID,

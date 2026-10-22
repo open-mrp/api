@@ -164,7 +164,7 @@ type ReleaseBatch struct {
 	CarriedForwardFrom string
 }
 
-// CarryForwardBatch is an unworked ticket an earlier week issued, and a candidate to be moved into the run being released.
+// CarryForwardBatch is an unworked ticket already on a machine, and a candidate to be moved into the run being released.
 type CarryForwardBatch struct {
 	BatchID             string
 	ProductionRunID     string
@@ -174,11 +174,11 @@ type CarryForwardBatch struct {
 	UnitID              string
 }
 
-// ListCarryForwardBatchesParams asks for one item's unworked tickets from weeks that have already begun.
+// ListCarryForwardBatchesParams asks for one item's unworked tickets already on a machine.
 type ListCarryForwardBatchesParams struct {
 	AccountID string
 	ItemID    string
-	// WeekStartDate is the week being released. Only runs from weeks strictly before it are eligible: a week still ahead has not been missed, it simply has not been worked.
+	// WeekStartDate is the week being released. Runs released for it or a later week are not eligible: that work has not been missed, it simply has not been reached.
 	WeekStartDate time.Time
 	Limit         int32
 }

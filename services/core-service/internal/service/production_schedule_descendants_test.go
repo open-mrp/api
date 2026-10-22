@@ -161,6 +161,94 @@ func TestWalkDescendants_ReturnsEdgesWithinEachEchelon(t *testing.T) {
 	}, children, "the edge into sub belongs to sub's own echelon, not greige's")
 }
 
+// stepEdge is one routing edge with the step that makes it.
+type stepEdge struct{ child, step string }
+
+// walkFromStepEdges is walkFromEdges for a graph whose edges name their step, which is what lets the
+// walk tell an assembly from an alternative.
+func walkFromStepEdges(t *testing.T, edges map[string][]stepEdge, roots []string) map[string][]string {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	repo := repositorymock.NewMockProductionScheduleInputRepo(ctrl)
+
+	repo.EXPECT().GetProductionFlowChildrenByItem(gomock.Any(), "acct", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, parents []string) ([]domain.ProductionFlowChildRow, *apierror.APIError) {
+			var out []domain.ProductionFlowChildRow
+			for _, p := range parents {
+				for _, e := range edges[p] {
+					out = append(out, domain.ProductionFlowChildRow{ParentItemID: p, ChildItemID: e.child, ProductionStepID: e.step})
+				}
+			}
+			return out, nil
+		}).AnyTimes()
+
+	svc := &productionScheduleSvcImpl{}
+	got, _, apiErr := svc.walkDescendants(context.Background(), repo, "acct", roots, 10)
+	assert.Nil(t, apiErr)
+	return got
+}
+
+// Tights are sewn from a left leg and a right leg knitted as two items. Every pair sewn holds one of
+// each, so the sewn stock and everything after it is cover and demand for both legs.
+func TestWalkDescendants_StageAssembledFromTwoConstraintItemsBelongsToBoth(t *testing.T) {
+	t.Parallel()
+
+	edges := map[string][]stepEdge{
+		"leg_left":  {{child: "sewn", step: "step_sew"}},
+		"leg_right": {{child: "sewn", step: "step_sew"}},
+		"sewn":      {{child: "dyed", step: "step_dye"}},
+		"dyed":      {{child: "boxed", step: "step_box"}},
+	}
+
+	got := walkFromStepEdges(t, edges, []string{"leg_left", "leg_right"})
+
+	assert.Equal(t, []string{"boxed", "dyed", "sewn"}, got["leg_left"])
+	assert.Equal(t, []string{"boxed", "dyed", "sewn"}, got["leg_right"],
+		"the right leg is half of every pair sewn, so the whole family is its echelon too")
+}
+
+// Two different steps that each make the same stage from a different constraint item are alternatives,
+// not an assembly: the stage's stock can only have come from one of them, so it stays first-wins.
+func TestWalkDescendants_AlternativeStepsStayFirstWins(t *testing.T) {
+	t.Parallel()
+
+	edges := map[string][]stepEdge{
+		"greige_a": {{child: "dyed", step: "step_dye_a"}},
+		"greige_b": {{child: "dyed", step: "step_dye_b"}},
+	}
+
+	got := walkFromStepEdges(t, edges, []string{"greige_a", "greige_b"})
+
+	assert.Equal(t, []string{"dyed"}, got["greige_a"])
+	assert.Empty(t, got["greige_b"], "an alternative route must not count the same stock twice")
+}
+
+// An order for a finished good assembled from two constraint items is owed by both of them: tights
+// ordered are a left leg and a right leg owed.
+func TestLoadOpenOrderBook_AssembledFinishedGoodIsOwedByEveryConstraintItem(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	repo := repositorymock.NewMockProductionScheduleInputRepo(ctrl)
+	repo.EXPECT().GetOpenOrderRequirements(gomock.Any(), "acct", []string{"prd_tights"}).
+		Return([]domain.OpenOrderRequirementRow{
+			{SalesOrderID: "so_1", SalesOrderLineID: "sol_1", ProductID: "prd_tights", OutstandingQty: 24},
+		}, nil)
+
+	in := &scheduling.SolverInput{}
+	apiErr := loadOpenOrderBook(context.Background(), repo, domain.LoadSolverInputParams{AccountID: "acct"}, in,
+		[]string{"leg_left", "leg_right"},
+		map[string][]string{"leg_left": {"sewn", "tights"}, "leg_right": {"sewn", "tights"}},
+		map[string]string{"prd_tights": "tights"},
+		func(string) float64 { return 2 })
+	assert.Nil(t, apiErr)
+
+	assert.Equal(t, []scheduling.OpenOrderLine{
+		{SalesOrderID: "so_1", SalesOrderLineID: "sol_1", FinishedItemID: "tights", ConstraintItemID: "leg_left", Units: 12},
+		{SalesOrderID: "so_1", SalesOrderLineID: "sol_1", FinishedItemID: "tights", ConstraintItemID: "leg_right", Units: 12},
+	}, in.OpenOrders)
+}
+
 func identityRatio(string) float64 { return 1 }
 
 // Undyed stock can still become any colorway and stays fungible; dyed and packed stock has passed the

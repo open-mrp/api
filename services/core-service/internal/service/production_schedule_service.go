@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -741,7 +742,9 @@ func (s *productionScheduleSvcImpl) loadLotResolutionInput(
 //
 // The routing graph, not batch genealogy, is what defines the echelon: a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on down to the packed finished good. Every one of those stages holds stock that will become a finished good, so it has to count against the decision to build more. Genealogy could not see it — its edges (_batch_flow) are written only when the floor links batches through move/split/merge, so a plant that scans each stage as its own batch produced no edges and the walk collapsed to the constraint item alone.
 //
-// Attribution is first-wins when a stage is reachable from more than one constraint item, and the walk starts from SKU-sorted items so that choice is stable. A constraint item that is itself downstream of another is left rooted to itself rather than folded into the other's echelon, so its stock is never counted twice. The visited set doubles as the cycle guard: a routing loop cannot re-expand an item already reached.
+// Attribution is first-wins when different steps reach a stage from more than one constraint item, and the walk starts from sorted items so that choice is stable: those are alternative routes, and counting the stock in both echelons would count it twice. A stage one step assembles from several constraint items (tights sewn from a left and a right leg) belongs to all of them, since every unit holds one of each.
+//
+// A constraint item that is itself downstream of another is left rooted to itself rather than folded into the other's echelon, so its stock is never counted twice. The visited set doubles as the cycle guard: a routing loop cannot re-expand an item already reached.
 func (s *productionScheduleSvcImpl) walkDescendants(
 	ctx context.Context,
 	repo domain.ProductionScheduleInputRepo,
@@ -749,15 +752,19 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	itemIDs []string,
 	maxDepth int,
 ) (map[string][]string, map[string][]string, *apierror.APIError) {
-	// Item -> the constraint item whose echelon it belongs to. Also the visited set: an item present here has been reached and must not be expanded again. Each constraint item roots itself.
-	rootByItem := make(map[string]string, len(itemIDs))
+	// Item -> the constraint items whose echelon it belongs to, sorted. Also the visited set: an item present here has been reached and must not be expanded again. Each constraint item roots itself.
+	rootsByItem := make(map[string][]string, len(itemIDs))
 	frontier := make([]string, 0, len(itemIDs))
 	for _, itemID := range itemIDs {
-		if _, taken := rootByItem[itemID]; taken {
+		if _, taken := rootsByItem[itemID]; taken {
 			continue
 		}
-		rootByItem[itemID] = itemID
+		rootsByItem[itemID] = []string{itemID}
 		frontier = append(frontier, itemID)
+	}
+	isRoot := make(map[string]bool, len(frontier))
+	for _, itemID := range frontier {
+		isRoot[itemID] = true
 	}
 
 	descendants := map[string]map[string]bool{}
@@ -771,9 +778,12 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 			return nil, nil, apiErr
 		}
 
-		next := make([]string, 0, len(childRows))
+		// Settled in two passes: whether a stage is assembled can only be seen once every parent feeding it has been read.
+		var reached []string
+		firstRoots := map[string][]string{}
+		rootsByStep := map[string]map[string]map[string]bool{}
 		for _, row := range childRows {
-			rootItemID, ok := rootByItem[row.ParentItemID]
+			parentRoots, ok := rootsByItem[row.ParentItemID]
 			if !ok {
 				continue
 			}
@@ -781,16 +791,51 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 				edges[row.ParentItemID] = map[string]bool{}
 			}
 			edges[row.ParentItemID][row.ChildItemID] = true
-			if _, seen := rootByItem[row.ChildItemID]; seen {
-				continue // already reached by another path, or a constraint item in its own right; first-wins
+			if _, seen := rootsByItem[row.ChildItemID]; seen {
+				continue // already reached by another path, or a constraint item in its own right
 			}
-			rootByItem[row.ChildItemID] = rootItemID
-			next = append(next, row.ChildItemID)
+			if _, ok := firstRoots[row.ChildItemID]; !ok {
+				reached = append(reached, row.ChildItemID)
+				firstRoots[row.ChildItemID] = parentRoots
+			}
+			if row.ProductionStepID == "" {
+				continue
+			}
+			if rootsByStep[row.ChildItemID] == nil {
+				rootsByStep[row.ChildItemID] = map[string]map[string]bool{}
+			}
+			if rootsByStep[row.ChildItemID][row.ProductionStepID] == nil {
+				rootsByStep[row.ChildItemID][row.ProductionStepID] = map[string]bool{}
+			}
+			for _, rootItemID := range parentRoots {
+				rootsByStep[row.ChildItemID][row.ProductionStepID][rootItemID] = true
+			}
+		}
 
-			if descendants[rootItemID] == nil {
-				descendants[rootItemID] = map[string]bool{}
+		next := make([]string, 0, len(reached))
+		for _, childItemID := range reached {
+			assembled := map[string]bool{}
+			for _, stepRoots := range rootsByStep[childItemID] {
+				if len(stepRoots) < 2 {
+					continue
+				}
+				for rootItemID := range stepRoots {
+					assembled[rootItemID] = true
+				}
 			}
-			descendants[rootItemID][row.ChildItemID] = true
+			roots := firstRoots[childItemID]
+			if len(assembled) > 0 {
+				roots = scheduleSortedKeys(assembled)
+			}
+
+			rootsByItem[childItemID] = roots
+			next = append(next, childItemID)
+			for _, rootItemID := range roots {
+				if descendants[rootItemID] == nil {
+					descendants[rootItemID] = map[string]bool{}
+				}
+				descendants[rootItemID][childItemID] = true
+			}
 		}
 		frontier = next
 	}
@@ -804,13 +849,23 @@ func (s *productionScheduleSvcImpl) walkDescendants(
 	children := make(map[string][]string, len(edges))
 	for parentItemID, childSet := range edges {
 		for childItemID := range childSet {
-			if rootByItem[childItemID] == rootByItem[parentItemID] && childItemID != rootByItem[parentItemID] {
+			if !isRoot[childItemID] && sharesRoot(rootsByItem[parentItemID], rootsByItem[childItemID]) {
 				children[parentItemID] = append(children[parentItemID], childItemID)
 			}
 		}
 		sort.Strings(children[parentItemID])
 	}
 	return out, children, nil
+}
+
+// sharesRoot reports whether two stages sit in at least one common echelon.
+func sharesRoot(a, b []string) bool {
+	for _, x := range a {
+		if slices.Contains(b, x) {
+			return true
+		}
+	}
+	return false
 }
 
 // committedStockByItem splits out the downstream stock that has passed a branch point in its family's routing.
@@ -1047,12 +1102,12 @@ func loadOpenOrderBook(
 	itemByProduct map[string]string,
 	nativeRatioOf func(string) float64,
 ) *apierror.APIError {
-	// A finished good reachable from two constraint items is claimed by the first, matching the first-wins attribution the echelon on-hand walk already uses. itemIDs is sorted, so the choice is stable.
-	constraintByContributor := map[string]string{}
+	// A finished good assembled from several constraint items is owed by each of them; otherwise the walk gave it exactly one.
+	constraintsByContributor := map[string][]string{}
 	for _, constraintItemID := range itemIDs {
 		for _, contributorID := range append([]string{constraintItemID}, descendantItemsByItem[constraintItemID]...) {
-			if _, claimed := constraintByContributor[contributorID]; !claimed {
-				constraintByContributor[contributorID] = constraintItemID
+			if !slices.Contains(constraintsByContributor[contributorID], constraintItemID) {
+				constraintsByContributor[contributorID] = append(constraintsByContributor[contributorID], constraintItemID)
 			}
 		}
 	}
@@ -1073,24 +1128,22 @@ func loadOpenOrderBook(
 		if !ok {
 			continue
 		}
-		constraintItemID, ok := constraintByContributor[finishedItemID]
-		if !ok {
-			// Nothing in the plan produces this order. Dropping it is right: the alternative is putting work on a machine for a product it does not make.
-			continue
+		// No constraint item means nothing in the plan produces this order, and it is dropped rather than put on a machine that does not make it.
+		for _, constraintItemID := range constraintsByContributor[finishedItemID] {
+			ratio := nativeRatioOf(constraintItemID)
+			if ratio == 0 {
+				continue
+			}
+			in.OpenOrders = append(in.OpenOrders, scheduling.OpenOrderLine{
+				SalesOrderID:     row.SalesOrderID,
+				SalesOrderNumber: row.SalesOrderNumber,
+				SalesOrderLineID: row.SalesOrderLineID,
+				FinishedItemID:   finishedItemID,
+				ConstraintItemID: constraintItemID,
+				Units:            row.OutstandingQty / ratio,
+				ShipByDate:       row.ShipByDate,
+			})
 		}
-		ratio := nativeRatioOf(constraintItemID)
-		if ratio == 0 {
-			continue
-		}
-		in.OpenOrders = append(in.OpenOrders, scheduling.OpenOrderLine{
-			SalesOrderID:     row.SalesOrderID,
-			SalesOrderNumber: row.SalesOrderNumber,
-			SalesOrderLineID: row.SalesOrderLineID,
-			FinishedItemID:   finishedItemID,
-			ConstraintItemID: constraintItemID,
-			Units:            row.OutstandingQty / ratio,
-			ShipByDate:       row.ShipByDate,
-		})
 	}
 
 	return nil

@@ -106,6 +106,8 @@ type StepConsumptionRow struct {
 type ProductionFlowChildRow struct {
 	ParentItemID string
 	ChildItemID  string
+	// ProductionStepID is the step making the child; parents consumed by one step are assembled together.
+	ProductionStepID string
 }
 
 // SellableProductRow is one sellable product carried by an item.

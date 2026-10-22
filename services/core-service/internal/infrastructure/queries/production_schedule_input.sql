@@ -97,16 +97,19 @@ ORDER BY c.production_step_id, i.sku;
 -- GetProductionFlowChildrenByItem returns one edge per (consumed item -> item the same step produces): the immediate downstream stage of each given item in the production-flow graph.
 --
 -- This is the routing/BOM graph, not batch history. The echelon is defined by what an item is structurally turned into — a step consumes greige and produces sewn, sewn is consumed and washed produced, and so on — so downstream stock is counted whether or not the floor ever linked the batches that produced it. That linkage (_batch_flow) is written only by move/split/merge, so a walk that depended on it collapsed to the constraint item alone whenever the stages were scanned as independent batches. The caller walks one level at a time, passing the whole frontier each round: O(depth) queries regardless of how many items are planned. A recursive CTE would be nicer, but sqlc's MySQL parser cannot resolve the self-reference. A step with no production row produces nothing and drops out of the join, which correctly ends that branch.
+--
+-- The step is returned because it tells an assembly (one step consuming both legs of a pair) from two alternative routes to the same stage.
 -- name: GetProductionFlowChildrenByItem :many
 SELECT DISTINCT
     c.item_id AS parent_item_id,
-    prod.item_id AS child_item_id
+    prod.item_id AS child_item_id,
+    c.production_step_id
 FROM consumption c
 JOIN production_step ps ON ps.id = c.production_step_id
 JOIN production prod ON prod.production_step_id = c.production_step_id
 WHERE ps.account_id = sqlc.arg('account_id')
   AND c.item_id IN (sqlc.slice('parent_item_ids'))
-ORDER BY c.item_id, prod.item_id;
+ORDER BY c.item_id, prod.item_id, c.production_step_id;
 
 -- GetProductsForItems returns the sellable products for a set of items, with the SKU and product line each one carries so a finished good can be reported by name rather than by ID. Only items with a product carry order demand.
 -- name: GetProductsForItems :many
@@ -122,17 +125,21 @@ WHERE i.account_id = sqlc.arg('account_id')
 ORDER BY p.item_id;
 
 -- GetEchelonOnHand returns available inventory per item, net of what is already allocated. Quantities are normalized through the unit ratio so items stocked in different units are comparable.
+--
+-- Each allocation is normalized through its own unit, not the receipt's: a receipt of pairs drawn on in eaches would otherwise lose a pair per each and read nearly empty. FetchOnHandInventoryBulk does the same.
 -- name: GetEchelonOnHand :many
 SELECT
     ir.item_id,
     CAST(COALESCE(SUM(
+        q.value * (u.ratio_numerator / u.ratio_denominator)
         -- Correlated per receipt: a grouped derived table cannot take the account and item filters and so aggregates all of inventory_allocation on every call.
-        (q.value - COALESCE((
-            SELECT SUM(aq.value)
+        - COALESCE((
+            SELECT SUM(aq.value * (au.ratio_numerator / au.ratio_denominator))
             FROM inventory_allocation ia
             JOIN quantity aq ON aq.id = ia.quantity_id
+            JOIN unit au ON au.id = aq.unit_id
             WHERE ia.inventory_receipt_id = ir.id
-        ), 0)) * (u.ratio_numerator / u.ratio_denominator)
+        ), 0)
     ), 0) AS DECIMAL(65,30)) AS on_hand
 FROM inventory_receipt ir
 JOIN quantity q ON q.id = ir.quantity_id

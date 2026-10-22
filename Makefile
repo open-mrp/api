@@ -250,7 +250,7 @@ install-tools: ## Install required development tools
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@$(call tool-version,google.golang.org/protobuf)
 	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(call tool-version,google.golang.org/grpc/cmd/protoc-gen-go-grpc)
 	@go install github.com/goreleaser/goreleaser/v2@$(call tool-version,github.com/goreleaser/goreleaser/v2)
-	@go install github.com/securego/gosec/v2/cmd/gosec@$(call tool-version,github.com/securego/gosec/v2)
+	@./scripts/install-gosec.sh
 	@go install honnef.co/go/tools/cmd/staticcheck@$(call tool-version,honnef.co/go/tools)
 	@go install golang.org/x/tools/cmd/goimports@$(call tool-version,golang.org/x/tools)
 

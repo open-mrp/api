@@ -91,16 +91,11 @@ jobs:
         id: cache-gosec
         with:
           path: ~/go/bin/gosec
-          key: ${{ runner.os }}-gosec-xtools-${{ hashFiles('tools/tool-versions') }}
+          key: ${{ runner.os }}-gosec-${{ hashFiles('tools/tool-versions', 'scripts/install-gosec.sh') }}
 
       - name: Install gosec
         if: steps.cache-gosec.outputs.cache-hit != 'true'
-        run: |
-          cd "$(mktemp -d)"
-          go mod init gosec-build
-          go get github.com/securego/gosec/v2/cmd/gosec@$(awk '/gosec/{print $2}' "$GITHUB_WORKSPACE/tools/tool-versions") \
-            golang.org/x/tools@$(awk '/golang.org\/x\/tools/{print $2}' "$GITHUB_WORKSPACE/tools/tool-versions")
-          go install github.com/securego/gosec/v2/cmd/gosec
+        run: ./scripts/install-gosec.sh
 
       - name: Get changed packages
         id: pkgs

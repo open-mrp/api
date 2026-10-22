@@ -263,6 +263,13 @@ func (s *conversationSvcImpl) ListConversationsByResource(ctx context.Context, r
 	if resourceType == "" || resourceID == "" {
 		return nil, tracing.Trace(span, apierror.NewParameterMissingError("A resource_type and resource_id are required.", "resource_type"))
 	}
+	if isPersonalTopic(resourceType) {
+		_, callerAcus, accountID, apiErr := s.caller(ctx)
+		if apiErr != nil {
+			return nil, tracing.Trace(span, apiErr)
+		}
+		return s.repoFactory.NewConversationRepo().ListParticipantByTopic(ctx, accountID, callerAcus, resourceType, resourceID, clampLimit(limit, defaultNotificationPageSize, maxNotificationPageSize))
+	}
 	accountID, apiErr := s.requireMessagingAdmin(ctx, types.ActionRead)
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)
@@ -752,4 +759,13 @@ func caseEmailSubject(explicit, title *string) string {
 		return "Re: " + *title
 	}
 	return ""
+}
+
+func isPersonalTopic(resourceType string) bool {
+	switch constants.ObjectType(resourceType) {
+	case constants.ObjectTypeConversation, constants.ObjectTypeAgentDefinition:
+		return true
+	default:
+		return false
+	}
 }

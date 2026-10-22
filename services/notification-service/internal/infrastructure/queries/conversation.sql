@@ -283,6 +283,17 @@ WHERE account_id = sqlc.arg('account_id')
 ORDER BY last_message_at DESC, id DESC
 LIMIT ?;
 
+-- name: ListParticipantConversationsByTopic :many
+SELECT c.* FROM conversation c
+JOIN conversation_participant p
+    ON p.conversation_id = c.id AND p.account_user_id = sqlc.arg('account_user_id')
+WHERE c.account_id = sqlc.arg('account_id')
+  AND c.topic_resource_type = sqlc.arg('topic_resource_type')
+  AND c.topic_resource_id = sqlc.arg('topic_resource_id')
+  AND p.membership = 'active'
+ORDER BY c.last_message_at DESC, c.id DESC
+LIMIT ?;
+
 -- name: ListConversationsByResource :many
 -- Every conversation linked to a business record, via either the primary topic anchor or a secondary
 -- conversation_link row. Drives the "conversations on this object" panel from a record's page.

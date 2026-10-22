@@ -901,6 +901,78 @@ func (q *Queries) ListConversationsForUser(ctx context.Context, arg ListConversa
 	return items, nil
 }
 
+const listParticipantConversationsByTopic = `-- name: ListParticipantConversationsByTopic :many
+SELECT c.id, c.account_id, c.type, c.audience, c.title, c.group_id, c.topic_resource_type, c.topic_resource_id, c.created_by_participant_id, c.next_sequence, c.last_message_id, c.last_message_at, c.is_archived, c.legal_hold, c.workflow_status, c.assignee_resource_type, c.assignee_resource_id, c.email_inbox_id, c.email_external_address, c.metadata, c.created_at, c.updated_at FROM conversation c
+JOIN conversation_participant p
+    ON p.conversation_id = c.id AND p.account_user_id = ?
+WHERE c.account_id = ?
+  AND c.topic_resource_type = ?
+  AND c.topic_resource_id = ?
+  AND p.membership = 'active'
+ORDER BY c.last_message_at DESC, c.id DESC
+LIMIT ?
+`
+
+type ListParticipantConversationsByTopicParams struct {
+	AccountUserID     sql.NullString
+	AccountID         string
+	TopicResourceType sql.NullString
+	TopicResourceID   sql.NullString
+	Limit             int32
+}
+
+func (q *Queries) ListParticipantConversationsByTopic(ctx context.Context, arg ListParticipantConversationsByTopicParams) ([]Conversation, error) {
+	rows, err := q.db.QueryContext(ctx, listParticipantConversationsByTopic,
+		arg.AccountUserID,
+		arg.AccountID,
+		arg.TopicResourceType,
+		arg.TopicResourceID,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Conversation
+	for rows.Next() {
+		var i Conversation
+		if err := rows.Scan(
+			&i.ID,
+			&i.AccountID,
+			&i.Type,
+			&i.Audience,
+			&i.Title,
+			&i.GroupID,
+			&i.TopicResourceType,
+			&i.TopicResourceID,
+			&i.CreatedByParticipantID,
+			&i.NextSequence,
+			&i.LastMessageID,
+			&i.LastMessageAt,
+			&i.IsArchived,
+			&i.LegalHold,
+			&i.WorkflowStatus,
+			&i.AssigneeResourceType,
+			&i.AssigneeResourceID,
+			&i.EmailInboxID,
+			&i.EmailExternalAddress,
+			&i.Metadata,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listParticipants = `-- name: ListParticipants :many
 SELECT id, conversation_id, account_id, participant_type, account_user_id, agent_config_id, role, membership, notifications, muted_until, last_read_message_id, last_read_sequence, last_read_at, last_seen_at, hidden_at, agent_trigger_policy, agent_trigger_keywords, relation_account_id, joined_at, created_at, updated_at FROM conversation_participant
 WHERE conversation_id = ? AND membership = 'active'

@@ -359,6 +359,27 @@ func (r *conversationRepoImpl) ListByResource(ctx context.Context, accountID, re
 	return out, nil
 }
 
+func (r *conversationRepoImpl) ListParticipantByTopic(ctx context.Context, accountID, accountUserID, resourceType, resourceID string, limit int32) ([]*domain.Conversation, *apierror.APIError) {
+	ctx, span := conversationRepoTracer.Start(ctx, "repository.conversation.list_participant_by_topic")
+	defer span.End()
+
+	rows, err := r.db.ListParticipantConversationsByTopic(ctx, sqlc.ListParticipantConversationsByTopicParams{
+		AccountUserID:     db.NullString(accountUserID),
+		AccountID:         accountID,
+		TopicResourceType: db.NullString(resourceType),
+		TopicResourceID:   db.NullString(resourceID),
+		Limit:             limit,
+	})
+	if apiErr := db.MapSQLError(err); apiErr != nil {
+		return nil, tracing.Trace(span, apiErr)
+	}
+	out := make([]*domain.Conversation, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, conversationFromRow(row))
+	}
+	return out, nil
+}
+
 // ── Participant repo ────────────────────────────────────────────────
 
 type participantRepoImpl struct {

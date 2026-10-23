@@ -2,9 +2,7 @@
 
 An open source manufacturing platform built to make factories programmable, reliable, and increasingly autonomous.
 
-[Website](https://openmrp.ai)  ·  [Documentation](https://docs.openmrp.ai)  ·  [API reference](https://docs.openmrp.ai/api-reference)  ·  [All repos](https://github.com/open-mrp)
-
-![The OpenMRP landing page: an agent reviewing a sales order and holding two protected writes for approval](docs/assets/screenshots/landing.png)
+[Documentation](https://docs.openmrp.ai)  ·  [API reference](https://docs.openmrp.ai/api-reference)  ·  [All repos](https://github.com/open-mrp)
 
 ---
 
@@ -23,7 +21,7 @@ Our philosophy is that **ERPs should be programmable infrastructure.** Our goal 
 | **Engineering**     | Bills of materials, production flows, production steps, consumptions and productions, rolled-up costing                       |
 | **Planning**        | Demand forecasting, demand overrides, production schedules, publishing and releasing, work lists, operating calendars         |
 | **Production**      | Production runs, batches, batch operations, machines, departments, machine status and downtime tracking                       |
-| **Inventory**       | Storage locations, lots, reconciliation, change logs, receipts, distribution-center locations                                 |
+| **Inventory**       | Storage locations, lots, reconciliation, change logs, receipts                                                                |
 | **Purchasing**      | Suppliers, purchase orders, deliveries and receiving                                                                          |
 | **Shop floor**      | Scanning stations, labels, picking, packing, shipping, carriers and service levels                                            |
 | **Sales**           | Customers, contacts, customer groups, territories, sales reps and targets, sales orders, order discounts                      |
@@ -33,30 +31,22 @@ Our philosophy is that **ERPs should be programmable infrastructure.** Our goal 
 | **Analytics**       | Order, delivery, manufacturing and material analytics; pricing analysis; weeks of sales; quarterly orders; products on order  |
 | **Communication**   | Shared inbox, threaded messaging, email domains and inboxes, notifications and preferences, retention and compliance controls |
 | **Agents**          | Agent configs, runs, memories, endpoint-tools with approval gates, agents in chat, reply drafts a human approves              |
-| **Platform**        | API keys, sandboxes, roles and permissions, audit events, request logs, email logs, idempotency, HubSpot and EDI integrations |
+| **Platform**        | API keys, sandboxes, roles and permissions, audit events, request logs, email logs, idempotency, HubSpot integration          |
 
 
 Browse the [API reference](https://docs.openmrp.ai/api-reference), or read the OpenAPI specification.
 
 **Production flows.** A product's bill of materials and its routing are the same graph: materials feed production steps, steps yield parts, and every edge carries the quantity consumed or produced. Costs roll up along it.
 
-![A production flow running from raw yarn through knitting, dyeing, boarding, and packing to a finished SKU](docs/assets/screenshots/production-flow-full.png)
-
 **Production schedules.** A solver turns forecast demand into a week-by-week plan per SKU — run hours, utilization, and what freezes when. It stays a draft until you publish it.
-
-![A draft production schedule laid out by SKU across thirteen weeks](docs/assets/screenshots/production-schedule.png)
 
 **Agents.** @mention an agent in any thread and it works the same API you do. Tools that write are gated: the run stops, a human approves by name, and only then does it continue.
 
-![An agent run holding a customer update at an approval gate until a human approves it](docs/assets/screenshots/agent-run.png)
-
 **Request logs.** Every call the dashboard makes is a call you can make. Method, path, status, latency, and caller — whether that caller was a person, an API key, or an agent.
-
-![Request logs listing API calls with method, path, status, latency, and caller](docs/assets/screenshots/request-logs.png)
 
 ## Architecture
 
-This repository is the backend: an HTTP gateway in front of six domain services that talk to each other over gRPC and to themselves over RabbitMQ.
+This repository is the backend: an HTTP gateway in front of five domain services that talk to each other over gRPC and to themselves over RabbitMQ.
 
 ```mermaid
 flowchart LR
@@ -86,10 +76,9 @@ flowchart LR
 ```
 
 
-
 Agents run inside `agent-service`, and when a run calls a tool it loops back through the gateway rather than reaching into another service directly, so an agent's writes get the same auth, versioning, idempotency, and audit trail as anyone else's. That loop lands on a second gateway listener on port 8091, a ClusterIP that is never routed publicly and is gated by a shared token.
 
-Messages cross between services through the outbox and inbox tables, so a publish commits in the same transaction as the state change it describes. At the moment, several services share a MySQL database; this will change after we finish migrating a legacy API to this repository.
+Messages cross between services through the outbox and inbox tables, so a publish commits in the same transaction as the state change it describes. Today every service, `agent-service` included, uses the same MySQL database.
 
 
 | Service                | Owns                                    | Store      |
@@ -137,12 +126,11 @@ Cross-cutting concerns live in `shared/`: gRPC interceptors and identity propaga
 | ----------------------- | -------------------------------------------------------------------- |
 | Go 1.27                 | gRPC + Protocol Buffers, via [buf](https://buf.build)                |
 | MySQL 8                 | [sqlc](https://sqlc.dev) · [goose](https://github.com/pressly/goose) |
-| RabbitMQ                | OpenTelemetry tracing                                                |
+| RabbitMQ                | Redis (caching)                                                      |
+| OpenTelemetry           | Jaeger locally                                                       |
 | Kubernetes / EKS        | [Tilt](https://tilt.dev) + minikube for local dev                    |
 | Stripe                  | AWS S3 · SES · SQS                                                   |
 | Anthropic Claude        |                                                                      |
-
-
 
 
 ## The project
@@ -153,30 +141,34 @@ OpenMRP is split across repositories rather than a monorepo. Everything below is
 | Repo                                                     | What it is                                                                               |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **[api](https://github.com/open-mrp/api)** (this repo)   | The Go microservices, the REST API, and the OpenAPI specifications                       |
-| [dashboard](https://github.com/open-mrp/dashboard)       | The Next.js dashboard and customer portal                                                 |
-| [ui](https://github.com/open-mrp/ui)                     | `@openmrp/ui` — the React component library both frontends are built from                |
-| [internal-sdk](https://github.com/open-mrp/internal-sdk) | `@openmrp/internal-sdk` — the TypeScript client the dashboard uses                       |
+| [dashboard](https://github.com/open-mrp/dashboard)       | The Next.js dashboard                                                                    |
+| [customer-portal](https://github.com/open-mrp/customer-portal) | The Next.js portal a vendor's customers use to order, pay, and message the vendor |
+| [ui](https://github.com/open-mrp/ui)                     | `@openmrp/ui` — the React component library the frontends are built from                |
+| [internal-sdk](https://github.com/open-mrp/internal-sdk) | `@openmrp/internal-sdk` — the TypeScript client the frontends use                       |
+| [typescript-sdk](https://github.com/open-mrp/typescript-sdk) | `@openmrp/sdk` — the public TypeScript SDK and MCP server                          |
 | [openmrp-go](https://github.com/open-mrp/openmrp-go)     | The Go SDK                                                                               |
+| [python-sdk](https://github.com/open-mrp/python-sdk)     | `openmrp` — the Python SDK                                                               |
 | [public-docs](https://github.com/open-mrp/public-docs)   | [docs.openmrp.ai](https://docs.openmrp.ai) — the guides plus the generated API reference |
-
-
 
 
 ## Using the API
 
-Authenticate with a bearer API key, name the account you're acting on, and pin a version:
+Point a client at your own deployment's gateway (under `make dev`, Tilt forwards it to `localhost:8081`). Authenticate with a bearer API key, name the account you're acting on, and pin a version:
 
 ```bash
-curl https://api.openmrp.ai/v1/catalog/items \
+curl http://localhost:8081/v1/catalog/items \
   -H "Authorization: Bearer $OPENMRP_API_KEY" \
   -H "OpenMRP-Account: acct_..." \
-  -H "OpenMRP-Version: 1.0.forge-preview.3"
+  -H "OpenMRP-Version: 1.0.forge-preview.10"
 ```
 
 ```ts
 import OpenMRP from "@openmrp/sdk";
 
-const client = new OpenMRP({ bearerToken: process.env["OPENMRP_API_KEY"] });
+const client = new OpenMRP({
+  bearerToken: process.env["OPENMRP_API_KEY"],
+  baseURL: "http://localhost:8081",
+});
 const items = await client.catalog.items.list();
 ```
 
@@ -184,6 +176,7 @@ const items = await client.catalog.items.list();
 client := openmrp.NewClient(
     option.WithBearerToken(os.Getenv("OPENMRP_API_KEY")),
     option.WithOpenMRPAccountID("acct_..."),
+    option.WithBaseURL("http://localhost:8081"),
 )
 items, err := client.Catalog.Items.List(ctx, openmrp.CatalogItemListParams{})
 ```
@@ -191,7 +184,6 @@ items, err := client.Catalog.Items.List(ctx, openmrp.CatalogItemListParams{})
 Sandboxes, idempotency keys, pagination, `?include=` expansion, request IDs, and rate limits are covered in the [developer guides](https://docs.openmrp.ai/api-reference). AI assistants can drive the same API through the [MCP server](https://docs.openmrp.ai/api-reference/mcp-server).
 
 ## Running it locally
-
 
 
 ### Prerequisites
@@ -225,7 +217,8 @@ make mocks [service]    # Generate mock implementations
 make generate           # Regenerate sqlc, proto, OpenAPI specs, Stainless configs, and agent tools
 make test               # Run all tests
 make e2e                # Bring up the E2E stack and run the E2E tests
-make lint               # gosec + staticcheck + tx audit + committed-binary check
+make migrate-create name=add_foo  # New core-service schema migration
+make lint               # gosec, staticcheck, tx audit, audit-event gaps, Vitess parse, binary and migration checks
 make fmt                # Format Go sources
 ```
 
@@ -256,15 +249,15 @@ make local-db-nuke
 ```
 
 
-
 #### Using with Tilt / Kubernetes
 
-Services running in minikube cannot reach `localhost` on the host machine. The K8s secret in `infra/development/kubernetes/config/secrets.yaml` uses `host.minikube.internal` to route traffic back to the host. This URI matches the Docker Compose database started by `make local-db`:
+Services running in minikube cannot reach `localhost` on the host machine. The K8s secret in `infra/development/kubernetes/config/secrets.yaml` (gitignored) uses `host.minikube.internal` to route traffic back to the host. Its `database-credentials` secret needs two keys, both pointing at the Docker Compose MySQL started by `make local-db`:
 
 
-| Service       | URI                                                         |
-| ------------- | ----------------------------------------------------------- |
-| All (MySQL)   | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
+| Key                 | Used by                          | URI                                                         |
+| ------------------- | -------------------------------- | ----------------------------------------------------------- |
+| `core-service-uri`  | Every service but agent-service  | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
+| `agent-service-uri` | `agent-service`                  | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
 
 
 The seed script hardcodes the Docker Compose connection details, so no `.env` configuration is needed — just run `make local-db` before `make dev`.
@@ -290,12 +283,11 @@ Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL
 > **minikube acting up?** `minikube delete && make setup` clears most of it. Tilt needs the Docker container runtime (`--container-runtime=docker`, set by `make setup`); on containerd it tries to push images to docker.io and fails.
 
 
-
 ## Contributing
 
 Pull requests are welcome — including on the parts of this README that are wrong.
 
-**Read the pattern docs before you write.** `AGENTS.md` and the docs in `docs/patterns/` are the normative spec for this codebase — layering, API versioning, nullable fields, authorization, audit events, entity IDs, logging, comments. Where a doc and existing code disagree, the doc wins. Imitating the file next to yours is the most common way to get a change rejected.
+**Read the pattern docs before you write.** `AGENTS.md` and the docs in `docs/patterns/` (distilled for coding agents in `.claude/skills/`) are the normative spec for this codebase — layering, API versioning, nullable fields, authorization, audit events, entity IDs, logging, comments. Where a doc and existing code disagree, the doc wins. Imitating the file next to yours is the most common way to get a change rejected.
 
 **Branch** from `main` with a descriptive name:
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.4](https://github.com/open-mrp/api/compare/v7.1.3...v7.1.4) (2026-10-23)
+
+
+### Documentation
+
+* refresh README and drop product screenshots ([#376](https://github.com/open-mrp/api/issues/376)) ([6871c75](https://github.com/open-mrp/api/commit/6871c75766956104256a2069c50b4eaac96026b2))
+
 ## [7.1.3](https://github.com/open-mrp/api/compare/v7.1.2...v7.1.3) (2026-10-22)
 
 

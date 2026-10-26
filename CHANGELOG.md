@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.6](https://github.com/open-mrp/api/compare/v7.1.5...v7.1.6) (2026-10-26)
+
+
+### Bug Fixes
+
+* **addresses:** null clears an inline address's state and postal code ([#383](https://github.com/open-mrp/api/issues/383)) ([4bb8b39](https://github.com/open-mrp/api/commit/4bb8b39d78b862871837d6803f6d6aa877dc9bdb))
+
 ## [7.1.5](https://github.com/open-mrp/api/compare/v7.1.4...v7.1.5) (2026-10-26)
 
 

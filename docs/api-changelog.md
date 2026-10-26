@@ -20,6 +20,10 @@ OpenMRP no longer sells plans or subscriptions, so these routes and fields are r
 - The `billing` permission. A role that sends `billing:read` or `billing:update` is refused with `400`.
 - The error codes `payment_required` and `agent_spending_cap_reached` (`402`) and `limit_exceeded` (`403`), and `quota` on the error object. No account has a seat, sandbox, invoice or batch limit any more.
 
+### Fixes
+
+- An empty `state` or `postal_code` on Update Address (`PATCH /v1/sales/addresses/{id}`), or on an inline address that names a saved one, clears it. It was ignored before, so an address could not drop its state when it moved to a country without states.
+
 ## 1.0.forge-preview.10
 
 ### Breaking changes

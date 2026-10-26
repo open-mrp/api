@@ -244,8 +244,8 @@ UPDATE geolocation SET
     street_line_1 = COALESCE(sqlc.narg('street_line_1'), street_line_1),
     street_line_2 = sqlc.narg('street_line_2'),
     locality = COALESCE(sqlc.narg('locality'), locality),
-    state = COALESCE(sqlc.narg('state'), state),
-    postal_code = COALESCE(sqlc.narg('postal_code'), postal_code),
+    state = sqlc.narg('state'),
+    postal_code = sqlc.narg('postal_code'),
     country = COALESCE(sqlc.narg('country'), country),
     google_place_id = sqlc.narg('google_place_id'),
     updated_at = NOW(3)

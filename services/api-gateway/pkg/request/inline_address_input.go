@@ -14,7 +14,7 @@ func init() {
 
 // An address saved together with the record that uses it, under that record's own permission.
 //
-// Without `id`, a new address is created from these fields, so `name` and `country` are required. With `id`, that saved address is updated: omitted fields are left unchanged, and `null` clears `phone`, `email`, `receive_calendar_id` or `street_line_2`. The address must already belong to the account the record saves it in.
+// Without `id`, a new address is created from these fields, so `name` and `country` are required. With `id`, that saved address is updated: omitted fields are left unchanged, `null` clears `phone`, `email`, `receive_calendar_id` or `street_line_2`, and an empty string clears `state` or `postal_code`. The address must already belong to the account the record saves it in.
 type InlineAddressInput struct {
 	// ID of a saved address to update instead of creating a new one.
 	ID field.Optional[string] `json:"id,omitzero" validate:"omitempty"`
@@ -38,8 +38,12 @@ type InlineAddressInput struct {
 	// City or locality.
 	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
 	// State or administrative area.
+	//
+	// Send an empty string to clear.
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
+	//
+	// Send an empty string to clear.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
 	// Two-letter ISO 3166-1 country code, such as `US`. Required when `id` is omitted.
 	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,max=2"`

@@ -512,6 +512,36 @@ func TestAddresses_UpdateGeolocationFields(t *testing.T) {
 	assert.Equal(t, "US", jsonField(geo, "country"))
 }
 
+// An address outside a region-addressed country, such as the Cayman Islands, has no state, so an empty one clears it.
+func TestAddresses_UpdateClearsStateAndPostalCodeWhenEmpty(t *testing.T) {
+	t.Parallel()
+	created := createAndCleanup(t, addressesPath, map[string]any{
+		"name":          uniqueName("e2e-addr-clear-state"),
+		"street_line_1": "600 Old Rd",
+		"locality":      "Miami",
+		"state":         "FL",
+		"postal_code":   "33101",
+		"country":       "US",
+	})
+	id := jsonField(created, "id")
+
+	status, body, err := apiClient.Patch(addressesPath+"/"+id, map[string]any{
+		"street_line_1": "1 Harbour Dr",
+		"locality":      "George Town",
+		"state":         "",
+		"postal_code":   "",
+		"country":       "KY",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, body)
+
+	geo := jsonObject(parseJSON(body), "geolocation")
+	require.NotNil(t, geo, "geolocation should be present")
+	assertNilField(t, geo, "state")
+	assertNilField(t, geo, "postal_code")
+	assert.Equal(t, "KY", jsonField(geo, "country"))
+}
+
 func TestAddresses_DeleteInUse(t *testing.T) {
 	t.Parallel()
 	// The seeded address is used as billing address on sales orders, invoices, and account defaults.

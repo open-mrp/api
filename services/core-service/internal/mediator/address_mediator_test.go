@@ -200,3 +200,71 @@ func (s *AddressMedTestSuite) TestPreviewOfANewAddressIsBuiltFromItsFields() {
 	s.Equal("OH", *got.Geolocation.State)
 	s.Equal("US", got.Geolocation.Country)
 }
+
+func (s *AddressMedTestSuite) expectGeolocationWrite(stored *domain.Address) *domain.UpdateAddressParams {
+	s.address.EXPECT().IsInAccount(gomock.Any(), inlineSupplierAccountID, inlineAddressID).Return(true, nil)
+	s.address.EXPECT().Get(gomock.Any(), gomock.Any()).Return(stored, nil)
+	s.address.EXPECT().GetGeolocationIDByAddressID(gomock.Any(), inlineAddressID).Return("geo_dock", nil)
+	s.address.EXPECT().GetGeolocationSharedCount(gomock.Any(), "geo_dock").Return(int64(1), nil).AnyTimes()
+	s.address.EXPECT().Update(gomock.Any(), gomock.Any()).Return(stored, nil)
+
+	written := &domain.UpdateAddressParams{}
+	s.address.EXPECT().UpdateGeolocation(gomock.Any(), "geo_dock", gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, params domain.UpdateAddressParams) *apierror.APIError {
+			*written = params
+			return nil
+		})
+	return written
+}
+
+func (s *AddressMedTestSuite) TestSaveWithAnEmptyStateAndPostalCodeClearsThem() {
+	stored := s.storedDock()
+	stored.Geolocation.State = strPtr("CA")
+	stored.Geolocation.PostalCode = strPtr("90001")
+	written := s.expectGeolocationWrite(stored)
+
+	_, apiErr := s.med.Save(s.ctx, inlineSupplierAccountID, domain.InlineAddressParams{
+		ID:         strPtr(inlineAddressID),
+		State:      strPtr(""),
+		PostalCode: strPtr(""),
+	}, "shipping_address")
+
+	s.Require().Nil(apiErr)
+	s.Require().NotNil(written.State)
+	s.Require().NotNil(written.PostalCode)
+	s.Equal("", *written.State)
+	s.Equal("", *written.PostalCode)
+}
+
+func (s *AddressMedTestSuite) TestSaveOfAnotherGeolocationFieldKeepsTheStateAndPostalCode() {
+	stored := s.storedDock()
+	stored.Geolocation.State = strPtr("CA")
+	stored.Geolocation.PostalCode = strPtr("90001")
+	written := s.expectGeolocationWrite(stored)
+
+	_, apiErr := s.med.Save(s.ctx, inlineSupplierAccountID, domain.InlineAddressParams{
+		ID:          strPtr(inlineAddressID),
+		StreetLine2: field.Set("Suite 4"),
+	}, "shipping_address")
+
+	s.Require().Nil(apiErr)
+	s.Require().NotNil(written.State, "an unsent state is written back")
+	s.Require().NotNil(written.PostalCode, "an unsent postal code is written back")
+	s.Equal("CA", *written.State)
+	s.Equal("90001", *written.PostalCode)
+}
+
+func (s *AddressMedTestSuite) TestPreviewOfAnEmptyStateHasNoState() {
+	stored := s.storedDock()
+	stored.Geolocation.State = strPtr("CA")
+	s.address.EXPECT().IsInAccount(gomock.Any(), inlineSupplierAccountID, inlineAddressID).Return(true, nil)
+	s.address.EXPECT().Get(gomock.Any(), gomock.Any()).Return(stored, nil)
+
+	got, apiErr := s.med.Preview(s.ctx, inlineSupplierAccountID, domain.InlineAddressParams{
+		ID:    strPtr(inlineAddressID),
+		State: strPtr(""),
+	}, "ship_to_address")
+
+	s.Require().Nil(apiErr)
+	s.Nil(got.Geolocation.State)
+}

@@ -46,12 +46,12 @@ type UpdateAddressRequest struct {
 	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
 	// State or administrative area.
 	//
-	// Send an empty string to clear.
-	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
+	// Send `null` or an empty string to clear.
+	State field.Clearable[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
 	//
-	// Send an empty string to clear.
-	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
+	// Send `null` or an empty string to clear.
+	PostalCode field.Clearable[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
 	// Two-letter country code.
 	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,max=2"`
 }
@@ -74,8 +74,8 @@ var sampleUpdateAddressRequest = &UpdateAddressRequest{
 	StreetLine1: field.Some(sampleUpdateAddressStreetLine1),
 	StreetLine2: field.Set(sampleUpdateAddressStreetLine2),
 	Locality:    field.Some(sampleUpdateAddressLocality),
-	State:       field.Some(sampleUpdateAddressState),
-	PostalCode:  field.Some(sampleUpdateAddressPostalCode),
+	State:       field.Set(sampleUpdateAddressState),
+	PostalCode:  field.Set(sampleUpdateAddressPostalCode),
 	Country:     field.Some(sampleUpdateAddressCountry),
 }
 

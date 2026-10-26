@@ -22,6 +22,7 @@ OpenMRP no longer sells plans or subscriptions, so these routes and fields are r
 
 ### Fixes
 
+- Validate Address (`PUT /v1/core/addresses/actions/validate`) accepts an empty `state` and `postal_code`, so an address in a country without states can be validated. It returned `400 missing_field` before.
 - An empty `state` or `postal_code` on Update Address (`PATCH /v1/sales/addresses/{id}`), or on an inline address that names a saved one, clears it. It was ignored before, so an address could not drop its state when it moved to a country without states.
 
 ## 1.0.forge-preview.10

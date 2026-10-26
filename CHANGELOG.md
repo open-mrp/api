@@ -1,5 +1,18 @@
 # Changelog
 
+## [7.1.4](https://github.com/open-mrp/api/compare/v7.1.3...v7.1.4) (2026-10-26)
+
+
+### Bug Fixes
+
+* **addresses:** an empty state or postal code clears it on update ([#379](https://github.com/open-mrp/api/issues/379)) ([62c4a68](https://github.com/open-mrp/api/commit/62c4a68d6c4a6152b551cd443aab75cd04233566))
+* **production-schedule:** a campaign moved to another machine takes on that machine's production step ([#380](https://github.com/open-mrp/api/issues/380)) ([dd12804](https://github.com/open-mrp/api/commit/dd12804842f65de509bc971f1b447f9d55ca746e))
+
+
+### Documentation
+
+* refresh README and drop product screenshots ([#376](https://github.com/open-mrp/api/issues/376)) ([6871c75](https://github.com/open-mrp/api/commit/6871c75766956104256a2069c50b4eaac96026b2))
+
 ## [7.1.3](https://github.com/open-mrp/api/compare/v7.1.2...v7.1.3) (2026-10-22)
 
 

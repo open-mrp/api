@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	apirequest "github.com/open-mrp/api/services/api-gateway/pkg/request"
 	"github.com/open-mrp/api/shared/validate"
 )
 
@@ -17,8 +18,8 @@ func TestUpdateAddressClearsStateAndPostalCodeWithEmptyOrNull(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &req))
 	require.Nil(t, validate.RejectExplicitJSONNulls(body, &req))
 
-	state := clearedAsEmptyString(req.State)
-	postalCode := clearedAsEmptyString(req.PostalCode)
+	state := apirequest.ClearedAsEmptyString(req.State)
+	postalCode := apirequest.ClearedAsEmptyString(req.PostalCode)
 	require.NotNil(t, state)
 	require.NotNil(t, postalCode)
 	require.Equal(t, "", *state)
@@ -30,6 +31,6 @@ func TestUpdateAddressLeavesAnUnsentStateUnchanged(t *testing.T) {
 	var req UpdateAddressRequest
 	require.NoError(t, json.Unmarshal([]byte(`{"locality":"George Town"}`), &req))
 
-	require.Nil(t, clearedAsEmptyString(req.State))
-	require.Nil(t, clearedAsEmptyString(req.PostalCode))
+	require.Nil(t, apirequest.ClearedAsEmptyString(req.State))
+	require.Nil(t, apirequest.ClearedAsEmptyString(req.PostalCode))
 }

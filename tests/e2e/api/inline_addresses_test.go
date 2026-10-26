@@ -358,6 +358,36 @@ func TestInlineAddresses_SalesOrderUpdateNeedsOnlyUpdatePermission(t *testing.T)
 	assert.Equal(t, "billing@e2e-test.openmrp.ai", jsonField(addressIn(t, customerID, existingID), "email"))
 }
 
+// An address outside a region-addressed country has no state, so null clears a saved address's state and postal code.
+func TestInlineAddresses_SalesOrderUpdateClearsStateAndPostalCodeOnNull(t *testing.T) {
+	t.Parallel()
+	customerID := setupOrderCustomer(t)
+	saved := trackInlineAddresses(t, customerID)
+	existingID := savedCounterpartyAddress(t, customerID, uniqueName("e2e-inline-so-clear-state"))
+	*saved = append(*saved, existingID)
+
+	body := inlineSalesOrderBody(customerID)
+	body["bill_to_address_id"] = existingID
+	body["ship_to_address_id"] = existingID
+	status, resp, err := apiClient.Post(salesOrdersPath, body, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 201, status, resp)
+	orderID := jsonField(parseJSON(resp), "id")
+	deleteOrder(t, orderID)
+
+	status, resp, err = apiClient.Patch(salesOrdersPath+"/"+orderID, map[string]any{
+		"billing_address": map[string]any{"id": existingID, "state": nil, "postal_code": nil, "country": "KY"},
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 200, status, resp)
+
+	geo := jsonObject(addressIn(t, customerID, existingID), "geolocation")
+	require.NotNil(t, geo, "geolocation should be present")
+	assertNilField(t, geo, "state")
+	assertNilField(t, geo, "postal_code")
+	assert.Equal(t, "KY", jsonField(geo, "country"))
+}
+
 func TestInlineAddresses_SalesOrderRejections(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)

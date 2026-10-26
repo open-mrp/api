@@ -47,3 +47,21 @@ func TestInlineAddressToProto(t *testing.T) {
 	assert.Nil(t, got.Name)
 	assert.Nil(t, got.Country)
 }
+
+func TestInlineAddressToProto_NullOrEmptyClearsStateAndPostalCode(t *testing.T) {
+	t.Parallel()
+	body := `{"bill_to_address":{"id":"ad_dock","state":null,"postal_code":""}}`
+	req := decodeInlineAddressRequest(t, body)
+	require.Nil(t, validate.RejectExplicitJSONNulls([]byte(body), &req))
+
+	got := InlineAddressToProto(req.BillToAddress)
+	require.NotNil(t, got)
+	require.NotNil(t, got.State)
+	require.NotNil(t, got.PostalCode)
+	assert.Equal(t, "", got.GetState())
+	assert.Equal(t, "", got.GetPostalCode())
+
+	unsent := InlineAddressToProto(decodeInlineAddressRequest(t, `{"bill_to_address":{"id":"ad_dock","locality":"George Town"}}`).BillToAddress)
+	assert.Nil(t, unsent.State, "an omitted state is left alone")
+	assert.Nil(t, unsent.PostalCode, "an omitted postal code is left alone")
+}

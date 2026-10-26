@@ -615,11 +615,15 @@ func (s *productionScheduleSvcImpl) updateProductionScheduleLineTx(
 		}
 
 		if params.MachineID != nil {
-			if _, apiErr := txSvc.repos.NewMachineRepo().Get(txCtx, domain.GetMachineParams{
+			machine, apiErr := txSvc.repos.NewMachineRepo().Get(txCtx, domain.GetMachineParams{
 				AccountID: accountID,
 				MachineID: *params.MachineID,
-			}); apiErr != nil {
+			})
+			if apiErr != nil {
 				return apierror.NewValidationErrorWithParam("Unknown machine.", "machine_id")
+			}
+			if *params.MachineID != existing.MachineID {
+				repoParams.ProductionStepID = machine.ProductionStepID
 			}
 		}
 

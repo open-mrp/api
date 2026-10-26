@@ -141,6 +141,7 @@ AND l.id = sqlc.arg('id');
 UPDATE production_schedule_line
 SET
     machine_id = COALESCE(sqlc.narg('machine_id'), machine_id),
+    production_step_id = COALESCE(sqlc.narg('production_step_id'), production_step_id),
     week_index = COALESCE(sqlc.narg('week_index'), week_index),
     week_start_date = COALESCE(sqlc.narg('week_start_date'), week_start_date),
     planned_quantity = COALESCE(sqlc.narg('planned_quantity'), planned_quantity),

@@ -846,6 +846,7 @@ const updateProductionScheduleLine = `-- name: UpdateProductionScheduleLine :exe
 UPDATE production_schedule_line
 SET
     machine_id = COALESCE(?, machine_id),
+    production_step_id = COALESCE(?, production_step_id),
     week_index = COALESCE(?, week_index),
     week_start_date = COALESCE(?, week_start_date),
     planned_quantity = COALESCE(?, planned_quantity),
@@ -862,23 +863,25 @@ AND id = ?
 `
 
 type UpdateProductionScheduleLineParams struct {
-	MachineID       sql.NullString
-	WeekIndex       sql.NullInt32
-	WeekStartDate   sql.NullTime
-	PlannedQuantity sql.NullString
-	PlannedLots     sql.NullInt32
-	PlannedRunHours sql.NullString
-	SequenceIndex   sql.NullInt32
-	StatusCode      sql.NullString
-	ClearReasonCode interface{}
-	ReasonCode      interface{}
-	AccountID       string
-	ID              string
+	MachineID        sql.NullString
+	ProductionStepID sql.NullString
+	WeekIndex        sql.NullInt32
+	WeekStartDate    sql.NullTime
+	PlannedQuantity  sql.NullString
+	PlannedLots      sql.NullInt32
+	PlannedRunHours  sql.NullString
+	SequenceIndex    sql.NullInt32
+	StatusCode       sql.NullString
+	ClearReasonCode  interface{}
+	ReasonCode       interface{}
+	AccountID        string
+	ID               string
 }
 
 func (q *Queries) UpdateProductionScheduleLine(ctx context.Context, arg UpdateProductionScheduleLineParams) error {
 	_, err := q.db.ExecContext(ctx, updateProductionScheduleLine,
 		arg.MachineID,
+		arg.ProductionStepID,
 		arg.WeekIndex,
 		arg.WeekStartDate,
 		arg.PlannedQuantity,

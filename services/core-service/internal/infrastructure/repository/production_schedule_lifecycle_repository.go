@@ -116,18 +116,19 @@ func (r *productionScheduleRepoImpl) UpdateLine(ctx context.Context, params doma
 	}
 
 	err := r.queries.UpdateProductionScheduleLine(ctx, sqlc.UpdateProductionScheduleLineParams{
-		AccountID:       params.AccountID,
-		ID:              params.LineID,
-		MachineID:       dtNullString(params.MachineID),
-		WeekIndex:       psNullInt32(params.WeekIndex),
-		WeekStartDate:   weekStart,
-		PlannedQuantity: psNullDecimal(params.PlannedQuantity),
-		PlannedLots:     psNullInt32(params.PlannedLots),
-		PlannedRunHours: psNullDecimal(params.PlannedRunHours),
-		SequenceIndex:   psNullInt32(params.SequenceIndex),
-		StatusCode:      dtNullString(params.StatusCode),
-		ReasonCode:      dtNullString(params.ReasonCode),
-		ClearReasonCode: params.ClearReasonCode,
+		AccountID:        params.AccountID,
+		ID:               params.LineID,
+		MachineID:        dtNullString(params.MachineID),
+		ProductionStepID: dtNullString(params.ProductionStepID),
+		WeekIndex:        psNullInt32(params.WeekIndex),
+		WeekStartDate:    weekStart,
+		PlannedQuantity:  psNullDecimal(params.PlannedQuantity),
+		PlannedLots:      psNullInt32(params.PlannedLots),
+		PlannedRunHours:  psNullDecimal(params.PlannedRunHours),
+		SequenceIndex:    psNullInt32(params.SequenceIndex),
+		StatusCode:       dtNullString(params.StatusCode),
+		ReasonCode:       dtNullString(params.ReasonCode),
+		ClearReasonCode:  params.ClearReasonCode,
 	})
 	if apiErr := db.MapSQLError(err); apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

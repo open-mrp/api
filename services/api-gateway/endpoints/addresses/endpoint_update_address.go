@@ -45,8 +45,12 @@ type UpdateAddressRequest struct {
 	// City or locality.
 	Locality field.Optional[string] `json:"locality,omitzero" validate:"omitempty,max=255"`
 	// State or administrative area.
+	//
+	// Send an empty string to clear.
 	State field.Optional[string] `json:"state,omitzero" validate:"omitempty,max=255"`
 	// Postal or ZIP code.
+	//
+	// Send an empty string to clear.
 	PostalCode field.Optional[string] `json:"postal_code,omitzero" validate:"omitempty,max=255"`
 	// Two-letter country code.
 	Country field.Optional[string] `json:"country,omitzero" validate:"omitempty,max=2"`

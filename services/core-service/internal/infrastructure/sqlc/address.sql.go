@@ -849,8 +849,8 @@ UPDATE geolocation SET
     street_line_1 = COALESCE(?, street_line_1),
     street_line_2 = ?,
     locality = COALESCE(?, locality),
-    state = COALESCE(?, state),
-    postal_code = COALESCE(?, postal_code),
+    state = ?,
+    postal_code = ?,
     country = COALESCE(?, country),
     google_place_id = ?,
     updated_at = NOW(3)

@@ -268,7 +268,11 @@ func (m *addressMedImpl) updateGeolocation(ctx context.Context, existing *domain
 		if apiErr != nil {
 			return apiErr
 		}
-		return repo.UpdateGeolocation(ctx, geoID, domain.UpdateAddressParams{StreetLine2: streetLine2})
+		return repo.UpdateGeolocation(ctx, geoID, domain.UpdateAddressParams{
+			StreetLine2: streetLine2,
+			State:       existing.Geolocation.State,
+			PostalCode:  existing.Geolocation.PostalCode,
+		})
 	}
 
 	geoID, apiErr := repo.GetGeolocationIDByAddressID(ctx, params.AddressID)
@@ -283,6 +287,8 @@ func (m *addressMedImpl) updateGeolocation(ctx context.Context, existing *domain
 	if sharedCount <= 1 {
 		inPlace := params
 		inPlace.StreetLine2 = streetLine2.BackfillUnsetPtr(existing.Geolocation.StreetLine2)
+		inPlace.State = coalesceStringPtr(params.State, existing.Geolocation.State)
+		inPlace.PostalCode = coalesceStringPtr(params.PostalCode, existing.Geolocation.PostalCode)
 		return repo.UpdateGeolocation(ctx, geoID, inPlace)
 	}
 
@@ -313,7 +319,21 @@ func coreGeoChanged(geo *domain.Geolocation, params domain.UpdateAddressParams) 
 }
 
 func stringPtrChanged(update, stored *string) bool {
-	return update != nil && (stored == nil || *update != *stored)
+	return update != nil && *update != stringPtrValue(stored)
+}
+
+func stringPtrValue(p *string) string {
+	if p == nil {
+		return ""
+	}
+	return *p
+}
+
+func nonEmptyStringPtr(p *string) *string {
+	if p == nil || *p == "" {
+		return nil
+	}
+	return p
 }
 
 func coalesceStringPtr(update, existing *string) *string {
@@ -368,8 +388,8 @@ func applyAddressUpdate(stored *domain.Address, params domain.UpdateAddressParam
 	geo.StreetLine1 = coalesceStringPtr(params.StreetLine1, geo.StreetLine1)
 	geo.StreetLine2 = params.StreetLine2.StringPtrAfterBackfill(geo.StreetLine2)
 	geo.Locality = coalesceStringPtr(params.Locality, geo.Locality)
-	geo.State = coalesceStringPtr(params.State, geo.State)
-	geo.PostalCode = coalesceStringPtr(params.PostalCode, geo.PostalCode)
+	geo.State = nonEmptyStringPtr(coalesceStringPtr(params.State, geo.State))
+	geo.PostalCode = nonEmptyStringPtr(coalesceStringPtr(params.PostalCode, geo.PostalCode))
 	geo.Country = coalesceString(params.Country, geo.Country)
 	out.Geolocation = &geo
 	return &out

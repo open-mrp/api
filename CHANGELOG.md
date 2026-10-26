@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.1.5](https://github.com/open-mrp/api/compare/v7.1.4...v7.1.5) (2026-10-26)
+
+
+### Bug Fixes
+
+* **addresses:** validate and clear an address without a state or postal code ([#381](https://github.com/open-mrp/api/issues/381)) ([094a330](https://github.com/open-mrp/api/commit/094a33033de17a0b2ffbb13fee779bb1142fb79f))
+
 ## [7.1.4](https://github.com/open-mrp/api/compare/v7.1.3...v7.1.4) (2026-10-26)
 
 

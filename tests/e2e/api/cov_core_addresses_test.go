@@ -131,38 +131,20 @@ func TestCovCoreAddresses_ValidateAddress_BlankCity(t *testing.T) {
 	assertErrorParam(t, errObj, "city")
 }
 
-// TestCovCoreAddresses_ValidateAddress_BlankState asserts a blank state is
-// rejected with 400.
-func TestCovCoreAddresses_ValidateAddress_BlankState(t *testing.T) {
+// TestCovCoreAddresses_ValidateAddress_BlankStateAndPostalCode asserts an
+// address without a state or postal code, as in countries that use neither,
+// is validated rather than refused.
+func TestCovCoreAddresses_ValidateAddress_BlankStateAndPostalCode(t *testing.T) {
 	t.Parallel()
 	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
 		"address_line_1": "123 Main St",
 		"city":           "Denver",
 		"state":          "",
-		"postal_code":    "80202",
-		"country":        "US",
-	})
-	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "state")
-}
-
-// TestCovCoreAddresses_ValidateAddress_BlankPostalCode asserts a blank
-// postal_code is rejected with 400.
-func TestCovCoreAddresses_ValidateAddress_BlankPostalCode(t *testing.T) {
-	t.Parallel()
-	status, body, err := apiClient.Put(addressValidatePath, map[string]any{
-		"address_line_1": "123 Main St",
-		"city":           "Denver",
-		"state":          "CO",
 		"postal_code":    "",
 		"country":        "US",
 	})
 	require.NoError(t, err)
-	requireStatus(t, 400, status, body)
-	errObj := requireErrorResponse(t, body, "missing_field", "invalid_request_error")
-	assertErrorParam(t, errObj, "postal_code")
+	requireStatus(t, 200, status, body)
 }
 
 // TestCovCoreAddresses_ValidateAddress_BlankCountry asserts a blank country

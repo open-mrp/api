@@ -20,10 +20,10 @@ type ValidateAddressRequest struct {
 	AddressLine2 field.Optional[string] `json:"address_line_2,omitzero"`
 	// City or locality.
 	City string `json:"city" validate:"required"`
-	// State or administrative area.
-	State string `json:"state" validate:"required"`
-	// Postal or ZIP code.
-	PostalCode string `json:"postal_code" validate:"required"`
+	// State or administrative area. Empty for an address without one.
+	State string `json:"state"`
+	// Postal or ZIP code. Empty for an address without one.
+	PostalCode string `json:"postal_code"`
 	// Two-letter country code, such as `US`.
 	//
 	// A full country name such as `United States` is recognized for a handful of common countries; send the two-letter code for anywhere else.

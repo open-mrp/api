@@ -133,8 +133,8 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 		StreetLine_1:      req.StreetLine1.Ptr(),
 		StreetLine_2:      field.StringClearableToProto(req.StreetLine2),
 		Locality:          req.Locality.Ptr(),
-		State:             req.State.Ptr(),
-		PostalCode:        req.PostalCode.Ptr(),
+		State:             clearedAsEmptyString(req.State),
+		PostalCode:        clearedAsEmptyString(req.PostalCode),
 		Country:           req.Country.Ptr(),
 	}
 	resp, apiErr := grpcutil.CallRPC(ctx, addressSvcTracer, "service.addresses.update", domain.ServiceName,
@@ -145,6 +145,15 @@ func (m *addressSvcImpl) UpdateAddress(ctx context.Context, req *UpdateAddressRe
 		return nil, apiErr
 	}
 	return loadAddressByID(ctx, resp.Address.Id)
+}
+
+// clearedAsEmptyString is the core service's form of a clearable geolocation field, where an empty string clears it.
+func clearedAsEmptyString(f field.Clearable[string]) *string {
+	if f.IsUnset() {
+		return nil
+	}
+	v, _ := f.Value()
+	return &v
 }
 
 func (m *addressSvcImpl) DeleteAddress(ctx context.Context, req *DeleteAddressRequest) (*apiresource.EmptyResource, *apierror.APIError) {

@@ -113,18 +113,19 @@ type PublishProductionScheduleParams struct {
 }
 
 type UpdateLineRepoParams struct {
-	AccountID       string
-	LineID          string
-	MachineID       *string
-	WeekIndex       *int32
-	WeekStartDate   *time.Time
-	PlannedQuantity *float64
-	PlannedLots     *int32
-	PlannedRunHours *float64
-	SequenceIndex   *int32
-	StatusCode      *string
-	ReasonCode      *string
-	ClearReasonCode bool
+	AccountID        string
+	LineID           string
+	MachineID        *string
+	ProductionStepID *string
+	WeekIndex        *int32
+	WeekStartDate    *time.Time
+	PlannedQuantity  *float64
+	PlannedLots      *int32
+	PlannedRunHours  *float64
+	SequenceIndex    *int32
+	StatusCode       *string
+	ReasonCode       *string
+	ClearReasonCode  bool
 }
 
 type FrozenLineTotals struct {

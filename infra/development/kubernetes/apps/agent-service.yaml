@@ -71,11 +71,6 @@ spec:
                 secretKeyRef:
                   name: cursor-hmac-key
                   key: key
-            - name: OPENROUTER_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: openrouter-credentials
-                  key: api-key
             - name: API_GATEWAY_INTERNAL_URL
               valueFrom:
                 configMapKeyRef:

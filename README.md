@@ -280,6 +280,10 @@ stringData:
 
 Both `api-gateway` and `agent-service` already consume this secret (as `INTERNAL_SERVICE_TOKEN`) and the `API_GATEWAY_INTERNAL_URL` config value. In production the token is generated and delivered by Terraform in the private infra repo.
 
+**Agent LLM calls**
+
+`agent-service` sends model calls to OpenRouter using the key from each account's OpenRouter integration (Settings > Integrations). No deployment-wide key is configured; an account without the integration cannot run agents.
+
 > **minikube acting up?** `minikube delete && make setup` clears most of it. Tilt needs the Docker container runtime (`--container-runtime=docker`, set by `make setup`); on containerd it tries to push images to docker.io and fails.
 
 

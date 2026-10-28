@@ -66,21 +66,6 @@ spec:
                 configMapKeyRef:
                   key: CHAT_BUCKET
                   name: app-config
-            - name: INBOUND_EMAIL_BUCKET
-              valueFrom:
-                configMapKeyRef:
-                  key: INBOUND_EMAIL_BUCKET
-                  name: app-config
-            - name: INBOUND_EMAIL_QUEUE_URL
-              valueFrom:
-                configMapKeyRef:
-                  key: INBOUND_EMAIL_QUEUE_URL
-                  name: app-config
-            - name: INBOUND_EMAIL_REGION
-              valueFrom:
-                configMapKeyRef:
-                  key: INBOUND_EMAIL_REGION
-                  name: app-config
             - name: INBOUND_EMAIL_DOMAIN
               valueFrom:
                 configMapKeyRef:

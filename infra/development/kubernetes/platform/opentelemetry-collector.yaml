@@ -29,6 +29,10 @@ data:
                     receivers: [otlp]
                     processors: [batch]
                     exporters: [otlphttp/jaeger, logging]
+                metrics:
+                    receivers: [otlp]
+                    processors: [batch]
+                    exporters: [logging]
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -43,6 +47,8 @@ spec:
         metadata:
             labels:
                 app: otel-collector
+            annotations:
+                config-revision: "2"
         spec:
             containers:
                 - name: otel-collector

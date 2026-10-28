@@ -30,7 +30,9 @@ update_env() {
     if [ ! -f "$file" ]; then
         echo "$key=$value" > "$file"
     elif grep -q "^$key=" "$file"; then
-        sed -i '' "s|^$key=.*|$key=$value|" "$file"
+        local tmp
+        tmp="$(mktemp)"
+        sed "s|^$key=.*|$key=$value|" "$file" > "$tmp" && mv "$tmp" "$file"
     else
         echo "$key=$value" >> "$file"
     fi

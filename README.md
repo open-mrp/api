@@ -259,6 +259,8 @@ Services running in minikube cannot reach `localhost` on the host machine. The K
 | `core-service-uri`  | Every service but agent-service  | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
 | `agent-service-uri` | `agent-service`                  | `root:Testing123!@tcp(host.minikube.internal:3306)/openmrp` |
 
+Nothing else in the dev stack reaches AWS or Google. `aws-credentials` is any fake pair (`access-key-id` of at least 3 characters, `secret-access-key` of at least 8): MinIO runs in minikube as the S3 stand-in, is bootstrapped with the dev buckets, and takes these as its root credentials, which is also what the SDK signs with through `S3_ENDPOINT_URL`. Presigned upload URLs carry the host `minio`, so add `127.0.0.1 minio` to `/etc/hosts` once for the browser to reach them through Tilt's port-forward. Email is stubbed outside production, and `google-maps-credentials` may be empty, which selects the address-validation stub.
+
 
 The seed script hardcodes the Docker Compose connection details, so no `.env` configuration is needed — just run `make local-db` before `make dev`.
 

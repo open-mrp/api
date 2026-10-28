@@ -87,7 +87,7 @@ func NewNotificationSvc(config *NotificationSvcConfig) domain.NotificationSvc {
 // BuildNotificationSvcConfig wires the notification service. merchantSender posts mail from accounts' own verified domains and must be an SES client in the region those domains are verified in — not awsRegion, where only the platform identity exists. Nil is allowed (test mode, or a deployment without the bridge) and leaves every send on the platform address.
 func BuildNotificationSvcConfig(repoFactory domain.RepoFactory, platformMode constants.PlatformMode, awsRegion string, templateRenderer email.TemplateRenderer, merchantSender domain.EmailSender) (*NotificationSvcConfig, *apierror.APIError) {
 	var emailSender domain.EmailSender
-	if platformMode.IsTest() {
+	if !platformMode.UsesAWSEmail() {
 		emailSender = &stub.EmailSender{}
 	} else {
 		var apiErr *apierror.APIError

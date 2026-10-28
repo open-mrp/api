@@ -69,7 +69,7 @@ type config struct {
 	// CursorHMACKey (required) is the key used to HMAC-sign pagination cursors.
 	CursorHMACKey []byte
 
-	// GoogleMapsAPIKey (required) is the Google Maps API key for address validation.
+	// GoogleMapsAPIKey (optional; default: "") is the Google Maps API key for address validation. Required in production; empty elsewhere selects the stub.
 	// Not enforced when PlatformMode is "test".
 	GoogleMapsAPIKey string
 
@@ -210,9 +210,6 @@ func (c *config) validate() error {
 	}
 
 	if !c.PlatformMode.IsTest() {
-		if c.GoogleMapsAPIKey == "" {
-			return fmt.Errorf("core-service: GOOGLE_MAPS_API_KEY is required")
-		}
 		if c.AWSRegion == "" {
 			return fmt.Errorf("core-service: AWS_REGION is required")
 		}
@@ -231,6 +228,9 @@ func (c *config) validate() error {
 	}
 
 	if c.PlatformMode.IsProduction() {
+		if c.GoogleMapsAPIKey == "" {
+			return fmt.Errorf("core-service: GOOGLE_MAPS_API_KEY is required")
+		}
 		if c.VercelAPIToken == "" {
 			return fmt.Errorf("core-service: VERCEL_API_TOKEN is required")
 		}

@@ -229,8 +229,9 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 	})
+	// Outside production the Google Maps key is optional; without one the stub stands in.
 	var addressValidationSvc domain.AddressValidationSvc
-	if cfg.PlatformMode.IsTest() {
+	if cfg.PlatformMode.IsTest() || cfg.GoogleMapsAPIKey == "" {
 		addressValidationSvc = &stub.AddressValidationSvc{}
 	} else {
 		addressValidationSvc = service.NewAddressValidationSvc(&service.AddressValidationSvcConfig{

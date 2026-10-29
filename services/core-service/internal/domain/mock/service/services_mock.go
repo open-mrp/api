@@ -11682,3 +11682,72 @@ func (mr *MockOperatingCalendarSvcMockRecorder) UpdateOperatingCalendar(ctx, par
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOperatingCalendar", reflect.TypeOf((*MockOperatingCalendarSvc)(nil).UpdateOperatingCalendar), ctx, params)
 }
+
+// MockFeedbackReportSvc is a mock of FeedbackReportSvc interface.
+type MockFeedbackReportSvc struct {
+	ctrl     *gomock.Controller
+	recorder *MockFeedbackReportSvcMockRecorder
+	isgomock struct{}
+}
+
+// MockFeedbackReportSvcMockRecorder is the mock recorder for MockFeedbackReportSvc.
+type MockFeedbackReportSvcMockRecorder struct {
+	mock *MockFeedbackReportSvc
+}
+
+// NewMockFeedbackReportSvc creates a new mock instance.
+func NewMockFeedbackReportSvc(ctrl *gomock.Controller) *MockFeedbackReportSvc {
+	mock := &MockFeedbackReportSvc{ctrl: ctrl}
+	mock.recorder = &MockFeedbackReportSvcMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFeedbackReportSvc) EXPECT() *MockFeedbackReportSvcMockRecorder {
+	return m.recorder
+}
+
+// BatchGetFeedbackReportsByIDs mocks base method.
+func (m *MockFeedbackReportSvc) BatchGetFeedbackReportsByIDs(ctx context.Context, ids []string) ([]*domain.FeedbackReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BatchGetFeedbackReportsByIDs", ctx, ids)
+	ret0, _ := ret[0].([]*domain.FeedbackReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// BatchGetFeedbackReportsByIDs indicates an expected call of BatchGetFeedbackReportsByIDs.
+func (mr *MockFeedbackReportSvcMockRecorder) BatchGetFeedbackReportsByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetFeedbackReportsByIDs", reflect.TypeOf((*MockFeedbackReportSvc)(nil).BatchGetFeedbackReportsByIDs), ctx, ids)
+}
+
+// CreateFeedbackReport mocks base method.
+func (m *MockFeedbackReportSvc) CreateFeedbackReport(ctx context.Context, params domain.CreateFeedbackReportParams) (*domain.FeedbackReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateFeedbackReport", ctx, params)
+	ret0, _ := ret[0].(*domain.FeedbackReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// CreateFeedbackReport indicates an expected call of CreateFeedbackReport.
+func (mr *MockFeedbackReportSvcMockRecorder) CreateFeedbackReport(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFeedbackReport", reflect.TypeOf((*MockFeedbackReportSvc)(nil).CreateFeedbackReport), ctx, params)
+}
+
+// ListFeedbackReports mocks base method.
+func (m *MockFeedbackReportSvc) ListFeedbackReports(ctx context.Context, params domain.ListFeedbackReportsParams) (*domain.ListFeedbackReportsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListFeedbackReports", ctx, params)
+	ret0, _ := ret[0].(*domain.ListFeedbackReportsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// ListFeedbackReports indicates an expected call of ListFeedbackReports.
+func (mr *MockFeedbackReportSvcMockRecorder) ListFeedbackReports(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListFeedbackReports", reflect.TypeOf((*MockFeedbackReportSvc)(nil).ListFeedbackReports), ctx, params)
+}

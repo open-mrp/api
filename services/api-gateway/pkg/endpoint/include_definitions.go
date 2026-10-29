@@ -126,6 +126,13 @@ func init() {
 	})
 
 	RegisterIncludes(&ObjectIncludes{
+		ObjectType: constants.ObjectTypeFeedbackReport,
+		Fields: []IncludeFieldDef{
+			{Key: "user", ObjectType: constants.ObjectTypeUser},
+		},
+	})
+
+	RegisterIncludes(&ObjectIncludes{
 		ObjectType: constants.ObjectTypeAccountUser,
 		Fields: []IncludeFieldDef{
 			{Key: "user", ObjectType: constants.ObjectTypeUser},

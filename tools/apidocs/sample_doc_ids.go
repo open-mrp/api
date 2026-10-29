@@ -157,6 +157,7 @@ func documentedAugnoIDs() map[string]struct{} {
 		apiresource.SampleSysPropertyID:                       {},
 		apiresource.SampleSysPropertyTypeID:                   {},
 		apiresource.SampleTerritoryID:                         {},
+		apiresource.SampleFeedbackReportID:                    {},
 		apiresource.SampleToolGroupID:                         {},
 		apiresource.SampleTransactionDetailID:                 {},
 		apiresource.SampleTransactionMethodID:                 {},

@@ -656,6 +656,14 @@ func (r *router) InitEndpointGroups(config MainRouterConfig) {
 		registry.RegisterGroup(territoriesGroup.APIEndpointGroup)
 	}
 
+	// Feedback reports
+	feedbackReportsGroup := (&httpgroup.FeedbackReportsEndpointGroup{}).Materialize(&httpgroup.FeedbackReportsEndpointGroupConfig{
+		CoreClient: config.CoreClient,
+	})
+	if feedbackReportsGroup != nil {
+		registry.RegisterGroup(feedbackReportsGroup.APIEndpointGroup)
+	}
+
 	// Suppliers
 	suppliersGroup := (&httpgroup.SuppliersEndpointGroup{}).Materialize(&httpgroup.SuppliersEndpointGroupConfig{
 		CoreClient: config.CoreClient,

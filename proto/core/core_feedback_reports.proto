@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+// CoreService feedback report message types (imported by core.proto).
+package core;
+
+import "google/protobuf/timestamp.proto";
+import "core/core_identity_context.proto";
+option go_package = "shared/proto/core;core";
+
+message FeedbackReportInfo {
+  string id = 1;
+  string account_id = 2;
+  string user_id = 3;
+  string message = 4;
+  optional string page = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+message CreateFeedbackReportRequest {
+  string message = 1;
+  optional string page = 2;
+}
+message CreateFeedbackReportResponse {
+  FeedbackReportInfo feedback_report = 1;
+}
+message ListFeedbackReportsRequest {
+  optional string cursor = 1;
+  int32 limit = 2;
+}
+message ListFeedbackReportsResponse {
+  repeated FeedbackReportInfo feedback_reports = 1;
+  PageInfo page_info = 2;
+}
+message BatchGetFeedbackReportsByIDsRequest {
+  repeated string ids = 1;
+}
+message BatchGetFeedbackReportsByIDsResponse {
+  repeated FeedbackReportInfo feedback_reports = 1;
+}

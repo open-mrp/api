@@ -1814,3 +1814,9 @@ type OperatingCalendarSvc interface {
 	CreateOperatingCalendarClosure(ctx context.Context, calendarID string, closedOn time.Time, name string) (*OperatingCalendarClosure, *apierror.APIError)
 	DeleteOperatingCalendarClosure(ctx context.Context, closureID string) *apierror.APIError
 }
+
+type FeedbackReportSvc interface {
+	CreateFeedbackReport(ctx context.Context, params CreateFeedbackReportParams) (*FeedbackReport, *apierror.APIError)
+	ListFeedbackReports(ctx context.Context, params ListFeedbackReportsParams) (*ListFeedbackReportsResult, *apierror.APIError)
+	BatchGetFeedbackReportsByIDs(ctx context.Context, ids []string) ([]*FeedbackReport, *apierror.APIError)
+}

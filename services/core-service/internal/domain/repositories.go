@@ -2012,3 +2012,10 @@ type PortalDomainRepo interface {
 	// ResolveVerifiedHost returns the public account whose verified portal domain matches the given host, or a not-found error.
 	ResolveVerifiedHost(ctx context.Context, domainName string) (*PublicAccountBySlug, *apierror.APIError)
 }
+
+type FeedbackReportRepo interface {
+	Create(ctx context.Context, feedbackReportID string, params CreateFeedbackReportParams) (*FeedbackReport, *apierror.APIError)
+	Get(ctx context.Context, accountID, feedbackReportID string) (*FeedbackReport, *apierror.APIError)
+	List(ctx context.Context, params ListFeedbackReportsParams) (*ListFeedbackReportsResult, *apierror.APIError)
+	GetByIDs(ctx context.Context, accountID string, ids []string) ([]*FeedbackReport, *apierror.APIError)
+}

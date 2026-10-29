@@ -731,6 +731,11 @@ func Run(
 		MediatorFactory: mediatorFactory,
 		TxManager:       txManager,
 	})
+	feedbackReportSvc := service.NewFeedbackReportSvc(&service.FeedbackReportSvcConfig{
+		Repos:           repoFactory,
+		MediatorFactory: mediatorFactory,
+		TxManager:       txManager,
+	})
 	documentSettingSvc := service.NewDocumentSettingSvc(&service.DocumentSettingSvcConfig{
 		Repos:           repoFactory,
 		MediatorFactory: mediatorFactory,
@@ -1035,6 +1040,7 @@ func Run(
 	grpc.RegisterRegistrationFlowService(srv, registrationFlowSvc)
 	grpc.RegisterPortalRegistrationSessionService(srv, portalRegistrationSessionSvc)
 	grpc.RegisterTerritoryService(srv, territorySvc)
+	grpc.RegisterFeedbackReportService(srv, feedbackReportSvc)
 	grpc.RegisterDocumentSettingService(srv, documentSettingSvc)
 	grpc.RegisterShippingService(srv, shipmentSvc, shipmentLineSvc)
 	grpc.RegisterAccountService(srv, accountSvc, sandboxSvc, accountStatusSvc)

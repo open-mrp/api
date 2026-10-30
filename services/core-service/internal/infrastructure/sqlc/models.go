@@ -936,6 +936,16 @@ type ErrorLog struct {
 	AccountID         sql.NullString
 }
 
+type FeedbackReport struct {
+	ID        string
+	AccountID string
+	UserID    string
+	Message   string
+	Page      sql.NullString
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type FulfillmentPolicy struct {
 	ID        string
 	Code      string

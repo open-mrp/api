@@ -17,6 +17,7 @@ import public "core/core_portal.proto";
 import public "core/core_items.proto";
 import public "core/core_consumption.proto";
 import public "core/core_users_territories.proto";
+import public "core/core_feedback_reports.proto";
 import public "core/core_invoices.proto";
 import public "core/core_lookups.proto";
 import public "core/core_document_settings.proto";
@@ -810,6 +811,12 @@ service CoreService {
   // Emails a record (invoice, sales order, or purchase order) with PDF attachment.
   rpc EmailRecord(EmailRecordRequest) returns (EmailRecordResponse);
   rpc SubmitFeedback(SubmitFeedbackRequest) returns (SubmitFeedbackResponse);
+
+  // Feedback reports
+
+  rpc CreateFeedbackReport(CreateFeedbackReportRequest) returns (CreateFeedbackReportResponse);
+  rpc ListFeedbackReports(ListFeedbackReportsRequest) returns (ListFeedbackReportsResponse);
+  rpc BatchGetFeedbackReportsByIDs(BatchGetFeedbackReportsByIDsRequest) returns (BatchGetFeedbackReportsByIDsResponse);
 
   // Catalog (supports customer actor access)
 

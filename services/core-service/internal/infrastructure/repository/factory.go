@@ -415,6 +415,10 @@ func (r *repoFactoryImpl) NewTerritoryRepo() domain.TerritoryRepo {
 	return NewTerritoryRepo(r.queries)
 }
 
+func (r *repoFactoryImpl) NewFeedbackReportRepo() domain.FeedbackReportRepo {
+	return NewFeedbackReportRepo(r.queries)
+}
+
 func (r *repoFactoryImpl) NewSupplierRepo() domain.SupplierRepo {
 	return NewSupplierRepo(r.queries)
 }

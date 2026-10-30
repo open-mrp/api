@@ -374,6 +374,9 @@ const (
 	CoreService_CheckDuplicate_FullMethodName                             = "/core.CoreService/CheckDuplicate"
 	CoreService_EmailRecord_FullMethodName                                = "/core.CoreService/EmailRecord"
 	CoreService_SubmitFeedback_FullMethodName                             = "/core.CoreService/SubmitFeedback"
+	CoreService_CreateFeedbackReport_FullMethodName                       = "/core.CoreService/CreateFeedbackReport"
+	CoreService_ListFeedbackReports_FullMethodName                        = "/core.CoreService/ListFeedbackReports"
+	CoreService_BatchGetFeedbackReportsByIDs_FullMethodName               = "/core.CoreService/BatchGetFeedbackReportsByIDs"
 	CoreService_ListCatalogProductLines_FullMethodName                    = "/core.CoreService/ListCatalogProductLines"
 	CoreService_ListCatalogProducts_FullMethodName                        = "/core.CoreService/ListCatalogProducts"
 	CoreService_ListRoles_FullMethodName                                  = "/core.CoreService/ListRoles"
@@ -1031,6 +1034,9 @@ type CoreServiceClient interface {
 	// Emails a record (invoice, sales order, or purchase order) with PDF attachment.
 	EmailRecord(ctx context.Context, in *EmailRecordRequest, opts ...grpc.CallOption) (*EmailRecordResponse, error)
 	SubmitFeedback(ctx context.Context, in *SubmitFeedbackRequest, opts ...grpc.CallOption) (*SubmitFeedbackResponse, error)
+	CreateFeedbackReport(ctx context.Context, in *CreateFeedbackReportRequest, opts ...grpc.CallOption) (*CreateFeedbackReportResponse, error)
+	ListFeedbackReports(ctx context.Context, in *ListFeedbackReportsRequest, opts ...grpc.CallOption) (*ListFeedbackReportsResponse, error)
+	BatchGetFeedbackReportsByIDs(ctx context.Context, in *BatchGetFeedbackReportsByIDsRequest, opts ...grpc.CallOption) (*BatchGetFeedbackReportsByIDsResponse, error)
 	// Customers only see product lines they have access to.
 	ListCatalogProductLines(ctx context.Context, in *ListCatalogProductLinesRequest, opts ...grpc.CallOption) (*ListCatalogProductLinesResponse, error)
 	// Returns products in a product line, grouped by item category.
@@ -4580,6 +4586,36 @@ func (c *coreServiceClient) SubmitFeedback(ctx context.Context, in *SubmitFeedba
 	return out, nil
 }
 
+func (c *coreServiceClient) CreateFeedbackReport(ctx context.Context, in *CreateFeedbackReportRequest, opts ...grpc.CallOption) (*CreateFeedbackReportResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateFeedbackReportResponse)
+	err := c.cc.Invoke(ctx, CoreService_CreateFeedbackReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) ListFeedbackReports(ctx context.Context, in *ListFeedbackReportsRequest, opts ...grpc.CallOption) (*ListFeedbackReportsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListFeedbackReportsResponse)
+	err := c.cc.Invoke(ctx, CoreService_ListFeedbackReports_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *coreServiceClient) BatchGetFeedbackReportsByIDs(ctx context.Context, in *BatchGetFeedbackReportsByIDsRequest, opts ...grpc.CallOption) (*BatchGetFeedbackReportsByIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchGetFeedbackReportsByIDsResponse)
+	err := c.cc.Invoke(ctx, CoreService_BatchGetFeedbackReportsByIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *coreServiceClient) ListCatalogProductLines(ctx context.Context, in *ListCatalogProductLinesRequest, opts ...grpc.CallOption) (*ListCatalogProductLinesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListCatalogProductLinesResponse)
@@ -5766,6 +5802,9 @@ type CoreServiceServer interface {
 	// Emails a record (invoice, sales order, or purchase order) with PDF attachment.
 	EmailRecord(context.Context, *EmailRecordRequest) (*EmailRecordResponse, error)
 	SubmitFeedback(context.Context, *SubmitFeedbackRequest) (*SubmitFeedbackResponse, error)
+	CreateFeedbackReport(context.Context, *CreateFeedbackReportRequest) (*CreateFeedbackReportResponse, error)
+	ListFeedbackReports(context.Context, *ListFeedbackReportsRequest) (*ListFeedbackReportsResponse, error)
+	BatchGetFeedbackReportsByIDs(context.Context, *BatchGetFeedbackReportsByIDsRequest) (*BatchGetFeedbackReportsByIDsResponse, error)
 	// Customers only see product lines they have access to.
 	ListCatalogProductLines(context.Context, *ListCatalogProductLinesRequest) (*ListCatalogProductLinesResponse, error)
 	// Returns products in a product line, grouped by item category.
@@ -6885,6 +6924,15 @@ func (UnimplementedCoreServiceServer) EmailRecord(context.Context, *EmailRecordR
 }
 func (UnimplementedCoreServiceServer) SubmitFeedback(context.Context, *SubmitFeedbackRequest) (*SubmitFeedbackResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitFeedback not implemented")
+}
+func (UnimplementedCoreServiceServer) CreateFeedbackReport(context.Context, *CreateFeedbackReportRequest) (*CreateFeedbackReportResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateFeedbackReport not implemented")
+}
+func (UnimplementedCoreServiceServer) ListFeedbackReports(context.Context, *ListFeedbackReportsRequest) (*ListFeedbackReportsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListFeedbackReports not implemented")
+}
+func (UnimplementedCoreServiceServer) BatchGetFeedbackReportsByIDs(context.Context, *BatchGetFeedbackReportsByIDsRequest) (*BatchGetFeedbackReportsByIDsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BatchGetFeedbackReportsByIDs not implemented")
 }
 func (UnimplementedCoreServiceServer) ListCatalogProductLines(context.Context, *ListCatalogProductLinesRequest) (*ListCatalogProductLinesResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListCatalogProductLines not implemented")
@@ -13330,6 +13378,60 @@ func _CoreService_SubmitFeedback_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CoreService_CreateFeedbackReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateFeedbackReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).CreateFeedbackReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_CreateFeedbackReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).CreateFeedbackReport(ctx, req.(*CreateFeedbackReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_ListFeedbackReports_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListFeedbackReportsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).ListFeedbackReports(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_ListFeedbackReports_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).ListFeedbackReports(ctx, req.(*ListFeedbackReportsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CoreService_BatchGetFeedbackReportsByIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchGetFeedbackReportsByIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CoreServiceServer).BatchGetFeedbackReportsByIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CoreService_BatchGetFeedbackReportsByIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CoreServiceServer).BatchGetFeedbackReportsByIDs(ctx, req.(*BatchGetFeedbackReportsByIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _CoreService_ListCatalogProductLines_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListCatalogProductLinesRequest)
 	if err := dec(in); err != nil {
@@ -15786,6 +15888,18 @@ var CoreService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitFeedback",
 			Handler:    _CoreService_SubmitFeedback_Handler,
+		},
+		{
+			MethodName: "CreateFeedbackReport",
+			Handler:    _CoreService_CreateFeedbackReport_Handler,
+		},
+		{
+			MethodName: "ListFeedbackReports",
+			Handler:    _CoreService_ListFeedbackReports_Handler,
+		},
+		{
+			MethodName: "BatchGetFeedbackReportsByIDs",
+			Handler:    _CoreService_BatchGetFeedbackReportsByIDs_Handler,
 		},
 		{
 			MethodName: "ListCatalogProductLines",

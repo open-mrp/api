@@ -104,6 +104,7 @@ type RepoFactory interface {
 	NewShipmentRepo() ShipmentRepo
 	NewShipmentLineRepo() ShipmentLineRepo
 	NewTerritoryRepo() TerritoryRepo
+	NewFeedbackReportRepo() FeedbackReportRepo
 	NewDocumentSettingRepo() DocumentSettingRepo
 	NewSupplierRepo() SupplierRepo
 	NewLocationRepo() LocationRepo

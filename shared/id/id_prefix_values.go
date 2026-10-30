@@ -155,6 +155,7 @@ const (
 	VocShift        = "sf"
 	VocPolicy       = "pc"
 	VocFinished     = "fi"
+	VocFeedback     = "fb"
 )
 
 // composePrefix concatenates vocabulary words to form a prefix. This ensures consistency and makes prefix construction explicit.
@@ -397,6 +398,9 @@ var (
 
 	// Territory-related prefix values
 	TerritoryIDPrefix = composePrefix(VocTerritory)
+
+	// Feedback-related prefix values
+	FeedbackReportIDPrefix = composePrefix(VocFeedback, VocReport)
 
 	// Target-related prefix values
 	TargetIDPrefix = composePrefix(VocTarget)

@@ -386,6 +386,9 @@ func openAPIEndpointGroups() []apiendpoint.APIEndpointGroup {
 		*(&httpgroup.TerritoriesEndpointGroup{}).Materialize(&httpgroup.TerritoriesEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,
+		*(&httpgroup.FeedbackReportsEndpointGroup{}).Materialize(&httpgroup.FeedbackReportsEndpointGroupConfig{
+			CoreClient: coreClient,
+		}).APIEndpointGroup,
 		*(&httpgroup.LocationsEndpointGroup{}).Materialize(&httpgroup.LocationsEndpointGroupConfig{
 			CoreClient: coreClient,
 		}).APIEndpointGroup,

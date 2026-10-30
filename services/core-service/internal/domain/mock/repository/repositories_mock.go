@@ -20945,3 +20945,87 @@ func (mr *MockPortalDomainRepoMockRecorder) UpdateProviderState(ctx, portalDomai
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProviderState", reflect.TypeOf((*MockPortalDomainRepo)(nil).UpdateProviderState), ctx, portalDomainID, status, dnsRecords)
 }
+
+// MockFeedbackReportRepo is a mock of FeedbackReportRepo interface.
+type MockFeedbackReportRepo struct {
+	ctrl     *gomock.Controller
+	recorder *MockFeedbackReportRepoMockRecorder
+	isgomock struct{}
+}
+
+// MockFeedbackReportRepoMockRecorder is the mock recorder for MockFeedbackReportRepo.
+type MockFeedbackReportRepoMockRecorder struct {
+	mock *MockFeedbackReportRepo
+}
+
+// NewMockFeedbackReportRepo creates a new mock instance.
+func NewMockFeedbackReportRepo(ctrl *gomock.Controller) *MockFeedbackReportRepo {
+	mock := &MockFeedbackReportRepo{ctrl: ctrl}
+	mock.recorder = &MockFeedbackReportRepoMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFeedbackReportRepo) EXPECT() *MockFeedbackReportRepoMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockFeedbackReportRepo) Create(ctx context.Context, feedbackReportID string, params domain.CreateFeedbackReportParams) (*domain.FeedbackReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", ctx, feedbackReportID, params)
+	ret0, _ := ret[0].(*domain.FeedbackReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockFeedbackReportRepoMockRecorder) Create(ctx, feedbackReportID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFeedbackReportRepo)(nil).Create), ctx, feedbackReportID, params)
+}
+
+// Get mocks base method.
+func (m *MockFeedbackReportRepo) Get(ctx context.Context, accountID, feedbackReportID string) (*domain.FeedbackReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, accountID, feedbackReportID)
+	ret0, _ := ret[0].(*domain.FeedbackReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockFeedbackReportRepoMockRecorder) Get(ctx, accountID, feedbackReportID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockFeedbackReportRepo)(nil).Get), ctx, accountID, feedbackReportID)
+}
+
+// GetByIDs mocks base method.
+func (m *MockFeedbackReportRepo) GetByIDs(ctx context.Context, accountID string, ids []string) ([]*domain.FeedbackReport, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, accountID, ids)
+	ret0, _ := ret[0].([]*domain.FeedbackReport)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockFeedbackReportRepoMockRecorder) GetByIDs(ctx, accountID, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockFeedbackReportRepo)(nil).GetByIDs), ctx, accountID, ids)
+}
+
+// List mocks base method.
+func (m *MockFeedbackReportRepo) List(ctx context.Context, params domain.ListFeedbackReportsParams) (*domain.ListFeedbackReportsResult, *apierror.APIError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, params)
+	ret0, _ := ret[0].(*domain.ListFeedbackReportsResult)
+	ret1, _ := ret[1].(*apierror.APIError)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockFeedbackReportRepoMockRecorder) List(ctx, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockFeedbackReportRepo)(nil).List), ctx, params)
+}

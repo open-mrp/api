@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.2.0](https://github.com/open-mrp/api/compare/v7.1.6...v7.2.0) (2026-10-30)
+
+
+### Features
+
+* adding endpoints for new user report feature ([#387](https://github.com/open-mrp/api/issues/387)) ([93b039c](https://github.com/open-mrp/api/commit/93b039caada1ea0ec2a49b5971d73671b15f55cf))
+
 ## [7.1.6](https://github.com/open-mrp/api/compare/v7.1.5...v7.1.6) (2026-10-26)
 
 

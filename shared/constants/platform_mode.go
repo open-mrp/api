@@ -33,6 +33,12 @@ func (m PlatformMode) IsTest() bool {
 	return m == PlatformModeTest
 }
 
+// UsesAWSEmail reports whether mail goes through SES and the inbound bridge polls SQS. Only
+// production does; development and test stub both so make dev needs no AWS account.
+func (m PlatformMode) UsesAWSEmail() bool {
+	return m == PlatformModeProduction
+}
+
 func (m PlatformMode) EnumValues() []string {
 	return []string{string(PlatformModeProduction), string(PlatformModeDevelopment), string(PlatformModeTest)}
 }

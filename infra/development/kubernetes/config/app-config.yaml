@@ -6,19 +6,18 @@ data:
     PLATFORM: "development"
     PORT: "8081"
     AWS_REGION: "us-east-2"
+    # MinIO in minikube stands in for S3 (platform/minio.yaml); the SDK signs for this host, so the browser needs `127.0.0.1 minio` in /etc/hosts to follow presigned URLs through the port-forward.
+    S3_ENDPOINT_URL: "http://minio:9000"
     FRONTEND_URL: "http://localhost:4200"
     PORTAL_URL: "http://localhost:4300"
-    ACCOUNT_PHOTOS_BUCKET: "augno-org-logos-dev-us-east-2"
-    USER_PHOTOS_BUCKET: "augno-user-photos-dev-us-east-2"
-    SHIPPING_LABELS_BUCKET: "augno-shipping-labels-dev-us-east-2"
-    EXPORTS_BUCKET: "augno-exports-dev-us-east-2"
-    CHAT_BUCKET: "augno-chat-attachments-dev-us-east-2"
-    # Inbound email bridge (dev). Resources + DNS in open-mrp/infra email_inbound_dev.tf; seeded
-    # inbox in shared/db/seed/dev/0002_email_bridge.sql (support@mail.dev.openmrp.ai). Queue value
-    # is the queue name — notification-service resolves it via GetQueueUrl (no account id in-repo).
-    INBOUND_EMAIL_BUCKET: "augno-notification-inbound-email-dev"
-    INBOUND_EMAIL_QUEUE_URL: "augno-notification-inbound-email-dev"
-    INBOUND_EMAIL_REGION: "us-east-1"
+    ACCOUNT_PHOTOS_BUCKET: "augno-account-photos"
+    USER_PHOTOS_BUCKET: "augno-user-photos"
+    SHIPPING_LABELS_BUCKET: "augno-shipping-labels"
+    EXPORTS_BUCKET: "augno-exports"
+    CHAT_BUCKET: "augno-chat-attachments"
+    PAYLOADS_BUCKET: "augno-payloads"
+    # The email bridge's SES/SQS side runs only in production (PlatformMode.UsesAWSEmail); dev keeps
+    # the domain so seeded inboxes (shared/db/seed/dev/0002_email_bridge.sql) render their addresses.
     INBOUND_EMAIL_DOMAIN: "mail.dev.openmrp.ai"
     AUTH_SERVICE_URL: "auth-service:9092"
     CORE_SERVICE_URL: "core-service:9092"

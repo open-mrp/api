@@ -96,10 +96,10 @@ func Run(
 	// bridgeEmailSender sends as a customer's own DKIM-verified domain, via SES in the inbound (receiving)
 	// region where those identities are verified — the platform's noreply@ identity lives in AWSRegion and
 	// neither region holds the other's. It carries both the email-bridge replies and, for accounts that have
-	// configured a sender, their merchant-facing transactional mail. Nil in test/dev-without-AWS, which
+	// configured a sender, their merchant-facing transactional mail. Nil outside production, which
 	// leaves the bridge erroring on SendInboxReply and all transactional mail on the platform address.
 	var bridgeEmailSender domain.EmailSender
-	if !cfg.PlatformMode.IsTest() {
+	if cfg.PlatformMode.UsesAWSEmail() {
 		bridgeEmailSender, apiErr = aws.NewSESEmailSender(ctx, cfg.PlatformMode, cfg.InboundEmailRegion)
 		if apiErr != nil {
 			return apiErr
@@ -127,7 +127,7 @@ func Run(
 	chatSvc := service.NewConversationSvc(repoFactory, txManager, objectStore, cfg.ChatBucket, rabbitmq, bridgeEmailSender, cfg.InboundEmailDomain)
 
 	var emailIdentityProvider domain.EmailIdentityProvider
-	if cfg.PlatformMode.IsTest() {
+	if !cfg.PlatformMode.UsesAWSEmail() {
 		emailIdentityProvider = &stub.EmailIdentityProvider{}
 	} else {
 		// Domain identities are verified in the inbound (receiving) region so the receipt rule accepts
@@ -201,9 +201,9 @@ func Run(
 	}
 
 	// Inbound email bridge: poll SQS for S3 events, parse the raw mail, thread it into chat. Runs only
-	// when a bucket + queue are configured (skipped in local dev without AWS). The inbound bucket/queue
-	// live in INBOUND_EMAIL_REGION (us-east-1, the SES receiving region), distinct from AWS_REGION.
-	if !cfg.PlatformMode.IsTest() && cfg.InboundEmailBucket != "" && cfg.InboundEmailQueueURL != "" {
+	// in production with a bucket + queue configured. The inbound bucket/queue live in
+	// INBOUND_EMAIL_REGION (us-east-1, the SES receiving region), distinct from AWS_REGION.
+	if cfg.PlatformMode.UsesAWSEmail() && cfg.InboundEmailBucket != "" && cfg.InboundEmailQueueURL != "" {
 		inboundStore, apiErr := s3client.NewClient(ctx, cfg.InboundEmailRegion)
 		if apiErr != nil {
 			return apiErr

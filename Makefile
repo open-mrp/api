@@ -39,10 +39,15 @@ connect-minikube: ## Switch kubectl context to minikube
 	@kubectl config use-context minikube
 
 fix-minikube-dns: ## Ensure host.minikube.internal resolves inside minikube pods
-	@HOST_IP=$$(minikube ssh "ip route | grep default" 2>/dev/null | awk '{print $$3}'); \
-	if [ -z "$$HOST_IP" ]; then echo "⚠ minikube not running, skipping DNS fix"; exit 0; fi; \
+	@if ! minikube status --format '{{.Host}}' 2>/dev/null | grep -qx Running; then echo "⚠ minikube not running, skipping DNS fix"; exit 0; fi; \
+	HOST_IP=$$(minikube ssh "ip route | grep default" 2>/dev/null | awk '{print $$3}'); \
+	if [ -z "$$HOST_IP" ]; then echo "⚠ could not determine host IP from minikube, skipping DNS fix"; exit 0; fi; \
 	echo "Fixing host.minikube.internal → $$HOST_IP"; \
-	minikube ssh "sudo sed -i '/host.minikube.internal/d' /etc/hosts && echo '$$HOST_IP	host.minikube.internal' | sudo tee -a /etc/hosts > /dev/null"; \
+	if minikube ssh "grep -qx '$$HOST_IP	host.minikube.internal' /etc/hosts" 2>/dev/null; then \
+		echo "/etc/hosts already correct"; \
+	else \
+		minikube ssh "grep -v host.minikube.internal /etc/hosts > /tmp/hosts.new && echo '$$HOST_IP	host.minikube.internal' >> /tmp/hosts.new && sudo sh -c 'cat /tmp/hosts.new > /etc/hosts' && rm /tmp/hosts.new"; \
+	fi; \
 	CURRENT=$$(kubectl get configmap coredns -n kube-system -o jsonpath='{.data.Corefile}' 2>/dev/null); \
 	if echo "$$CURRENT" | grep -q "host.minikube.internal"; then \
 		echo "CoreDNS already patched"; \

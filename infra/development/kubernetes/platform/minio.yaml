@@ -1,0 +1,119 @@
+# Local S3. Services reach it through S3_ENDPOINT_URL (app-config); the browser reaches presigned
+# URLs through Tilt's 9000 port-forward, which needs `127.0.0.1 minio` in /etc/hosts because the
+# URL's host is signed. Root credentials come from the aws-credentials secret so the one fake pair
+# satisfies both MinIO and the SDK.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: minio-data
+spec:
+    accessModes: ["ReadWriteOnce"]
+    resources:
+        requests:
+            storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: minio
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: minio
+    template:
+        metadata:
+            labels:
+                app: minio
+        spec:
+            containers:
+                - name: minio
+                  image: cgr.dev/chainguard/minio:latest
+                  args: ["server", "/data", "--console-address", ":9001"]
+                  env:
+                      - name: MINIO_ROOT_USER
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: access-key-id
+                      - name: MINIO_ROOT_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: secret-access-key
+                      # Uploads request SSE-S3, which MinIO refuses unless it has a key to encrypt
+                      # with. A fixed dev key keeps the production upload path unchanged.
+                      - name: MINIO_KMS_SECRET_KEY
+                        value: "dev-key:eEVCcnhtcWZ5bHpaU2hEdWJRUEhzS3RWd05qWGFHZEM="
+                  ports:
+                      - containerPort: 9000
+                      - containerPort: 9001
+                  readinessProbe:
+                      httpGet:
+                          path: /minio/health/live
+                          port: 9000
+                      initialDelaySeconds: 2
+                      periodSeconds: 5
+                  volumeMounts:
+                      - name: data
+                        mountPath: /data
+                  resources:
+                      requests:
+                          memory: "128Mi"
+                          cpu: "50m"
+                      limits:
+                          memory: "512Mi"
+                          cpu: "500m"
+            volumes:
+                - name: data
+                  persistentVolumeClaim:
+                      claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: minio
+spec:
+    selector:
+        app: minio
+    ports:
+        - name: s3
+          port: 9000
+          targetPort: 9000
+        - name: console
+          port: 9001
+          targetPort: 9001
+    type: ClusterIP
+---
+# Creates the buckets app-config names. Idempotent, so Tilt re-running it is harmless.
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: minio-init
+spec:
+    backoffLimit: 10
+    template:
+        spec:
+            restartPolicy: OnFailure
+            containers:
+                - name: mc
+                  image: cgr.dev/chainguard/minio:latest
+                  env:
+                      - name: MINIO_ROOT_USER
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: access-key-id
+                      - name: MINIO_ROOT_PASSWORD
+                        valueFrom:
+                            secretKeyRef:
+                                name: aws-credentials
+                                key: secret-access-key
+                  command:
+                      - /bin/sh
+                      - -c
+                      - |
+                          until mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do sleep 2; done
+                          for b in augno-account-photos augno-user-photos augno-shipping-labels augno-exports augno-chat-attachments augno-payloads augno-agent-artifacts; do
+                            mc mb --ignore-existing "local/$b"
+                          done

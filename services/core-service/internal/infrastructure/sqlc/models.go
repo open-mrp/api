@@ -944,6 +944,7 @@ type FeedbackReport struct {
 	Page      sql.NullString
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	Severity  string
 }
 
 type FulfillmentPolicy struct {

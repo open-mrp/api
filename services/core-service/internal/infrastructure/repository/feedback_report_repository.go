@@ -6,6 +6,7 @@ import (
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/services/core-service/internal/infrastructure/sqlc"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/db"
 	apierror "github.com/open-mrp/api/shared/errors"
 	"github.com/open-mrp/api/shared/pagination"
@@ -32,6 +33,7 @@ func mapFeedbackReportRow(row sqlc.FeedbackReport) *domain.FeedbackReport {
 		UserID:    row.UserID,
 		Message:   row.Message,
 		Page:      db.StringFromNullString(row.Page),
+		Severity:  constants.FeedbackReportSeverity(row.Severity),
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
@@ -47,6 +49,7 @@ func (r *feedbackReportRepoImpl) Create(ctx context.Context, feedbackReportID st
 		UserID:    params.UserID,
 		Message:   params.Message,
 		Page:      toNullString(params.Page),
+		Severity:  string(params.Severity),
 	}); err != nil {
 		if apiErr := db.MapSQLError(err); apiErr != nil {
 			return nil, tracing.Trace(span, apiErr)

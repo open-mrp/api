@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/open-mrp/api/services/core-service/internal/domain"
+	"github.com/open-mrp/api/shared/constants"
 	"github.com/open-mrp/api/shared/contracts"
 	pb "github.com/open-mrp/api/shared/proto/core"
 	"google.golang.org/grpc"
@@ -24,6 +25,7 @@ func feedbackReportToProto(r *domain.FeedbackReport) *pb.FeedbackReportInfo {
 		UserId:    r.UserID,
 		Message:   r.Message,
 		Page:      r.Page,
+		Severity:  string(r.Severity),
 		CreatedAt: timestamppb.New(r.CreatedAt),
 		UpdatedAt: timestamppb.New(r.UpdatedAt),
 	}
@@ -38,8 +40,9 @@ func (h *gRPCHandler) CreateFeedbackReport(ctx context.Context, req *pb.CreateFe
 	defer finalizeIdempotency()
 
 	report, apiErr := h.feedbackReportSvc.CreateFeedbackReport(ctx, domain.CreateFeedbackReportParams{
-		Message: req.Message,
-		Page:    req.Page,
+		Message:  req.Message,
+		Page:     req.Page,
+		Severity: constants.FeedbackReportSeverity(req.GetSeverity()),
 	})
 	if apiErr != nil {
 		return nil, contracts.ConvertAPIErrorToGRPC(apiErr)

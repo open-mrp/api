@@ -34,6 +34,7 @@ type FeedbackReportInfo struct {
 	Page          *string                `protobuf:"bytes,5,opt,name=page,proto3,oneof" json:"page,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	Severity      string                 `protobuf:"bytes,8,opt,name=severity,proto3" json:"severity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -117,10 +118,18 @@ func (x *FeedbackReportInfo) GetUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *FeedbackReportInfo) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
 type CreateFeedbackReportRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
 	Page          *string                `protobuf:"bytes,2,opt,name=page,proto3,oneof" json:"page,omitempty"`
+	Severity      *string                `protobuf:"bytes,3,opt,name=severity,proto3,oneof" json:"severity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -165,6 +174,13 @@ func (x *CreateFeedbackReportRequest) GetMessage() string {
 func (x *CreateFeedbackReportRequest) GetPage() string {
 	if x != nil && x.Page != nil {
 		return *x.Page
+	}
+	return ""
+}
+
+func (x *CreateFeedbackReportRequest) GetSeverity() string {
+	if x != nil && x.Severity != nil {
+		return *x.Severity
 	}
 	return ""
 }
@@ -317,7 +333,6 @@ func (x *ListFeedbackReportsResponse) GetPageInfo() *PageInfo {
 	return nil
 }
 
-// Batched read for the api-gateway resourcekit resolver.
 type BatchGetFeedbackReportsByIDsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ids           []string               `protobuf:"bytes,1,rep,name=ids,proto3" json:"ids,omitempty"`
@@ -410,7 +425,7 @@ var File_core_core_feedback_reports_proto protoreflect.FileDescriptor
 
 const file_core_core_feedback_reports_proto_rawDesc = "" +
 	"\n" +
-	" core/core_feedback_reports.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\"\x8e\x02\n" +
+	" core/core_feedback_reports.proto\x12\x04core\x1a\x1fgoogle/protobuf/timestamp.proto\x1a core/core_identity_context.proto\"\xaa\x02\n" +
 	"\x12FeedbackReportInfo\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -421,12 +436,15 @@ const file_core_core_feedback_reports_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
 	"\n" +
-	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAtB\a\n" +
-	"\x05_page\"Y\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x12\x1a\n" +
+	"\bseverity\x18\b \x01(\tR\bseverityB\a\n" +
+	"\x05_page\"\x87\x01\n" +
 	"\x1bCreateFeedbackReportRequest\x12\x18\n" +
 	"\amessage\x18\x01 \x01(\tR\amessage\x12\x17\n" +
-	"\x04page\x18\x02 \x01(\tH\x00R\x04page\x88\x01\x01B\a\n" +
-	"\x05_page\"a\n" +
+	"\x04page\x18\x02 \x01(\tH\x00R\x04page\x88\x01\x01\x12\x1f\n" +
+	"\bseverity\x18\x03 \x01(\tH\x01R\bseverity\x88\x01\x01B\a\n" +
+	"\x05_pageB\v\n" +
+	"\t_severity\"a\n" +
 	"\x1cCreateFeedbackReportResponse\x12A\n" +
 	"\x0ffeedback_report\x18\x01 \x01(\v2\x18.core.FeedbackReportInfoR\x0efeedbackReport\"Z\n" +
 	"\x1aListFeedbackReportsRequest\x12\x1b\n" +

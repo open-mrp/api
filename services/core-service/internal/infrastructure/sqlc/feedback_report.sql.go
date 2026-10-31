@@ -19,7 +19,8 @@ SELECT
     fr.message,
     fr.page,
     fr.created_at,
-    fr.updated_at
+    fr.updated_at,
+    fr.severity
 FROM feedback_report fr
 WHERE fr.id = ?
 AND fr.account_id = ?
@@ -41,6 +42,7 @@ func (q *Queries) GetFeedbackReport(ctx context.Context, arg GetFeedbackReportPa
 		&i.Page,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Severity,
 	)
 	return i, err
 }
@@ -53,7 +55,8 @@ SELECT
     fr.message,
     fr.page,
     fr.created_at,
-    fr.updated_at
+    fr.updated_at,
+    fr.severity
 FROM feedback_report fr
 WHERE fr.id IN (/*SLICE:ids*/?)
 AND fr.account_id = ?
@@ -92,6 +95,7 @@ func (q *Queries) GetFeedbackReportsByIDs(ctx context.Context, arg GetFeedbackRe
 			&i.Page,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Severity,
 		); err != nil {
 			return nil, err
 		}
@@ -113,9 +117,11 @@ INSERT INTO feedback_report (
     user_id,
     message,
     page,
+    severity,
     created_at,
     updated_at
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -132,6 +138,7 @@ type InsertFeedbackReportParams struct {
 	UserID    string
 	Message   string
 	Page      sql.NullString
+	Severity  string
 }
 
 func (q *Queries) InsertFeedbackReport(ctx context.Context, arg InsertFeedbackReportParams) error {
@@ -141,6 +148,7 @@ func (q *Queries) InsertFeedbackReport(ctx context.Context, arg InsertFeedbackRe
 		arg.UserID,
 		arg.Message,
 		arg.Page,
+		arg.Severity,
 	)
 	return err
 }

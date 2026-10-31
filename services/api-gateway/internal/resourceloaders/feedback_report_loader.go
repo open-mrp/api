@@ -42,6 +42,7 @@ func FeedbackReportFromProto(ctx context.Context, r *pb.FeedbackReportInfo) *api
 		Object:    constants.ObjectTypeFeedbackReport,
 		Message:   r.Message,
 		Page:      r.Page,
+		Severity:  constants.FeedbackReportSeverity(r.Severity),
 		CreatedAt: grpcutil.TimestampToTime(r.CreatedAt),
 		UpdatedAt: grpcutil.TimestampToTime(r.UpdatedAt),
 	}

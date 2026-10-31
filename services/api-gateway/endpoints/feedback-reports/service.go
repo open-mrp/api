@@ -52,6 +52,10 @@ func (m *feedbackReportSvcImpl) CreateFeedbackReport(ctx context.Context, req *C
 		Message: req.Message,
 		Page:    req.Page.Ptr(),
 	}
+	if severity, ok := req.Severity.Value(); ok {
+		s := string(severity)
+		pbReq.Severity = &s
+	}
 
 	resp, apiErr := grpcutil.CallRPC(ctx, feedbackReportSvcTracer, "service.feedback_reports.create", domain.ServiceName,
 		func(ctx context.Context, opts ...grpc.CallOption) (*pb.CreateFeedbackReportResponse, error) {

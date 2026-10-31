@@ -20,6 +20,8 @@ type FeedbackReport struct {
 	Message string `json:"message" validate:"required"`
 	// Dashboard page the user was on when they submitted the report.
 	Page *string `json:"page"`
+	// How urgently the report needs attention.
+	Severity constants.FeedbackReportSeverity `json:"severity" validate:"required"`
 	// User who submitted the report.
 	User *User `json:"user" expandable:"true"`
 	// When the report was submitted.
@@ -35,6 +37,7 @@ var SampleFeedbackReport = &FeedbackReport{
 	Object:    constants.ObjectTypeFeedbackReport,
 	Message:   "The item list loses its filters when I open an item and come back.",
 	Page:      &sampleFeedbackReportPage,
+	Severity:  constants.FeedbackReportSeverityMedium,
 	User:      nil,
 	CreatedAt: timeutil.TimestampToTime(sampleCreatedAtTimestamp),
 	UpdatedAt: timeutil.TimestampToTime(sampleUpdatedAtTimestamp),

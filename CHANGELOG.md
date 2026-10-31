@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.3.0](https://github.com/open-mrp/api/compare/v7.2.0...v7.3.0) (2026-10-31)
+
+
+### Features
+
+* add severity to feedback reports ([#389](https://github.com/open-mrp/api/issues/389)) ([71d9e1d](https://github.com/open-mrp/api/commit/71d9e1de5a89a0e5dc6fee3e693483e4c5eade79))
+
 ## [7.2.0](https://github.com/open-mrp/api/compare/v7.1.6...v7.2.0) (2026-10-30)
 
 

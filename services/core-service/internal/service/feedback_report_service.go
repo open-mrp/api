@@ -97,6 +97,12 @@ func (s *feedbackReportSvcImpl) CreateFeedbackReport(ctx context.Context, params
 	if params.Page != nil && strings.TrimSpace(*params.Page) == "" {
 		params.Page = nil
 	}
+	if params.Severity == "" {
+		params.Severity = constants.FeedbackReportSeverityMedium
+	}
+	if !params.Severity.IsValid() {
+		return nil, tracing.Trace(span, apierror.NewValidationErrorWithParam("Severity must be one of: "+strings.Join(params.Severity.EnumValues(), ", ")+".", "severity"))
+	}
 	params.AccountID = identity.Target.AccountID
 	params.UserID = identity.Actor.ID
 

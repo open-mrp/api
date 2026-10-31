@@ -5,6 +5,7 @@ INSERT INTO feedback_report (
     user_id,
     message,
     page,
+    severity,
     created_at,
     updated_at
 ) VALUES (
@@ -13,6 +14,7 @@ INSERT INTO feedback_report (
     sqlc.arg('user_id'),
     sqlc.arg('message'),
     sqlc.narg('page'),
+    sqlc.arg('severity'),
     NOW(3),
     NOW(3)
 );
@@ -25,7 +27,8 @@ SELECT
     fr.message,
     fr.page,
     fr.created_at,
-    fr.updated_at
+    fr.updated_at,
+    fr.severity
 FROM feedback_report fr
 WHERE fr.id = sqlc.arg('id')
 AND fr.account_id = sqlc.arg('account_id');
@@ -38,7 +41,8 @@ SELECT
     fr.message,
     fr.page,
     fr.created_at,
-    fr.updated_at
+    fr.updated_at,
+    fr.severity
 FROM feedback_report fr
 WHERE fr.id IN (sqlc.slice('ids'))
 AND fr.account_id = sqlc.arg('account_id');

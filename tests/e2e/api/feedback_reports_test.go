@@ -21,8 +21,9 @@ func TestFeedbackReports_CreateResponseShape(t *testing.T) {
 	message := uniqueName("e2e-feedback-report")
 
 	status, body, err := loginAsSeedUser(t).Post(feedbackReportsPath, map[string]any{
-		"message": message,
-		"page":    "/dashboard/items",
+		"message":  message,
+		"page":     "/dashboard/items",
+		"severity": "urgent",
 	}, newIdempotencyKey())
 	require.NoError(t, err)
 	requireStatus(t, 201, status, body)
@@ -32,6 +33,7 @@ func TestFeedbackReports_CreateResponseShape(t *testing.T) {
 	assertObjectField(t, report, "feedback_report")
 	assert.Equal(t, message, jsonField(report, "message"))
 	assert.Equal(t, "/dashboard/items", jsonField(report, "page"))
+	assert.Equal(t, "urgent", jsonField(report, "severity"))
 	assertNilField(t, report, "user")
 	assertValidTimestamp(t, jsonField(report, "created_at"), "created_at")
 	assertValidTimestamp(t, jsonField(report, "updated_at"), "updated_at")
@@ -50,6 +52,50 @@ func TestFeedbackReports_OmittedFields(t *testing.T) {
 	report := parseJSON(body)
 	assert.Equal(t, message, jsonField(report, "message"))
 	assertNilField(t, report, "page")
+	assert.Equal(t, "medium", jsonField(report, "severity"), "severity must default to medium when omitted")
+}
+
+func TestFeedbackReports_SeverityValues(t *testing.T) {
+	t.Parallel()
+	user := loginAsSeedUser(t)
+
+	for _, severity := range []string{"urgent", "medium", "low"} {
+		message := uniqueName("e2e-feedback-report-" + severity)
+
+		status, body, err := user.Post(feedbackReportsPath, map[string]any{
+			"message":  message,
+			"severity": severity,
+		}, newIdempotencyKey())
+		require.NoError(t, err)
+		requireStatus(t, 201, status, body)
+		created := parseJSON(body)
+		assert.Equal(t, severity, jsonField(created, "severity"))
+
+		found := listFindByField(t, feedbackReportsPath, nil, "id", jsonField(created, "id"))
+		require.NotNil(t, found, "the %s report must be listed", severity)
+		assert.Equal(t, severity, DataItemField(found, "severity"))
+	}
+}
+
+func TestFeedbackReports_InvalidSeverity(t *testing.T) {
+	t.Parallel()
+	user := loginAsSeedUser(t)
+
+	status, body, err := user.Post(feedbackReportsPath, map[string]any{
+		"message":  uniqueName("e2e-feedback-report-bad-severity"),
+		"severity": "critical",
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
+	errObj := requireErrorResponse(t, body, "parameter_invalid", "invalid_request_error")
+	assertErrorParam(t, errObj, "severity")
+
+	status, body, err = user.Post(feedbackReportsPath, map[string]any{
+		"message":  uniqueName("e2e-feedback-report-null-severity"),
+		"severity": nil,
+	}, newIdempotencyKey())
+	require.NoError(t, err)
+	requireStatus(t, 400, status, body)
 }
 
 func TestFeedbackReports_MissingMessage(t *testing.T) {
@@ -122,6 +168,7 @@ func TestFeedbackReports_List(t *testing.T) {
 	found := listFindByField(t, feedbackReportsPath, nil, "id", reportID)
 	require.NotNil(t, found, "the new report must be listed")
 	assert.Equal(t, message, DataItemField(found, "message"))
+	assert.Equal(t, "medium", DataItemField(found, "severity"))
 }
 
 // --- Expandable Fields ---

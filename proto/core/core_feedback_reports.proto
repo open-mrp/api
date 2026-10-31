@@ -15,10 +15,12 @@ message FeedbackReportInfo {
   optional string page = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  string severity = 8;
 }
 message CreateFeedbackReportRequest {
   string message = 1;
   optional string page = 2;
+  optional string severity = 3;
 }
 message CreateFeedbackReportResponse {
   FeedbackReportInfo feedback_report = 1;

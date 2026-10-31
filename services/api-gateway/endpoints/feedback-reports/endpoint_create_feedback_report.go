@@ -18,11 +18,14 @@ type CreateFeedbackReportRequest struct {
 	Message string `json:"message" validate:"required,max=10000"`
 	// Dashboard page the user was on when they submitted the report, recorded so the report can be read in context.
 	Page field.Optional[string] `json:"page,omitzero" validate:"omitempty,max=2083"`
+	// How urgently the report needs attention. Defaults to `medium` when omitted.
+	Severity field.Optional[constants.FeedbackReportSeverity] `json:"severity,omitzero" default:"medium"`
 }
 
 var sampleCreateFeedbackReportRequest = &CreateFeedbackReportRequest{
-	Message: "The item list loses its filters when I open an item and come back.",
-	Page:    field.Some("/dashboard/items"),
+	Message:  "The item list loses its filters when I open an item and come back.",
+	Page:     field.Some("/dashboard/items"),
+	Severity: field.Some(constants.FeedbackReportSeverityMedium),
 }
 
 func (*CreateFeedbackReportRequest) SchemaExample() any {

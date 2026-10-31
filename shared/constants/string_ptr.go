@@ -145,3 +145,4 @@ func (c *AgentToolCategory) StringPtr() *string        { return stringPtrEnum(c)
 func (t *BatchLotType) StringPtr() *string             { return stringPtrEnum(t) }
 func (t *MeasureOwnerType) StringPtr() *string         { return stringPtrEnum(t) }
 func (t *ConversationAssigneeType) StringPtr() *string { return stringPtrEnum(t) }
+func (s *FeedbackReportSeverity) StringPtr() *string   { return stringPtrEnum(s) }

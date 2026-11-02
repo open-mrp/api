@@ -168,6 +168,33 @@ func TestCosts_ItemUnitCostNeedsCostsRead(t *testing.T) {
 	assert.Equal(t, adminCost, rateValue(t, embedded, "unit_cost"))
 }
 
+func TestCosts_InventoryItemUnitCostNeedsCostsRead(t *testing.T) {
+	t.Parallel()
+	_, itemID := costProduct(t, "3.25")
+	sku := jsonField(parseJSON(mustGetAs(t, apiClient, itemsPath+"/"+itemID, nil)), "sku")
+	query := url.Values{"q": {sku}}
+
+	rowItem := func(c *Client) map[string]any {
+		rows := listRows(t, parseJSON(mustGetAs(t, c, inventoriesPath, query)))
+		require.Len(t, rows, 1, "exactly one inventory row matches the unique SKU %q", sku)
+		item := jsonObject(rows[0], "item")
+		require.NotNil(t, item)
+		return item
+	}
+
+	admin := rowItem(apiClient)
+	adminCost := rateValue(t, admin, "unit_cost")
+	require.True(t, strings.HasPrefix(adminCost, "3.25"), "the admin reads the item's cost: %s", adminCost)
+	assert.NotNil(t, jsonObject(admin, "unit_value"), "the selling value rides along without an include")
+
+	itemsOnly := rowItem(customRoleClient(t, "items:read"))
+	assertNilField(t, itemsOnly, "unit_cost")
+	assert.NotNil(t, jsonObject(itemsOnly, "unit_value"), "the selling value is not cost data")
+
+	withCosts := rowItem(customRoleClient(t, "items:read", costsRead))
+	assert.Equal(t, adminCost, rateValue(t, withCosts, "unit_cost"))
+}
+
 func TestCosts_SalesOrderLineUnitCostNeedsCostsRead(t *testing.T) {
 	t.Parallel()
 	customerID := setupOrderCustomer(t)

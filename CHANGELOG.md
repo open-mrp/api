@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.3.1](https://github.com/open-mrp/api/compare/v7.3.0...v7.3.1) (2026-11-02)
+
+
+### Bug Fixes
+
+* return item unit cost and value on the inventories list ([#391](https://github.com/open-mrp/api/issues/391)) ([61610fb](https://github.com/open-mrp/api/commit/61610fbd41a8f09319d6743b67a230343ee20ea7))
+
 ## [7.3.0](https://github.com/open-mrp/api/compare/v7.2.0...v7.3.0) (2026-10-31)
 
 

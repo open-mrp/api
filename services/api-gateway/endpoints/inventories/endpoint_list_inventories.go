@@ -26,6 +26,8 @@ type ListInventoriesRequest struct {
 // Items are listed whether or not they have ever held stock; an item with no recorded inventory reports a zero quantity. Items backed by a non-sale product — the service, shipping, tax, credit, and return products that carry charges on orders — are left out. The `q` search term matches on item SKU and description.
 //
 // Without `as_of`, each quantity is the item's current on-hand stock. With it, each is the item's last logged level at or before that instant, which is what an inventory valuation at a past date reads. Either way the figure is in the base unit of the item's category.
+//
+// Each item carries its `unit_value` and `unit_cost`; `unit_cost` is null unless the caller holds `costs:read`.
 type ListInventoriesEndpoint struct{}
 
 func (e *ListInventoriesEndpoint) Materialize() *apiendpoint.APIEndpoint[*ListInventoriesRequest, *apiresource.List[apiresource.InventoryItem]] {

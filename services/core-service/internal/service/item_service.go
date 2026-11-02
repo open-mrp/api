@@ -1284,6 +1284,7 @@ func (s *itemSvcImpl) ListInventories(ctx context.Context, params domain.ListInv
 		Cursor:    params.Cursor,
 		Limit:     params.Limit,
 		Query:     params.Query,
+		Includes:  []string{"unit_value", "unit_cost"},
 	})
 	if apiErr != nil {
 		return nil, tracing.Trace(span, apiErr)

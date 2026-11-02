@@ -166,7 +166,7 @@ func ensureInventoryCorpus(t *testing.T) {
 
 // planInventoriesParams is what ListInventories asks of the item list.
 func planInventoriesParams(p domain.ListInventoriesParams) domain.ListItemsParams {
-	return domain.ListItemsParams{AccountID: planInvAccount, Cursor: p.Cursor, Limit: p.Limit, Query: p.Query}
+	return domain.ListItemsParams{AccountID: planInvAccount, Cursor: p.Cursor, Limit: p.Limit, Query: p.Query, Includes: []string{"unit_value", "unit_cost"}}
 }
 
 func inventoryPlanCases() []planCase[domain.ListInventoriesParams] {

@@ -82,3 +82,37 @@ func TestAccountShippoClient_NoIntegrationSkipsTheCarrier(t *testing.T) {
 	require.Nil(t, apiErr)
 	assert.Nil(t, client)
 }
+
+// The carrier bills the third party's account directly, so the seller posts no freight and never asks the carrier.
+func TestEstimateShippingRate_ThirdPartyAccountIsNotCharged(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newLabelHarness(t, ctrl)
+
+	params := estimateParams()
+	params.Billing = &domain.ShippingBilling{Type: "THIRD_PARTY", Account: "ACCT-9", Country: "US", Zip: "43215"}
+
+	// The carrier, integration and Shippo mocks carry no expectations: a third-party account is never quoted.
+	rate, apiErr := estimateShippingRate(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), params)
+	require.Nil(t, apiErr)
+	assert.Zero(t, rate)
+}
+
+// A third-party order that names no account is still quoted, with the billing block forwarded.
+func TestEstimateShippingRate_ThirdPartyWithoutAccountIsQuoted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	h := newLabelHarness(t, ctrl)
+	h.expectQuotableCarrier()
+	h.expectShippoCredentials(true)
+
+	params := estimateParams()
+	params.Billing = &domain.ShippingBilling{Type: "THIRD_PARTY", Account: "  ", Country: "US", Zip: "43215"}
+	h.shippoClient.EXPECT().FetchShippingRate(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, p domain.FetchShippingRateParams) (float64, *apierror.APIError) {
+			assert.Equal(t, params.Billing, p.Billing)
+			return 12.5, nil
+		})
+
+	rate, apiErr := estimateShippingRate(context.Background(), h.repoFactory, h.svc.shippoFactory, testEncryptionKey(), params)
+	require.Nil(t, apiErr)
+	assert.Equal(t, 12.5, rate)
+}

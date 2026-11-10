@@ -1712,6 +1712,21 @@ func (s *salesOrderSvcImpl) FinishPendingFreight(ctx context.Context, accountID,
 		return tracing.Trace(span, apiErr)
 	}
 
+	lines, apiErr := s.repos.NewSalesOrderRepo().GetLines(ctx, salesOrderID)
+	if apiErr != nil {
+		return tracing.Trace(span, apiErr)
+	}
+	if hasFreightLine(lines) {
+		return tracing.Trace(span, s.withTx(ctx, func(txCtx context.Context, txSvc *salesOrderSvcImpl) *apierror.APIError {
+			txOrderRepo := txSvc.repos.NewSalesOrderRepo()
+			stillPending, apiErr := txOrderRepo.IsFreightPending(txCtx, accountID, salesOrderID, true)
+			if apiErr != nil || !stillPending {
+				return apiErr
+			}
+			return txOrderRepo.ClearFreightPending(txCtx, accountID, salesOrderID)
+		}))
+	}
+
 	// Quoted before the transaction so the carrier call holds no row lock.
 	rate, apiErr := s.estimateFreightForOrder(ctx, accountID, salesOrderID, true)
 	if apiErr != nil {
@@ -1729,10 +1744,7 @@ func (s *salesOrderSvcImpl) FinishPendingFreight(ctx context.Context, accountID,
 		if apiErr != nil {
 			return apiErr
 		}
-		hasFreight := slices.ContainsFunc(lines, func(l *domain.SalesOrderLine) bool {
-			return l.ProductTypeCode != nil && *l.ProductTypeCode == systemProductCodeShipping
-		})
-		if !hasFreight {
+		if !hasFreightLine(lines) {
 			line, apiErr := txSvc.synthesizeShippingLine(txCtx, salesOrderID, domain.CreateSalesOrderParams{AccountID: accountID}, rate)
 			if apiErr != nil {
 				return apiErr
@@ -1753,6 +1765,12 @@ func (s *salesOrderSvcImpl) FinishPendingFreight(ctx context.Context, accountID,
 		}
 		return txOrderRepo.ClearFreightPending(txCtx, accountID, salesOrderID)
 	}))
+}
+
+func hasFreightLine(lines []*domain.SalesOrderLine) bool {
+	return slices.ContainsFunc(lines, func(l *domain.SalesOrderLine) bool {
+		return l.ProductTypeCode != nil && *l.ProductTypeCode == systemProductCodeShipping
+	})
 }
 
 // AbandonPendingFreight stops waiting on an order's freight when the carrier cannot quote it, leaving
@@ -2042,7 +2060,7 @@ func (s *salesOrderSvcImpl) estimateOrderShippingRate(ctx context.Context, param
 			account = *params.CarrierBillingAccount
 		}
 		billing = &domain.ShippingBilling{
-			Type:    "THIRD_PARTY",
+			Type:    shippingBillingTypeThirdParty,
 			Account: account,
 			Country: billTo.Country,
 			Zip:     billTo.Zip,

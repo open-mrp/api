@@ -1222,8 +1222,13 @@ func (s *shipmentSvcImpl) EstimateRate(ctx context.Context, params domain.Estima
 	return estimateShippingRate(ctx, s.repos, s.shippoFactory, s.encryptionKey, params)
 }
 
-// estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. An inactive integration is refused and a carrier that quotes no rate is unavailable, never 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
+// estimateShippingRate computes the posted shipping rate for an order or shipment, mirroring Dashboard's estimatePostedShippingRate cascade: third-party billing to a named account → product-line freight exemption → customer/group freight exemption → shipping-term free/flat/min-order → carrier-without-Shippo → no Shippo integration → live Shippo rate (already marked up by the Shippo client). A nil shippoFactory short-circuits the live rate to 0. An inactive integration is refused and a carrier that quotes no rate is unavailable, never 0. It is shared by the shipment estimate-rate endpoint and sales-order shipping-line synthesis.
 func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoFactory domain.ShippoClientFactory, encryptionKey []byte, params domain.EstimateRateParams) (float64, *apierror.APIError) {
+	// The carrier bills the third party's account directly, so the seller charges no freight.
+	if isThirdPartyBilledToAccount(params.Billing) {
+		return 0, nil
+	}
+
 	// Check product line freight exemption: if any product line is freight exempt, rate is 0.
 	if len(params.ProductLineIDs) > 0 {
 		productLineRepo := repos.NewProductLineRepo()
@@ -1361,6 +1366,10 @@ func estimateShippingRate(ctx context.Context, repos domain.RepoFactory, shippoF
 	}
 
 	return rate, nil
+}
+
+func isThirdPartyBilledToAccount(billing *domain.ShippingBilling) bool {
+	return billing != nil && billing.Type == shippingBillingTypeThirdParty && strings.TrimSpace(billing.Account) != ""
 }
 
 // isCustomerOrGroupFreightExempt reports whether the customer, its type group, or any of its price groups is freight exempt, mirroring Dashboard's CustomerUtils.isCustomerOrGroupFreightExempt. PriceGroups must be hydrated on the customer for the group check to be meaningful.
@@ -2532,6 +2541,8 @@ func accountShippoClient(ctx context.Context, repos domain.RepoFactory, factory 
 // Names the account's system freight product, whose order line carries the shipping charge.
 const systemProductCodeShipping = "shipping"
 
+const shippingBillingTypeThirdParty = "THIRD_PARTY"
+
 // Nominal case dimensions used for rating and labels; only the weight varies per case.
 const (
 	shippingCaseLength = "23.5"
@@ -2576,7 +2587,7 @@ func shipmentThirdPartyBilling(shipment *domain.Shipment) *domain.ShippingBillin
 		return nil
 	}
 	return &domain.ShippingBilling{
-		Type:    "THIRD_PARTY",
+		Type:    shippingBillingTypeThirdParty,
 		Account: ptrutil.Deref(shipment.OrderCarrierBillingAccount),
 		Country: ptrutil.Deref(shipment.BillingAddressCountry),
 		Zip:     ptrutil.Deref(shipment.BillingAddressZip),

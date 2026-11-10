@@ -1,8 +1,15 @@
 package shippo
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strings"
 	"testing"
 
+	"github.com/open-mrp/api/services/core-service/internal/domain"
 	"github.com/open-mrp/api/shared/constants"
 	apierror "github.com/open-mrp/api/shared/errors"
 )
@@ -98,5 +105,73 @@ func TestClientFactory_DefaultsToProduction(t *testing.T) {
 	}
 	if _, apiErr := factory.Build("shippo_live_x"); apiErr != nil {
 		t.Errorf("an unset platform mode is production, as PLATFORM is: %v", apiErr)
+	}
+}
+
+func TestShipmentMessages(t *testing.T) {
+	var shipment ShipmentResponse
+	body := `{"rates":[],"messages":[{"source":"UPS","code":"120412","text":"Third party billing is not supported on this account"},{"source":"UPS","text":"No rates returned"},{"source":"UPS","code":"0","text":"  "}]}`
+	if err := json.Unmarshal([]byte(body), &shipment); err != nil {
+		t.Fatalf("decoding shipment: %v", err)
+	}
+	if len(shipment.Rates) != 0 || len(shipment.Messages) != 3 {
+		t.Fatalf("decoded %d rates and %d messages", len(shipment.Rates), len(shipment.Messages))
+	}
+
+	want := "120412: Third party billing is not supported on this account; No rates returned"
+	if got := shipmentMessages(shipment.Messages); got != want {
+		t.Errorf("shipmentMessages = %q, want %q", got, want)
+	}
+	if got := shipmentMessages(nil); got != "" {
+		t.Errorf("shipmentMessages(nil) = %q, want empty", got)
+	}
+}
+
+// A carrier that quotes nothing says why in the shipment's messages; the log keeps that reason without the third party's details.
+func TestFetchShippingRate_NoRatesLogsTheCarrierMessages(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	client := newStubClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/carrier_accounts/":
+			_, _ = w.Write([]byte(`{"results":[{"object_id":"byoa_ups","carrier":"ups","active":true},{"object_id":"shippo_ups","carrier":"ups","active":true,"is_shippo_account":true}]}`))
+		case r.Method == http.MethodPost && r.URL.Path == "/shipments/":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = w.Write([]byte(`{"rates":[],"messages":[{"source":"UPS","code":"120412","text":"Third party billing is not supported on this account"}]}`))
+		default:
+			http.NotFound(w, r)
+		}
+	})
+
+	_, apiErr := client.FetchShippingRate(context.Background(), domain.FetchShippingRateParams{
+		CarrierAccountObjectID: "byoa_ups",
+		ServiceLevelToken:      "ups_ground",
+		FromAddress:            domain.ShippingAddress{Street1: "1 Origin Way", City: "Springfield", State: "OH", Zip: "45501", Country: "US"},
+		ToAddress:              domain.ShippingAddress{Street1: "2 Dock St", City: "Dayton", State: "OH", Zip: "45402", Country: "US"},
+		Parcels:                []domain.Parcel{{Weight: "5", Length: "10", Width: "10", Height: "10"}},
+		Billing:                &domain.ShippingBilling{Type: "THIRD_PARTY", Account: "ACCT-9", Country: "US", Zip: "43215"},
+	})
+	if apiErr == nil || apiErr.Code != apierror.ErrorCodeSvcUnavailable {
+		t.Fatalf("want a service_unavailable error, got %v", apiErr)
+	}
+
+	logged := logs.String()
+	for _, want := range []string{
+		"shippo returned no rates for the shipment",
+		"carrier_account_object_id=shippo_ups",
+		"third_party_billing=true",
+		"120412: Third party billing is not supported on this account",
+	} {
+		if !strings.Contains(logged, want) {
+			t.Errorf("log is missing %q:\n%s", want, logged)
+		}
+	}
+	for _, secret := range []string{"ACCT-9", "43215", "Dock St", "Origin Way"} {
+		if strings.Contains(logged, secret) {
+			t.Errorf("log leaks %q:\n%s", secret, logged)
+		}
 	}
 }

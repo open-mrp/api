@@ -565,7 +565,30 @@ func (c *clientImpl) createShipmentForRates(ctx context.Context, carrierAccountO
 		return nil, apierror.NewInternalError(err, "Failed to parse Shippo shipment response.")
 	}
 
+	if len(shipment.Rates) == 0 {
+		slog.WarnContext(ctx, "shippo returned no rates for the shipment",
+			"carrier_account_object_id", carrierAccountObjectID,
+			"third_party_billing", billing != nil && billing.Type == "THIRD_PARTY",
+			"messages", shipmentMessages(shipment.Messages))
+	}
+
 	return &shipment, nil
+}
+
+// shipmentMessages joins a shipment's messages into one line for the log.
+func shipmentMessages(messages []ShipmentMessage) string {
+	texts := make([]string, 0, len(messages))
+	for _, m := range messages {
+		text := strings.TrimSpace(m.Text)
+		if text == "" {
+			continue
+		}
+		if m.Code != "" {
+			text = m.Code + ": " + text
+		}
+		texts = append(texts, text)
+	}
+	return strings.Join(texts, "; ")
 }
 
 // resolvePublishedRateCarrierAccountID maps a BYOA (bring-your-own-account) carrier account object ID to the carrier's Shippo default (published/retail) account object ID, mirroring Dashboard's resolvePublishedRateCarrierAccountId. BYOA accounts return the account's negotiated rates; customer-facing estimates should quote published rates instead. Best-effort: if the BYOA account cannot be read or no Shippo default account exists for that carrier, the original BYOA object ID is returned so a quote is still produced.

@@ -38,7 +38,15 @@ type RateService struct {
 
 // ShipmentResponse is a Shippo shipment creation response.
 type ShipmentResponse struct {
-	Rates []ShipmentRate `json:"rates"`
+	Rates    []ShipmentRate    `json:"rates"`
+	Messages []ShipmentMessage `json:"messages"`
+}
+
+// ShipmentMessage is a carrier or Shippo note on a shipment, such as why a carrier quoted no rate.
+type ShipmentMessage struct {
+	Source string `json:"source"`
+	Code   string `json:"code"`
+	Text   string `json:"text"`
 }
 
 // CreateCarrierAccountRequest is the request to create a carrier account.

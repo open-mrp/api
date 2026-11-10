@@ -1,5 +1,12 @@
 # Changelog
 
+## [7.3.2](https://github.com/open-mrp/api/compare/v7.3.1...v7.3.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* charge no freight on orders billed to a third party's carrier account ([#393](https://github.com/open-mrp/api/issues/393)) ([cdaec46](https://github.com/open-mrp/api/commit/cdaec469a2188e25025ca59b01b1528eb33cc749))
+
 ## [7.3.1](https://github.com/open-mrp/api/compare/v7.3.0...v7.3.1) (2026-11-02)
 
 
